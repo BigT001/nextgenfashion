@@ -223,4 +223,13 @@
     0%,100% { transform: translateY(0px); }
     50%     { transform: translateY(-12px); }
   }
+
+  /* ── Sun pulse ── */
+  .animate-sun-pulse {
+    animation: sunPulse 4s ease-in-out infinite;
+  }
+  @keyframes sunPulse {
+    0%,100% { box-shadow: 0 0 40px 15px rgba(255,214,0,0.4); }
+    50%     { box-shadow: 0 0 60px 25px rgba(255,214,0,0.6); }
+  }
 }
