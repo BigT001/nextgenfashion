@@ -29,11 +29,11 @@ export default async function ProductDetailPage({
       <div className="absolute top-0 right-0 size-[600px] bg-brand-navy/5 rounded-full blur-[120px] -z-10" />
       <div className="absolute bottom-0 left-0 size-[400px] bg-brand-silver/5 rounded-full blur-[100px] -z-10" />
 
-      <div className="container mx-auto px-6 py-20 md:py-32">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-32 items-start">
+      <div className="container mx-auto px-6 py-10 md:py-16 max-w-6xl">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-start">
           {/* Product Showcase */}
-          <div className="space-y-8 animate-slow-fade">
-            <div className="aspect-[4/5] relative rounded-[3.5rem] overflow-hidden glass-card border-none shadow-[0_40px_80px_-15px_rgba(0,0,0,0.1)] group">
+          <div className="space-y-6 animate-slow-fade">
+            <div className="aspect-square lg:aspect-[4/5] max-w-md mx-auto relative rounded-3xl overflow-hidden glass-card border-none shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] group">
               <div className="absolute inset-0 bg-brand-mesh opacity-5 z-0" />
               {product.images && product.images[0] ? (
                 <Image
@@ -56,9 +56,9 @@ export default async function ProductDetailPage({
             </div>
             
             {product.images && product.images.length > 1 && (
-              <div className="grid grid-cols-4 gap-6 px-4">
+              <div className="grid grid-cols-4 gap-4 px-4 max-w-md mx-auto">
                 {product.images.map((img, i) => (
-                  <div key={i} className="aspect-square relative rounded-3xl overflow-hidden glass-card border-none cursor-pointer hover:scale-105 transition-all shadow-sm">
+                  <div key={i} className="aspect-square relative rounded-2xl overflow-hidden glass-card border-none cursor-pointer hover:scale-105 transition-all shadow-sm">
                     <Image src={img} alt={`${product.name} ${i}`} fill className="object-cover" />
                   </div>
                 ))}
@@ -67,9 +67,9 @@ export default async function ProductDetailPage({
           </div>
 
           {/* Product Intelligence & Actions */}
-          <div className="flex flex-col space-y-10 animate-slow-fade delay-100">
-            <div className="space-y-6">
-              <div className="flex flex-col gap-6">
+          <div className="flex flex-col space-y-6 animate-slow-fade delay-100">
+            <div className="space-y-4">
+              <div className="flex flex-col gap-4">
                 <ConversionPulse />
                 <div className="flex items-center gap-4">
                     <Badge variant="outline" className="text-brand-navy border-brand-navy/20 font-black px-4 py-1.5 rounded-full">
@@ -82,30 +82,30 @@ export default async function ProductDetailPage({
                 </div>
               </div>
               
-              <h1 className="text-5xl md:text-7xl font-black tracking-tighter leading-[1.1]">
+              <h1 className="text-3xl md:text-5xl font-black tracking-tighter leading-tight">
                 {product.name}
               </h1>
               
-              <div className="flex items-center gap-6">
-                <span className="text-5xl font-black tracking-tighter text-gradient">
+              <div className="flex items-center gap-4">
+                <span className="text-3xl md:text-4xl font-black tracking-tighter text-gradient">
                   ₦{Number(product.basePrice).toLocaleString()}
                 </span>
-                <Badge className="bg-emerald-500/10 text-emerald-600 border-none px-4 py-1.5 font-black text-xs uppercase tracking-widest">
+                <Badge className="bg-emerald-500/10 text-emerald-600 border-none px-4 py-1 font-black text-[10px] md:text-xs uppercase tracking-widest">
                   Ready to ship
                 </Badge>
               </div>
             </div>
 
-            <p className="text-xl text-muted-foreground leading-relaxed font-medium">
+            <p className="text-sm md:text-base text-muted-foreground leading-relaxed font-medium">
               {product.description || "An exquisite piece of fashion tech architecture, designed for the next generation of style icons. Engineered with premium fabrics and sustainable methodology."}
             </p>
 
-            <div className="glass-card p-10 rounded-[2.5rem] space-y-10">
+            <div className="glass-card p-6 md:p-8 rounded-3xl space-y-6">
               <ProductActions product={product} />
               
               <Separator className="bg-border/30" />
 
-              <div className="grid grid-cols-2 gap-8">
+              <div className="grid grid-cols-2 gap-4">
                 {[
                   { icon: ShieldCheck, title: "LIFETIME QUALITY", desc: "Sustainably sourced fabrics." },
                   { icon: Truck, title: "EXPRESS DELIVERY", desc: "Next-day nationwide." }
@@ -124,15 +124,15 @@ export default async function ProductDetailPage({
             </div>
 
             {/* Features list */}
-            <div className="flex flex-wrap gap-8 px-4">
+            <div className="flex flex-wrap gap-4 px-2">
               {[
                   "100% Organic Cotton",
                   "Ethically Engineered",
                   "NextGen Exclusive",
                   "Limited Edition"
               ].map((f, i) => (
-                  <div key={i} className="flex items-center gap-3 text-sm font-bold text-muted-foreground">
-                      <Sparkles className="size-4 text-brand-navy" />
+                  <div key={i} className="flex items-center gap-2 text-xs font-bold text-muted-foreground">
+                      <Sparkles className="size-3 text-brand-navy" />
                       {f}
                   </div>
               ))}
