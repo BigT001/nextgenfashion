@@ -32,7 +32,7 @@ export default async function ProductDetailPage({
       <div className="container mx-auto px-6 py-10 md:py-16 max-w-6xl">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-start">
           {/* Product Showcase */}
-          <div className="space-y-6 animate-slow-fade">
+          <div className="space-y-6 animate-slow-fade lg:sticky lg:top-24">
             <div className="aspect-square lg:aspect-[4/5] max-w-md mx-auto relative rounded-3xl overflow-hidden glass-card border-none shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] group">
               <div className="absolute inset-0 bg-brand-mesh opacity-5 z-0" />
               {product.images && product.images[0] ? (
@@ -69,18 +69,6 @@ export default async function ProductDetailPage({
           {/* Product Intelligence & Actions */}
           <div className="flex flex-col space-y-6 animate-slow-fade delay-100">
             <div className="space-y-4">
-              <div className="flex flex-col gap-4">
-                <ConversionPulse />
-                <div className="flex items-center gap-4">
-                    <Badge variant="outline" className="text-brand-navy border-brand-navy/20 font-black px-4 py-1.5 rounded-full">
-                    {product.category.name.toUpperCase()}
-                    </Badge>
-                    <div className="flex items-center gap-1 text-amber-400">
-                    {[1,2,3,4,5].map(i => <Star key={i} className="size-4 fill-current" />)}
-                    <span className="text-xs text-muted-foreground font-bold ml-2">(48 Reviews)</span>
-                    </div>
-                </div>
-              </div>
               
               <h1 className="text-3xl md:text-5xl font-black tracking-tighter leading-tight">
                 {product.name}
@@ -102,40 +90,6 @@ export default async function ProductDetailPage({
 
             <div className="glass-card p-6 md:p-8 rounded-3xl space-y-6">
               <ProductActions product={product} />
-              
-              <Separator className="bg-border/30" />
-
-              <div className="grid grid-cols-2 gap-4">
-                {[
-                  { icon: ShieldCheck, title: "LIFETIME QUALITY", desc: "Sustainably sourced fabrics." },
-                  { icon: Truck, title: "EXPRESS DELIVERY", desc: "Next-day nationwide." }
-                ].map((item, i) => (
-                  <div key={i} className="space-y-3">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-brand-navy/10 rounded-xl">
-                        <item.icon className="size-5 text-brand-navy" />
-                      </div>
-                      <h4 className="text-xs font-black uppercase tracking-widest">{item.title}</h4>
-                    </div>
-                    <p className="text-xs text-muted-foreground font-medium">{item.desc}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Features list */}
-            <div className="flex flex-wrap gap-4 px-2">
-              {[
-                  "100% Organic Cotton",
-                  "Ethically Engineered",
-                  "NextGen Exclusive",
-                  "Limited Edition"
-              ].map((f, i) => (
-                  <div key={i} className="flex items-center gap-2 text-xs font-bold text-muted-foreground">
-                      <Sparkles className="size-3 text-brand-navy" />
-                      {f}
-                  </div>
-              ))}
             </div>
           </div>
         </div>

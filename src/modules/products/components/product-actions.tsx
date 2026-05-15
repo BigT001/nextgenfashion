@@ -51,7 +51,7 @@ export function ProductActions({ product }: ProductActionsProps) {
   };
 
   return (
-    <div className="space-y-12">
+    <div className="space-y-6">
       {/* Variants Selection */}
       <div className="space-y-8">
         {sizes.length > 0 && (
@@ -63,7 +63,7 @@ export function ProductActions({ product }: ProductActionsProps) {
                   key={size}
                   onClick={() => setSelectedSize(size)}
                   className={cn(
-                    "h-14 min-w-[4rem] px-5 rounded-2xl border-2 font-black text-sm transition-all active:scale-95",
+                    "h-10 min-w-[3rem] px-4 rounded-xl border-2 font-black text-xs transition-all active:scale-95",
                     selectedSize === size 
                       ? "border-brand-navy bg-brand-navy/5 text-brand-navy shadow-lg shadow-brand-navy/10" 
                       : "border-border/50 hover:border-brand-navy/50 glass-card"
@@ -85,7 +85,7 @@ export function ProductActions({ product }: ProductActionsProps) {
                   key={color}
                   onClick={() => setSelectedColor(color)}
                   className={cn(
-                    "group flex items-center gap-3 h-14 px-6 rounded-2xl border-2 transition-all active:scale-95",
+                    "group flex items-center gap-2 h-10 px-4 rounded-xl border-2 transition-all active:scale-95",
                     selectedColor === color 
                       ? "border-brand-navy bg-brand-navy/5" 
                       : "border-border/50 hover:border-brand-navy/50 glass-card"
@@ -103,25 +103,25 @@ export function ProductActions({ product }: ProductActionsProps) {
       </div>
 
       {/* Quantity & Actions */}
-      <div className="space-y-8">
+      <div className="space-y-6">
         <div className="flex items-center gap-6">
-            <div className="flex items-center gap-4 glass-card rounded-2xl p-2 h-16 w-44">
+            <div className="flex items-center gap-4 glass-card rounded-xl p-1 h-12 w-32">
                 <Button 
                     variant="ghost" 
                     size="icon" 
-                    className="size-12 rounded-xl hover:bg-white dark:hover:bg-zinc-800 transition-colors"
+                    className="size-10 rounded-lg hover:bg-white dark:hover:bg-zinc-800 transition-colors"
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
                 >
-                    <Minus className="size-5" />
+                    <Minus className="size-4" />
                 </Button>
-                <span className="flex-1 text-center font-black text-xl tracking-tighter">{quantity}</span>
+                <span className="flex-1 text-center font-black text-base tracking-tighter">{quantity}</span>
                 <Button 
                     variant="ghost" 
                     size="icon" 
-                    className="size-12 rounded-xl hover:bg-white dark:hover:bg-zinc-800 transition-colors"
+                    className="size-10 rounded-lg hover:bg-white dark:hover:bg-zinc-800 transition-colors"
                     onClick={() => setQuantity(quantity + 1)}
                 >
-                    <Plus className="size-5" />
+                    <Plus className="size-4" />
                 </Button>
             </div>
             <div className="flex items-center gap-2 text-xs font-black text-emerald-500 uppercase tracking-widest">
@@ -130,21 +130,21 @@ export function ProductActions({ product }: ProductActionsProps) {
             </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex flex-col sm:flex-row gap-3">
           <Button 
             size="lg" 
             onClick={handleAddToCart}
-            className="flex-[2] bg-brand-navy hover:bg-brand-navy/90 text-white h-20 rounded-[2rem] text-lg font-black tracking-widest shadow-2xl shadow-brand-navy/30 group active:scale-95 transition-all"
+            className="flex-[2] bg-brand-navy hover:bg-brand-navy/90 text-white h-14 rounded-xl text-sm font-black tracking-widest shadow-xl shadow-brand-navy/20 group active:scale-95 transition-all"
           >
-            <ShoppingCart className="mr-3 size-6 group-hover:scale-110 transition-transform" />
+            <ShoppingCart className="mr-3 size-5 group-hover:scale-110 transition-transform" />
             ADD TO COLLECTION
           </Button>
           <div className="flex flex-1 gap-3">
-            <Button size="icon" variant="outline" className="h-20 flex-1 rounded-[2rem] border-2 border-border/50 hover:text-brand-navy hover:border-brand-navy/50 transition-all glass-card">
-              <Heart className="size-7" />
+            <Button size="icon" variant="outline" className="h-14 w-14 rounded-xl border-2 border-border/50 hover:text-brand-navy hover:border-brand-navy/50 transition-all glass-card">
+              <Heart className="size-5" />
             </Button>
-            <Button size="icon" variant="outline" className="h-20 flex-1 rounded-[2rem] border-2 border-border/50 hover:text-brand-silver hover:border-brand-silver/50 transition-all glass-card">
-              <Share2 className="size-7" />
+            <Button size="icon" variant="outline" className="h-14 w-14 rounded-xl border-2 border-border/50 hover:text-brand-silver hover:border-brand-silver/50 transition-all glass-card">
+              <Share2 className="size-5" />
             </Button>
           </div>
         </div>
