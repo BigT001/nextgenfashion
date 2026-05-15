@@ -35,7 +35,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
-import { UserRole } from "@prisma/client";
+import { UserRole } from "@/modules/auth/constants";
 import Image from "next/image";
 
 const data = {

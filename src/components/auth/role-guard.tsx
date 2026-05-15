@@ -1,5 +1,5 @@
 import { auth } from "@/services/auth.service";
-import { UserRole } from "@prisma/client";
+import { UserRole } from "@/modules/auth/constants";
 
 interface RoleGuardProps {
   children: React.ReactNode;
