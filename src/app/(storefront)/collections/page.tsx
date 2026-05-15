@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import Link from "next/link";
 import { ArrowRight, Package, Sparkles, Zap, Layers } from "lucide-react";
 import { ProductQueries } from "@/modules/products/queries/product.queries";
