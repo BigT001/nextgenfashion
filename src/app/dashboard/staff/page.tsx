@@ -1,9 +1,5 @@
-import { redirect } from "next/navigation";
-import { getServerSession } from "next-auth";
 import { getStaffAction } from "@/modules/staff/actions/staff.actions";
 import { StaffTable } from "@/modules/staff/components/staff-table";
-import { UserRole } from "@prisma/client";
-import { authOptions } from "@/modules/auth/api/auth/[...nextauth]/route";
 
 export const metadata = {
   title: "Staff Management - NextGen Fashion",
@@ -29,7 +25,7 @@ export default async function StaffPage() {
 
   return (
     <div className="flex-1 space-y-4 p-8 pt-6">
-      <StaffTable data={res.data} />
+      <StaffTable data={res.data || []} />
     </div>
   );
 }
