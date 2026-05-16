@@ -90,6 +90,12 @@ const data = {
           roles: [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.STAFF],
         },
         {
+          title: "Staff",
+          url: "/dashboard/staff",
+          icon: User,
+          roles: [UserRole.SUPERADMIN, UserRole.ADMIN],
+        },
+        {
           title: "Analytics",
           url: "/dashboard/analytics",
           icon: BarChart3,

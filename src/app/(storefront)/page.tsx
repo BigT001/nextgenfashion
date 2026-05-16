@@ -52,7 +52,7 @@ export default async function LandingPage() {
         <div className="absolute top-6 left-8 z-10 animate-float" style={{ animationDuration: "6s" }}>
           <div className="relative w-20 h-20">
             {/* Rays */}
-            {[0,30,60,90,120,150,180,210,240,270,300,330].map((deg, i) => (
+            {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((deg, i) => (
               <div key={i} className="absolute top-1/2 left-1/2 origin-left"
                 style={{ width: 14, height: 4, background: "#ffd600", borderRadius: 4, transform: `rotate(${deg}deg) translateY(-50%)`, marginLeft: 10, opacity: 0.85 }} />
             ))}
@@ -154,7 +154,7 @@ export default async function LandingPage() {
         {/* White scallop wave at bottom */}
         <div className="absolute bottom-0 inset-x-0 pointer-events-none z-20">
           <svg viewBox="0 0 1440 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full">
-            <path d="M0 60C120 60 120 100 240 100C360 100 360 60 480 60C600 60 600 100 720 100C840 100 840 60 960 60C1080 60 1080 100 1200 100C1320 100 1320 60 1440 60V100H0V60Z" fill="white"/>
+            <path d="M0 60C120 60 120 100 240 100C360 100 360 60 480 60C600 60 600 100 720 100C840 100 840 60 960 60C1080 60 1080 100 1200 100C1320 100 1320 60 1440 60V100H0V60Z" fill="white" />
           </svg>
         </div>
       </section>
@@ -308,7 +308,7 @@ export default async function LandingPage() {
             <p className="text-sm font-black uppercase tracking-widest text-pink-500 mb-1">Discover More</p>
             <h2 className="text-3xl md:text-4xl font-black text-zinc-900">Top Performing <span className="text-pink-500">Categories</span></h2>
           </AnimatedSection>
-          
+
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-6xl mx-auto">
             {[
               { name: "Summer Vibes", img: "https://images.unsplash.com/photo-1622290291468-a28f7a7dc6a8?auto=format&fit=crop&q=80&w=600", link: "/shop?category=summer" },
@@ -319,11 +319,11 @@ export default async function LandingPage() {
               <AnimatedSection key={i} animation="fade-up" delay={i * 100}>
                 <Link href={cat.link}>
                   <div className="group relative rounded-3xl overflow-hidden aspect-[4/5] shadow-md hover:shadow-xl transition-all duration-300">
-                    <Image 
-                      src={cat.img} 
-                      alt={cat.name} 
-                      fill 
-                      className="object-cover group-hover:scale-110 transition-transform duration-700" 
+                    <Image
+                      src={cat.img}
+                      alt={cat.name}
+                      fill
+                      className="object-cover group-hover:scale-110 transition-transform duration-700"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex items-end p-6">
                       <h3 className="text-white font-black text-xl tracking-wide group-hover:text-pink-300 transition-colors">{cat.name}</h3>
