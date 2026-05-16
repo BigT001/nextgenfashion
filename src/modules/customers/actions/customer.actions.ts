@@ -122,3 +122,16 @@ export async function registerCustomerAction(data: {
     };
   }
 }
+
+/**
+ * Search for customers in the CRM
+ */
+export async function searchCustomersAction(query?: string) {
+  try {
+    const customers = await CustomerQueries.searchCustomers(query);
+    return { success: true, data: customers };
+  } catch (error) {
+    console.error("Error searching customers:", error);
+    return { success: false, error: "Failed to locate patrons" };
+  }
+}

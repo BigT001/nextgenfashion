@@ -116,5 +116,22 @@ export const CustomerQueries = {
       },
       trend
     };
+  },
+
+  /**
+   * Search for customers by name, email, or phone
+   */
+  async searchCustomers(query?: string) {
+    return await prisma.customer.findMany({
+      where: query ? {
+        OR: [
+          { name: { contains: query, mode: 'insensitive' } },
+          { email: { contains: query, mode: 'insensitive' } },
+          { phone: { contains: query, mode: 'insensitive' } },
+        ]
+      } : undefined,
+      take: 10,
+      orderBy: { name: 'asc' }
+    });
   }
 };
