@@ -53,7 +53,7 @@ export function InventoryHistoryViewer({ variantId, refreshTrigger = 0 }: Invent
           {logs.length} Activity Events
         </span>
       </div>
-      <div className="max-h-[300px] overflow-y-auto pr-2 space-y-3 relative before:absolute before:inset-0 before:ml-4 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-border/50 before:to-transparent custom-scrollbar">
+      <div className="max-h-[650px] overflow-y-auto pr-2 space-y-3 relative before:absolute before:inset-0 before:ml-4 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-border/50 before:to-transparent custom-scrollbar">
         {logs.map((log) => {
           const isDecrement = log.action === "STOCK_DECREMENT";
           const isIncrement = log.action === "STOCK_INCREMENT";

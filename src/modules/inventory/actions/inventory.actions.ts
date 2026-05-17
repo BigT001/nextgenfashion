@@ -20,10 +20,39 @@ export async function getInventoryDashboardAction() {
     });
 
     // Process data for dashboard view
-    const processedProducts = products.map(p => {
+    const processedProducts = await Promise.all(products.map(async p => {
       const totalStock = p.variants.reduce((acc, v) => acc + (v.inventory?.quantity || 0), 0);
       const isLowStock = p.variants.some(v => (v.inventory?.quantity || 0) <= (v.inventory?.lowStockThreshold || 5));
       const status = totalStock === 0 ? "Out of Stock" : isLowStock ? "Low Stock" : "In Stock";
+
+      // Fetch latest movement log for the main variant
+      const mainVariantId = p.variants[0]?.id;
+      let lastMovement = "No movements logged";
+      if (mainVariantId) {
+        const latestLog = await prisma.auditLog.findFirst({
+          where: {
+            entity: "ProductVariant",
+            entityId: mainVariantId
+          },
+          orderBy: {
+            createdAt: "desc"
+          }
+        });
+        if (latestLog) {
+          const details = latestLog.details as any;
+          const reason = (details?.reason || "").toLowerCase();
+          
+          if (latestLog.action === "STOCK_DECREMENT" && (reason.includes("customer purchase") || reason.includes("sale") || reason.includes("pos"))) {
+            lastMovement = "SALES OUTFLOW";
+          } else if (latestLog.action === "STOCK_DECREMENT") {
+            lastMovement = "STOCK DECREMENT";
+          } else if (latestLog.action === "STOCK_INCREMENT") {
+            lastMovement = "STOCK INCREMENT";
+          } else {
+            lastMovement = latestLog.action.replace("_", " ");
+          }
+        }
+      }
 
       return {
         id: p.id,
@@ -38,9 +67,10 @@ export async function getInventoryDashboardAction() {
         images: p.images,
         image: p.images?.[0] || null,
         isSuspended: p.isSuspended,
-        status
+        status,
+        lastMovement
       };
-    });
+    }));
 
     // Calculate Executive KPIs
     const totalInventoryValue = processedProducts.reduce((acc, p) => acc + (p.price * p.stock), 0);

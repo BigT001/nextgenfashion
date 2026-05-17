@@ -23,7 +23,8 @@ import {
   ChevronDown,
   ChevronRight,
   Ban,
-  Trash
+  Trash,
+  History
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
@@ -70,6 +71,7 @@ export default function InventoryClient({ initialData }: { initialData: any }) {
   const [actionType, setActionType] = useState<"SUSPEND" | "DELETE" | null>(null);
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [historyItem, setHistoryItem] = useState<any>(null);
 
   const handleExportLedger = () => {
     if (!data?.products) return;
@@ -103,22 +105,7 @@ export default function InventoryClient({ initialData }: { initialData: any }) {
   };
 
   const columns: ColumnDef<any>[] = [
-    {
-      id: "expander",
-      header: () => null,
-      cell: ({ row }) => {
-        return (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-muted-foreground hover:bg-brand-navy/5 hover:text-brand-navy"
-            onClick={row.getToggleExpandedHandler()}
-          >
-            {row.getIsExpanded() ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-          </Button>
-        )
-      },
-    },
+
     {
       accessorKey: "image",
       header: "IMAGE",
@@ -188,23 +175,58 @@ export default function InventoryClient({ initialData }: { initialData: any }) {
       },
     },
     {
+      id: "history",
+      header: "LAST MOVEMENT",
+      cell: ({ row }) => {
+        const lastMovement = row.original.lastMovement || "No movements logged";
+        
+        let colorClasses = "text-muted-foreground hover:text-foreground bg-muted/10 border-border/10";
+        if (lastMovement === "STOCK INCREMENT") {
+          colorClasses = "text-emerald-600 hover:text-emerald-700 bg-emerald-500/5 border-emerald-500/10 hover:bg-emerald-500/10";
+        } else if (lastMovement === "SALES OUTFLOW") {
+          colorClasses = "text-indigo-600 hover:text-indigo-700 bg-indigo-500/5 border-indigo-500/10 hover:bg-indigo-500/10";
+        } else if (lastMovement === "STOCK DECREMENT") {
+          colorClasses = "text-amber-600 hover:text-amber-700 bg-amber-500/5 border-amber-500/10 hover:bg-amber-500/10";
+        } else if (lastMovement.includes("SUSPENDED")) {
+          colorClasses = "text-rose-600 hover:text-rose-700 bg-rose-500/5 border-rose-500/10 hover:bg-rose-500/10";
+        } else if (lastMovement.includes("ACTIVATED")) {
+          colorClasses = "text-sky-600 hover:text-sky-700 bg-sky-500/5 border-sky-500/10 hover:bg-sky-500/10";
+        }
+
+        return (
+          <Button
+            variant="ghost"
+            onClick={() => setHistoryItem(row.original)}
+            className={cn(
+              "flex items-center gap-2 text-xs font-black rounded-xl px-3 py-1.5 h-auto transition-all text-left max-w-[220px] justify-start shadow-sm border",
+              colorClasses
+            )}
+          >
+            <History className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate uppercase tracking-wide text-[10px]">{lastMovement}</span>
+          </Button>
+        )
+      },
+    },
+    {
       id: "actions",
-      header: () => <div className="text-right">CONTROL</div>,
+      header: () => <div className="text-right pr-4">CONTROL</div>,
       cell: ({ row }) => (
-        <div className="text-right">
+        <div className="flex items-center justify-end gap-2 pr-2">
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 px-3.5 font-black text-[10px] uppercase tracking-widest bg-brand-navy/5 text-brand-navy hover:bg-brand-navy hover:text-white border-none rounded-xl active:scale-95 transition-all flex items-center gap-1.5"
+            onClick={() => setStockUpdateItem(row.original)}
+          >
+            <Zap className="h-3.5 w-3.5" /> Adjust
+          </Button>
           <DropdownMenu>
-            <DropdownMenuTrigger className="h-8 w-8 p-0 inline-flex items-center justify-center hover:bg-brand-navy/5 hover:text-brand-navy rounded-lg transition-colors">
-                <MoreHorizontal className="h-4 w-4" />
+            <DropdownMenuTrigger className="h-8 w-8 inline-flex items-center justify-center hover:bg-brand-navy/5 hover:text-brand-navy rounded-xl transition-colors text-muted-foreground focus:outline-none">
+              <MoreHorizontal className="h-4 w-4" />
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 glass-card border-none shadow-2xl p-2 rounded-2xl">
+            <DropdownMenuContent align="end" className="w-52 glass-card border-none shadow-2xl p-2 rounded-2xl">
               <DropdownMenuGroup>
-                <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground p-3">Logistics Actions</DropdownMenuLabel>
-                <DropdownMenuItem 
-                  className="rounded-xl h-10 font-bold gap-3 focus:bg-brand-navy/5 focus:text-brand-navy cursor-pointer"
-                  onClick={() => setStockUpdateItem(row.original)}
-                >
-                  <Zap className="size-4" /> Adjust Inventory
-                </DropdownMenuItem>
                 <BarcodeVisualizer 
                   variantId={row.original.variantId} 
                   sku={row.original.sku} 
@@ -225,7 +247,7 @@ export default function InventoryClient({ initialData }: { initialData: any }) {
                     setActionType("SUSPEND");
                   }}
                 >
-                  <Ban className="size-4" /> {row.original.isSuspended ? "Activate" : "Suspend"}
+                  <Ban className="size-4" /> {row.original.isSuspended ? "Activate Product" : "Suspend Product"}
                 </DropdownMenuItem>
                 <DropdownMenuItem 
                   className="rounded-xl h-10 font-bold gap-3 focus:bg-rose-500/10 focus:text-rose-600 text-rose-600 cursor-pointer"
@@ -234,7 +256,7 @@ export default function InventoryClient({ initialData }: { initialData: any }) {
                     setActionType("DELETE");
                   }}
                 >
-                  <Trash className="size-4" /> Delete
+                  <Trash className="size-4" /> Delete Product
                 </DropdownMenuItem>
               </DropdownMenuGroup>
             </DropdownMenuContent>
@@ -277,7 +299,7 @@ export default function InventoryClient({ initialData }: { initialData: any }) {
             if (!open) {
               setStockUpdateItem(null);
               setAdjustmentValue(0);
-              setAdjustmentReason("Restock");
+              setAdjustmentReason("");
               setAdjustmentMode("ADD");
             }
           }}>
@@ -313,11 +335,10 @@ export default function InventoryClient({ initialData }: { initialData: any }) {
                 <div className="space-y-2">
                   <label className="text-[9px] font-black uppercase tracking-[0.15em] text-muted-foreground">Adjustment Action</label>
                   <div className="grid grid-cols-2 gap-3">
-                    <button 
+                     <button 
                       type="button"
                       onClick={() => {
                         setAdjustmentMode("ADD");
-                        setAdjustmentReason("Restock");
                       }}
                       className={cn(
                         "h-11 rounded-xl font-black text-xs uppercase tracking-widest border transition-all flex items-center justify-center gap-2 cursor-pointer",
@@ -332,7 +353,6 @@ export default function InventoryClient({ initialData }: { initialData: any }) {
                       type="button"
                       onClick={() => {
                         setAdjustmentMode("SUB");
-                        setAdjustmentReason("Shrinkage/Damage");
                       }}
                       className={cn(
                         "h-11 rounded-xl font-black text-xs uppercase tracking-widest border transition-all flex items-center justify-center gap-2 cursor-pointer",
@@ -358,10 +378,11 @@ export default function InventoryClient({ initialData }: { initialData: any }) {
                 </div>
                 
                 <div className="space-y-2">
-                  <label className="text-[9px] font-black uppercase tracking-[0.15em] text-muted-foreground">Reasoning</label>
+                  <label className="text-[9px] font-black uppercase tracking-[0.15em] text-muted-foreground">Reason</label>
                   <Input 
                     value={adjustmentReason} 
                     onChange={(e) => setAdjustmentReason(e.target.value)}
+                    placeholder={adjustmentMode === "SUB" ? "What is the reason for reduction?" : "What is the reason for addition?"}
                     className="h-11 rounded-xl border border-border/50 bg-muted/20 font-bold text-sm focus:border-brand-navy"
                   />
                 </div>
@@ -374,11 +395,13 @@ export default function InventoryClient({ initialData }: { initialData: any }) {
                       return;
                     }
                     const change = adjustmentMode === "ADD" ? adjustmentValue : -adjustmentValue;
-                    const res = await updateStockAction(stockUpdateItem.variantId, change, adjustmentReason);
+                    const reasonFallback = adjustmentReason.trim() || (adjustmentMode === "ADD" ? "Restock" : "Shrinkage/Damage");
+                    const res = await updateStockAction(stockUpdateItem.variantId, change, reasonFallback);
                     if (res.success) {
                         toast.success("Stock inventory updated successfully");
                         setStockUpdateItem(null);
                         setAdjustmentValue(0);
+                        setAdjustmentReason("");
                         loadData();
                     } else {
                         toast.error(res.error);
@@ -508,13 +531,27 @@ export default function InventoryClient({ initialData }: { initialData: any }) {
         </DialogContent>
       </Dialog>
 
+      {/* History Dialog */}
+      <Dialog open={!!historyItem} onOpenChange={(open) => !open && setHistoryItem(null)}>
+        <DialogContent className="max-w-4xl glass-card border-none p-0 overflow-hidden rounded-[2rem] shadow-2xl">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Product Audit Ledger</DialogTitle>
+            <DialogDescription>Comprehensive logistics movements</DialogDescription>
+          </DialogHeader>
+          <div className="p-12 max-h-[85vh] overflow-y-auto custom-scrollbar">
+            {historyItem && (
+              <InventoryHistoryViewer variantId={historyItem.variantId} refreshTrigger={refreshTrigger} />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Main Table Layer */}
       <div className="overflow-hidden">
         <DataTable 
           columns={columns} 
           data={data?.products || []} 
           searchKey="name"
-          renderSubComponent={({ row }) => <InventoryHistoryViewer variantId={row.original.variantId} refreshTrigger={refreshTrigger} />}
         />
       </div>
     </div>
