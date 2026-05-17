@@ -22,7 +22,8 @@ const prismaClientSingleton = () => {
   const models = (client as any)._dmmf?.modelMap;
   if (models && models.Product) {
     const hasCostPrice = models.Product.fields.some((f: any) => f.name === "costPrice");
-    console.log(`[PRISMA_SERVICE] Product model has costPrice: ${hasCostPrice}`);
+    const hasTargetGender = models.Product.fields.some((f: any) => f.name === "targetGender");
+    console.log(`[PRISMA_SERVICE] Product model has costPrice: ${hasCostPrice}, targetGender: ${hasTargetGender}`);
   }
   
   return client;

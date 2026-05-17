@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "NextGen Fashion OS | Enterprise Retail Ecosystem",
+  title: "NextGen Kiddies OS | Enterprise Retail Ecosystem",
   description: "High-Fidelity Children's Fashion Retail Operating System",
 };
 

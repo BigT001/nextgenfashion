@@ -20,6 +20,15 @@ interface Customer {
   phone?: string | null;
 }
 
+interface SuspendedSale {
+  id: string;
+  cart: CartItem[];
+  customer: Customer | null;
+  discount: number;
+  discountType: "FIXED" | "PERCENTAGE";
+  createdAt: Date;
+}
+
 interface POSState {
   cart: CartItem[];
   customer: Customer | null;
@@ -29,6 +38,7 @@ interface POSState {
   taxRate: number; // e.g., 0.075 for 7.5%
   taxAmount: number;
   total: number;
+  suspendedSales: SuspendedSale[];
   
   // Actions
   addItem: (item: Omit<CartItem, 'quantity' | 'discount'>) => void;
@@ -40,6 +50,9 @@ interface POSState {
   setTaxRate: (rate: number) => void;
   clearCart: () => void;
   calculateTotals: () => void;
+  suspendSale: () => void;
+  resumeSale: (id: string) => void;
+  deleteSuspendedSale: (id: string) => void;
 }
 
 export const usePOSStore = create<POSState>()(
@@ -53,6 +66,7 @@ export const usePOSStore = create<POSState>()(
       taxRate: 0.075, // 7.5% VAT
       taxAmount: 0,
       total: 0,
+      suspendedSales: [],
 
       addItem: (item) => {
         const { cart } = get();
@@ -151,6 +165,46 @@ export const usePOSStore = create<POSState>()(
         const total = taxableAmount + taxAmount;
         
         set({ subtotal, taxAmount, total });
+      },
+
+      suspendSale: () => {
+        const { cart, customer, discount, discountType, suspendedSales } = get();
+        if (cart.length === 0) return;
+
+        const newSuspendedSale: SuspendedSale = {
+          id: Math.random().toString(36).substring(2, 9),
+          cart,
+          customer,
+          discount,
+          discountType,
+          createdAt: new Date(),
+        };
+
+        set({
+          suspendedSales: [newSuspendedSale, ...suspendedSales],
+        });
+        get().clearCart();
+      },
+
+      resumeSale: (id) => {
+        const { suspendedSales } = get();
+        const sale = suspendedSales.find((s) => s.id === id);
+        if (!sale) return;
+
+        set({
+          cart: sale.cart,
+          customer: sale.customer,
+          discount: sale.discount,
+          discountType: sale.discountType,
+          suspendedSales: suspendedSales.filter((s) => s.id !== id),
+        });
+        get().calculateTotals();
+      },
+
+      deleteSuspendedSale: (id) => {
+        set({
+          suspendedSales: get().suspendedSales.filter((s) => s.id !== id),
+        });
       },
     }),
     {

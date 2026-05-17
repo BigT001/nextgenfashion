@@ -11,36 +11,33 @@ import { GetProductsService } from "@/modules/products/services/get-products.ser
 import { ProductCard } from "@/modules/products/components/product-card";
 import { LiveBrandPulse } from "@/modules/brand/components/live-brand-pulse";
 import { AnimatedSection } from "@/components/ui/animated-section";
+import { ProductQueries } from "@/modules/products/queries/product.queries";
 
 export default async function LandingPage() {
   let featuredProducts: any[] = [];
+  let dbCategories: any[] = [];
   try {
-    featuredProducts = await GetProductsService.findFeatured(8);
+    const [products, cats] = await Promise.all([
+      GetProductsService.findFeatured(8),
+      ProductQueries.findCategories()
+    ]);
+    featuredProducts = products;
+    dbCategories = cats;
   } catch {
     featuredProducts = [];
+    dbCategories = [];
   }
 
-  const testimonials = [
-    { name: "Adaeze O.", city: "Lagos", text: "My daughter refuses to wear anything else! The quality is amazing.", stars: 5, color: "#f472b6" },
-    { name: "Emeka P.", city: "Abuja", text: "Fast delivery and the clothes look even better in person. 10/10!", stars: 5, color: "#38bdf8" },
-    { name: "Fatima K.", city: "Kano", text: "My twins love their outfits. Great colours, great quality!", stars: 5, color: "#fbbf24" },
-  ];
+  const categories = dbCategories.map(cat => {
+    // Priority: 1. Dedicated Category Image, 2. First Product Image, 3. Null (show fallback icon)
+    const displayImage = cat.image || (cat.products?.[0]?.images?.[0]) || null;
 
-  const perks = [
-    { icon: Truck, title: "Fast Delivery", desc: "Free for all ₦15k+ Orders", color: "#f59e0b", bg: "#fef3c7" },
-    { icon: ShieldCheck, title: "Best Quality", desc: "Best Prices for Kids Wear", color: "#10b981", bg: "#d1fae5" },
-    { icon: RefreshCw, title: "Exchange Offer", desc: "One Day Exchange Product", color: "#3b82f6", bg: "#dbeafe" },
-    { icon: Headphones, title: "Help Center", desc: "Support System 24/7", color: "#f43f5e", bg: "#ffe4e6" },
-  ];
-
-  const categories = [
-    { name: "Boys", emoji: "🧢", color: "#3b82f6", bg: "from-blue-400 to-blue-600", href: "/shop?category=boys" },
-    { name: "Girls", emoji: "🎀", color: "#ec4899", bg: "from-pink-400 to-rose-500", href: "/shop?category=girls" },
-    { name: "Baby", emoji: "🍼", color: "#f59e0b", bg: "from-amber-400 to-orange-500", href: "/shop?category=baby" },
-    { name: "School", emoji: "📚", color: "#10b981", bg: "from-emerald-400 to-teal-600", href: "/shop?category=school" },
-    { name: "Casual", emoji: "👟", color: "#8b5cf6", bg: "from-violet-400 to-purple-600", href: "/shop?category=casual" },
-    { name: "Formal", emoji: "🎩", color: "#0B1E3F", bg: "from-slate-600 to-slate-800", href: "/shop?category=formal" },
-  ];
+    return {
+      name: cat.name,
+      image: displayImage,
+      href: `/shop?category=${cat.id}`
+    };
+  });
 
   return (
     <div className="flex flex-col bg-white overflow-x-hidden">
@@ -145,8 +142,8 @@ export default async function LandingPage() {
               <div><p className="font-black text-xs text-zinc-900">100+ Styles</p><p className="text-[10px] text-zinc-400">New Season</p></div>
             </div>
             <div className="absolute bottom-8 right-4 bg-white rounded-2xl px-4 py-2.5 shadow-xl animate-float-delay-3 z-30 flex items-center gap-2">
-              <span className="text-lg">🚚</span>
-              <div><p className="font-black text-xs text-zinc-900">Free Delivery</p><p className="text-[10px] text-zinc-400">On ₦15k+</p></div>
+              <span className="text-lg">📦</span>
+              <div><p className="font-black text-xs text-zinc-900">Fast Shipping</p><p className="text-[10px] text-zinc-400">Secure Dispatch</p></div>
             </div>
           </div>
         </div>
@@ -172,15 +169,26 @@ export default async function LandingPage() {
             </h2>
           </AnimatedSection>
 
-          <div className="flex flex-wrap justify-center gap-6 md:gap-10 max-w-4xl mx-auto">
+          <div className="flex items-center gap-5 md:gap-8 overflow-x-auto py-4 pb-8 scrollbar-hide px-6 md:justify-center">
             {categories.map((cat, i) => (
-              <AnimatedSection key={i} animation="zoom-in" delay={i * 60}>
+              <AnimatedSection key={i} animation="zoom-in" delay={i * 60} className="flex-shrink-0">
                 <Link href={cat.href}>
-                  <div className="group flex flex-col items-center gap-2 cursor-pointer">
-                    <div className={`w-14 h-14 md:w-16 md:h-16 rounded-full bg-gradient-to-br ${cat.bg} flex items-center justify-center text-2xl md:text-3xl shadow-md group-hover:scale-110 group-hover:shadow-lg transition-all duration-300`}>
-                      {cat.emoji}
+                  <div className="group flex flex-col items-center gap-3 cursor-pointer">
+                    <div className="w-14 h-14 md:w-18 md:h-18 rounded-full overflow-hidden bg-zinc-100 flex items-center justify-center shadow-md group-hover:scale-110 group-hover:shadow-brand-navy/30 transition-all duration-500 relative border-2 border-transparent group-hover:border-brand-navy">
+                      {cat.image ? (
+                        <Image 
+                          src={cat.image} 
+                          alt={cat.name} 
+                          fill 
+                          className="object-cover transition-transform duration-700 group-hover:scale-110" 
+                        />
+                      ) : (
+                        <div className="flex flex-col items-center justify-center text-zinc-300">
+                          <Gift className="size-6 opacity-40" />
+                        </div>
+                      )}
                     </div>
-                    <p className="font-black text-[11px] md:text-xs text-zinc-800 group-hover:text-pink-500 transition-colors">{cat.name}</p>
+                    <p className="font-black text-[9px] md:text-[10px] text-zinc-500 group-hover:text-brand-navy transition-colors uppercase tracking-[0.2em]">{cat.name}</p>
                   </div>
                 </Link>
               </AnimatedSection>
@@ -231,71 +239,76 @@ export default async function LandingPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
 
               {/* Banner 1 — Boys */}
-              <div className="relative rounded-3xl overflow-hidden h-48 flex items-center px-8 shadow-lg"
+              <div className="relative rounded-3xl overflow-hidden h-48 flex items-center px-8 shadow-lg group cursor-pointer hover:-translate-y-1 hover:shadow-2xl transition-all duration-500"
                 style={{ background: "linear-gradient(135deg,#ffd600,#ff6f00)" }}>
                 <div className="relative z-10">
                   <p className="text-white/80 font-black text-xs uppercase tracking-widest mb-1">Play Like</p>
                   <h3 className="text-3xl font-black text-white leading-tight">Boy Toys<br />&amp; Fashion</h3>
                   <Link href="/shop?category=boys">
-                    <button className="mt-4 bg-white text-yellow-700 font-black text-xs uppercase tracking-widest px-5 py-2 rounded-full hover:bg-yellow-50 transition-all">
+                    <button className="mt-4 bg-white text-yellow-700 font-black text-xs uppercase tracking-widest px-5 py-2 rounded-full group-hover:bg-yellow-50 group-hover:scale-105 transition-all">
                       SHOP ONLINE
                     </button>
                   </Link>
                 </div>
-                <div className="absolute right-4 bottom-0 text-7xl opacity-70">🧢</div>
+                <div className="absolute right-4 bottom-0 text-7xl opacity-70 group-hover:scale-110 group-hover:rotate-6 transition-transform duration-500">🧢</div>
               </div>
 
               {/* Banner 2 — Big Discount */}
-              <div className="relative rounded-3xl overflow-hidden h-48 flex items-center px-8 shadow-lg"
+              <div className="relative rounded-3xl overflow-hidden h-48 flex items-center px-8 shadow-lg group cursor-pointer hover:-translate-y-1 hover:shadow-2xl transition-all duration-500"
                 style={{ background: "linear-gradient(135deg,#43a047,#1de9b6)" }}>
                 <div className="relative z-10">
                   <p className="text-white/80 font-black text-xs uppercase tracking-widest mb-1">Special Deal</p>
                   <h3 className="text-3xl font-black text-white leading-tight">Big<br />Discount</h3>
-                  <div className="mt-1 bg-yellow-400 text-yellow-900 font-black text-lg px-4 py-1 rounded-full inline-block">50% OFF</div>
+                  <div className="mt-1 bg-yellow-400 text-yellow-900 font-black text-lg px-4 py-1 rounded-full inline-block group-hover:scale-110 transition-transform">50% OFF</div>
                   <br />
                   <Link href="/shop">
-                    <button className="mt-3 bg-white text-green-700 font-black text-xs uppercase tracking-widest px-5 py-2 rounded-full hover:bg-green-50 transition-all">
+                    <button className="mt-3 bg-white text-green-700 font-black text-xs uppercase tracking-widest px-5 py-2 rounded-full group-hover:bg-green-50 group-hover:scale-105 transition-all">
                       SHOP NOW
                     </button>
                   </Link>
                 </div>
-                <div className="absolute right-4 bottom-0 text-7xl opacity-70">🎉</div>
+                <div className="absolute right-4 bottom-0 text-7xl opacity-70 group-hover:scale-110 group-hover:-rotate-12 transition-transform duration-500">🎉</div>
               </div>
 
-              {/* Banner 3 — Gift Voucher */}
-              <div className="relative rounded-3xl overflow-hidden h-48 flex items-center px-8 shadow-lg"
-                style={{ background: "linear-gradient(135deg,#ffe082,#ffca28)" }}>
+              {/* Banner 3 — Elite Selection */}
+              <div className="relative rounded-3xl overflow-hidden h-48 flex items-center px-8 shadow-lg group cursor-pointer hover:-translate-y-1 hover:shadow-2xl transition-all duration-500"
+                style={{ background: "linear-gradient(135deg,#ff8a80,#e91e63)" }}>
                 <div className="relative z-10">
-                  <p className="text-yellow-800/70 font-black text-xs uppercase tracking-widest mb-1">Special Offer</p>
-                  <div className="bg-white/30 backdrop-blur-sm px-3 py-1 rounded-full text-yellow-900 font-black text-sm mb-2">100% Value</div>
-                  <h3 className="text-3xl font-black text-yellow-900 leading-tight">Gift 🎁<br />Voucher</h3>
+                  <p className="text-white/80 font-black text-xs uppercase tracking-widest mb-1">Style Update</p>
+                  <div className="bg-white/30 backdrop-blur-sm px-3 py-1 rounded-full text-white font-black text-sm mb-2 inline-block">Premium Range</div>
+                  <h3 className="text-3xl font-black text-white leading-tight">Elite 👗<br />Selection</h3>
                   <Link href="/shop">
-                    <button className="mt-3 bg-yellow-700 text-white font-black text-xs uppercase tracking-widest px-5 py-2 rounded-full hover:bg-yellow-800 transition-all">
+                    <button className="mt-3 bg-white text-pink-700 font-black text-xs uppercase tracking-widest px-5 py-2 rounded-full group-hover:bg-pink-50 group-hover:scale-105 transition-all">
                       SHOP ONLINE
                     </button>
                   </Link>
                 </div>
+                <div className="absolute right-4 bottom-0 text-7xl opacity-20 group-hover:opacity-40 transition-opacity">✨</div>
               </div>
             </div>
 
             {/* Full-width banner */}
-            <div className="mt-5 relative rounded-3xl overflow-hidden h-36 flex items-center px-10 shadow-lg"
+            <div className="mt-5 relative rounded-3xl overflow-hidden h-36 flex items-center px-10 shadow-lg group cursor-pointer hover:shadow-2xl transition-all duration-500"
               style={{ background: "linear-gradient(90deg,#29b6f6 0%,#0288d1 50%,#01579b 100%)" }}>
+              <div className="absolute inset-0 bg-brand-mesh opacity-10 group-hover:opacity-20 transition-opacity" />
               <div className="relative z-10">
                 <p className="text-white/70 font-black text-xs uppercase tracking-widest mb-1">New Arrivals</p>
-                <h3 className="text-3xl md:text-4xl font-black text-white">Kids Collection 2025</h3>
+                <h3 className="text-3xl md:text-4xl font-black text-white">Kids Collection {new Date().getFullYear()}</h3>
               </div>
               <Link href="/shop" className="ml-6 relative z-10">
-                <button className="bg-yellow-400 text-blue-900 font-black text-xs uppercase tracking-widest px-6 py-3 rounded-full hover:bg-yellow-300 transition-all shadow-lg">
+                <button className="bg-yellow-400 text-blue-900 font-black text-xs uppercase tracking-widest px-6 py-3 rounded-full hover:bg-yellow-300 group-hover:scale-105 transition-all shadow-lg active:scale-95">
                   SHOP NOW →
                 </button>
               </Link>
+              <div className="absolute right-10 top-0 bottom-0 flex items-center opacity-10 group-hover:opacity-30 transition-opacity">
+                <div className="flex gap-4 text-5xl">🎒 👗 👟</div>
+              </div>
+            </div>
               {/* Decorative emojis */}
               <span className="absolute right-32 top-4 text-5xl opacity-60 animate-float">👗</span>
               <span className="absolute right-16 bottom-4 text-4xl opacity-60 animate-float-delay-2">👟</span>
               <span className="absolute right-56 top-8 text-3xl opacity-40 animate-float-delay-1">🎒</span>
             </div>
-          </div>
         </section>
       </AnimatedSection>
 

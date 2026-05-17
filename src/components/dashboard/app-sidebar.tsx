@@ -12,7 +12,7 @@ import {
   PackagePlus,
   Zap,
   ChevronRight,
-  LogOut,
+  ChevronDown,
   Sparkles,
   ShieldCheck,
   User
@@ -111,15 +111,21 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { data: session } = useSession();
   const userRole = (session?.user as any)?.role as UserRole || UserRole.STAFF;
 
-  const handleSignOut = () => {
-    signOut({ callbackUrl: "/auth/staff" });
+  const [expandedGroups, setExpandedGroups] = React.useState<Record<string, boolean>>({
+    Core: true,
+    Management: true,
+    Business: true,
+  });
+
+  const toggleGroup = (title: string) => {
+    setExpandedGroups(prev => ({ ...prev, [title]: !prev[title] }));
   };
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-border/10 bg-zinc-950/[0.01]" {...props}>
+    <Sidebar collapsible="icon" className="border-r-0 bg-brand-navy" {...props}>
       {/* High-Fidelity Header - Compact */}
-      <SidebarHeader className="h-20 flex items-center justify-center">
-        <div className="flex items-center gap-3 px-4 w-full group">
+      <SidebarHeader className="h-20 flex items-center justify-center border-b border-white/10">
+        <div className="flex items-center gap-3 px-4 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:justify-center w-full group">
           <div className="flex aspect-square size-10 items-center justify-center rounded-xl bg-white shadow-lg shadow-brand-navy/5 group-hover:scale-105 transition-transform duration-500 ring-1 ring-border/50 p-1.5 shrink-0">
             <Image 
                 src="/images/logonextgen.png" 
@@ -130,25 +136,30 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             />
           </div>
           <div className="flex flex-col leading-none group-data-[collapsible=icon]:hidden text-left">
-            <span className="font-black text-base tracking-tighter text-brand-navy">Business</span>
-            <span className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground/60 font-black">Suite</span>
+            <span className="font-black text-base tracking-tighter text-white">Business</span>
+            <span className="text-[10px] uppercase tracking-[0.3em] text-white/60 font-black">Suite</span>
           </div>
         </div>
       </SidebarHeader>
       
       {/* Navigation Content - Optimized Spacing */}
-      <SidebarContent className="px-3 pt-2">
+      <SidebarContent className="px-3 group-data-[collapsible=icon]:px-2 pt-2">
         {data.navMain.map((group) => {
           const visibleItems = group.items.filter(item => item.roles.includes(userRole));
           if (visibleItems.length === 0) return null;
 
           return (
-            <SidebarGroup key={group.title} className="py-2">
-              <SidebarGroupLabel className="px-5 text-[9px] font-black uppercase tracking-[0.4em] text-muted-foreground/30 group-data-[collapsible=icon]:hidden mb-2">
+            <SidebarGroup key={group.title} className="py-0 mt-4">
+              <SidebarGroupLabel 
+                className="px-5 text-[9px] font-black uppercase tracking-[0.4em] text-white/50 hover:text-white cursor-pointer group-data-[collapsible=icon]:hidden mb-1 flex items-center justify-between transition-colors"
+                onClick={() => toggleGroup(group.title)}
+              >
                 {group.title}
+                {expandedGroups[group.title] ? <ChevronDown className="size-3" /> : <ChevronRight className="size-3" />}
               </SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu className="gap-1">
+              {expandedGroups[group.title] && (
+                <SidebarGroupContent>
+                  <SidebarMenu className="gap-0">
                   {visibleItems.map((item) => {
                     // Strict matching for Dashboard, startsWith for others
                     const isActive = item.url === "/dashboard" 
@@ -162,19 +173,19 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                           tooltip={item.title}
                           render={<Link href={item.url} />}
                           className={cn(
-                            "h-11 px-5 rounded-xl transition-all duration-300 group/item relative overflow-hidden flex items-center gap-3 w-full",
+                            "h-10 px-5 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:w-12 group-data-[collapsible=icon]:mx-auto rounded-xl transition-all duration-300 group/item relative overflow-hidden flex items-center gap-3 w-full",
                             isActive 
-                              ? "bg-brand-navy text-white shadow-lg shadow-brand-navy/10" 
-                              : "text-muted-foreground/50 hover:bg-brand-navy/[0.03] hover:text-brand-navy"
+                              ? "bg-white text-brand-navy font-black shadow-md group-data-[collapsible=icon]:bg-transparent group-data-[collapsible=icon]:shadow-none group-data-[collapsible=icon]:text-white" 
+                              : "text-white/60 hover:bg-white/10 hover:text-white group-data-[collapsible=icon]:text-white/40"
                           )}
                         >
                             <item.icon className={cn(
-                              "size-4.5 transition-colors",
-                              isActive ? "text-white" : "group-hover/item:text-brand-navy"
+                              "size-4.5 group-data-[collapsible=icon]:size-6 transition-colors",
+                              isActive ? "text-brand-navy group-data-[collapsible=icon]:text-white" : "group-hover/item:text-white"
                             )} />
-                            <span className="text-sm font-bold tracking-tight">{item.title}</span>
+                            <span className="text-sm tracking-tight group-data-[collapsible=icon]:hidden">{item.title}</span>
                             {isActive && (
-                                <div className="absolute right-0 top-2 bottom-2 w-1 bg-white/20 rounded-l-full" />
+                                <div className="absolute right-0 top-2 bottom-2 w-1 bg-brand-navy rounded-l-full group-data-[collapsible=icon]:hidden" />
                             )}
                         </SidebarMenuButton>
                       </SidebarMenuItem>
@@ -182,41 +193,30 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   })}
                 </SidebarMenu>
               </SidebarGroupContent>
+              )}
             </SidebarGroup>
           );
         })}
       </SidebarContent>
 
       {/* High-Fidelity Footer */}
-      <SidebarFooter className="p-6 mt-auto border-t border-border/30 bg-white/30 dark:bg-zinc-950/30 backdrop-blur-xl">
-        <div className="space-y-6">
+      <SidebarFooter className="p-4 mt-auto border-t border-white/10 bg-brand-navy">
+        <div className="space-y-4">
           {session?.user && (
             <div className="flex items-center gap-4 px-2 group-data-[collapsible=icon]:hidden animate-slow-fade">
-              <div className="size-11 rounded-[1.25rem] bg-brand-navy/10 flex items-center justify-center font-black text-brand-navy border border-brand-navy/20 shadow-inner group-hover:rotate-12 transition-transform">
+              <div className="size-11 rounded-[1.25rem] bg-white/10 flex items-center justify-center font-black text-white border border-white/20 shadow-inner group-hover:rotate-12 transition-transform">
                 <User className="size-5" />
               </div>
               <div className="flex flex-col min-w-0">
-                <span className="text-xs font-black truncate">{session.user.name || "Executive"}</span>
-                <span className="text-[9px] text-muted-foreground truncate uppercase tracking-[0.2em] font-black opacity-60">
+                <span className="text-xs font-black text-white truncate">{session.user.name || "Executive"}</span>
+                <span className="text-[9px] text-white/60 truncate uppercase tracking-[0.2em] font-black">
                   {userRole} NODE
                 </span>
               </div>
             </div>
           )}
           
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                className="h-12 px-5 rounded-[1.25rem] text-muted-foreground/60 hover:bg-destructive/10 hover:text-destructive transition-all duration-500 group/logout"
-                onClick={handleSignOut}
-              >
-                <LogOut className="size-5 group-hover/logout:-translate-x-1 transition-transform" />
-                <span className="text-sm font-black tracking-tight">Sign Out</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-          
-          <div className="flex items-center justify-center gap-2 group-data-[collapsible=icon]:hidden opacity-20">
+          <div className="flex items-center justify-center gap-2 group-data-[collapsible=icon]:hidden opacity-30 text-white">
               <ShieldCheck className="size-3" />
               <span className="text-[8px] font-black uppercase tracking-widest">v1.2.0-STABLE</span>
           </div>

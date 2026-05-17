@@ -54,7 +54,7 @@ export default function CustomersPage() {
   const columns: ColumnDef<any>[] = [
     {
       accessorKey: "name",
-      header: "PATRON IDENTITY",
+      header: "PATRON ACCOUNT",
       cell: ({ row }) => (
         <div className="flex items-center gap-4 group">
             <div className="size-10 bg-brand-navy/10 rounded-xl flex items-center justify-center text-brand-navy shadow-inner group-hover:rotate-12 transition-transform">

@@ -11,8 +11,10 @@ import {
   getSortedRowModel,
   ColumnFiltersState,
   getFilteredRowModel,
+  ExpandedState,
+  getExpandedRowModel,
 } from "@tanstack/react-table";
-
+import { cn } from "@/lib/utils";
 import {
   Table,
   TableBody,
@@ -23,21 +25,26 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Barcode } from "lucide-react";
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
   searchKey?: string;
+  renderSubComponent?: (props: { row: any }) => React.ReactNode;
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
   searchKey,
+  renderSubComponent,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
+  const [expanded, setExpanded] = React.useState<ExpandedState>({});
+  const [globalFilter, setGlobalFilter] = React.useState("");
+  const inputRef = React.useRef<HTMLInputElement>(null);
 
   const table = useReactTable({
     data,
@@ -47,10 +54,16 @@ export function DataTable<TData, TValue>({
     onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
     onColumnFiltersChange: setColumnFilters,
+    onGlobalFilterChange: setGlobalFilter,
     getFilteredRowModel: getFilteredRowModel(),
+    onExpandedChange: setExpanded,
+    getExpandedRowModel: getExpandedRowModel(),
+    getRowCanExpand: () => !!renderSubComponent,
     state: {
       sorting,
       columnFilters,
+      globalFilter,
+      expanded,
     },
   });
 
@@ -60,13 +73,20 @@ export function DataTable<TData, TValue>({
         <div className="relative max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder={`Search ${searchKey}...`}
-            value={(table.getColumn(searchKey)?.getFilterValue() as string) ?? ""}
-            onChange={(event) =>
-              table.getColumn(searchKey)?.setFilterValue(event.target.value)
-            }
-            className="pl-10 h-11 bg-white/40 border border-brand-navy/5 rounded-2xl shadow-sm focus-visible:ring-brand-navy/10 focus-visible:border-brand-navy/10 transition-all outline-none"
+            ref={inputRef}
+            placeholder={searchKey === "name" ? "Scan or search name/ID..." : `Search ${searchKey}...`}
+            value={globalFilter ?? ""}
+            onChange={(event) => setGlobalFilter(event.target.value)}
+            className="pl-10 pr-10 h-11 bg-white/40 border border-brand-navy/5 rounded-2xl shadow-sm focus-visible:ring-brand-navy/10 focus-visible:border-brand-navy/10 transition-all outline-none"
           />
+          <button 
+            type="button"
+            onClick={() => inputRef.current?.focus()}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/40 hover:text-brand-navy transition-colors" 
+            title="Scan Barcode"
+          >
+              <Barcode className="h-5 w-5" />
+          </button>
         </div>
       )}
       <div className="rounded-2xl border bg-white/40 dark:bg-zinc-900/40 backdrop-blur-sm overflow-hidden shadow-sm">
@@ -92,17 +112,27 @@ export function DataTable<TData, TValue>({
           <TableBody>
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                  className="hover:bg-brand-navy/5 transition-colors border-border/50"
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="py-4">
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
-                </TableRow>
+                <React.Fragment key={row.id}>
+                  <TableRow
+                    data-state={row.getIsSelected() && "selected"}
+                    className={cn("hover:bg-brand-navy/5 transition-colors border-border/50", row.getIsExpanded() && "bg-brand-navy/5 border-b-transparent")}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id} className="py-4">
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                  {row.getIsExpanded() && renderSubComponent && (
+                    <TableRow className="bg-brand-navy/5 hover:bg-brand-navy/5 border-border/50 shadow-inner">
+                      <TableCell colSpan={columns.length} className="p-0">
+                        <div className="overflow-hidden animate-in slide-in-from-top-2 fade-in duration-300">
+                          {renderSubComponent({ row })}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </React.Fragment>
               ))
             ) : (
               <TableRow>

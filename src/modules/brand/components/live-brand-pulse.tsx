@@ -8,7 +8,7 @@ const STATS = [
   { value: "4.9★", label: "Parent Rating" },
   { value: "48hrs", label: "Fast Delivery" },
   { value: "100%", label: "Child-Safe Fabrics" },
-  { value: "₦0", label: "On Orders ₦15k+" },
+  { value: "Global", label: "Standard Shipping" },
 ];
 
 export function LiveBrandPulse() {

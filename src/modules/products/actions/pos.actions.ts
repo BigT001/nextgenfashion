@@ -9,7 +9,7 @@ import { POSProductQueries } from "../queries/pos-product.queries";
 export async function getPOSProductsAction(query?: string) {
   try {
     const products = await POSProductQueries.searchProducts(query);
-    return { success: true, data: products };
+    return { success: true, data: JSON.parse(JSON.stringify(products)) };
   } catch (error) {
     console.error("Error fetching POS products:", error);
     return { success: false, error: "Failed to load products" };
@@ -22,7 +22,7 @@ export async function getPOSProductsAction(query?: string) {
 export async function getPOSCategoriesAction() {
   try {
     const categories = await POSProductQueries.getCategories();
-    return { success: true, data: categories };
+    return { success: true, data: JSON.parse(JSON.stringify(categories)) };
   } catch (error) {
     console.error("Error fetching POS categories:", error);
     return { success: false, error: "Failed to load categories" };

@@ -31,9 +31,13 @@ export async function getInventoryDashboardAction() {
         category: p.category.name,
         categoryId: p.categoryId,
         sku: p.variants[0]?.sku || "N/A",
+        variantId: p.variants[0]?.id || null,
         stock: totalStock,
         price: Number(p.basePrice),
         costPrice: Number(p.costPrice || 0),
+        images: p.images,
+        image: p.images?.[0] || null,
+        isSuspended: p.isSuspended,
         status
       };
     });
@@ -59,10 +63,10 @@ export async function getInventoryDashboardAction() {
   }
 }
 
-export async function getAuditLogsAction() {
+export async function getAuditLogsAction(variantId?: string) {
   try {
     const { InventoryQueries } = await import("../queries/inventory.queries");
-    const logs = await InventoryQueries.findAuditLogs();
+    const logs = await InventoryQueries.findAuditLogs({ variantId });
     return { success: true, data: JSON.parse(JSON.stringify(logs)) };
   } catch (error) {
     console.error("Error fetching audit logs:", error);

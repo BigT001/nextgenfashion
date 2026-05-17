@@ -1,6 +1,7 @@
 import { prisma } from "@/services/prisma.service";
 import bcrypt from "bcryptjs";
 import { UserRole } from "@prisma/client";
+import { NotificationService } from "@/services/notification.service";
 
 export interface CreateStaffDTO {
   name: string;
@@ -23,7 +24,7 @@ export class CreateStaffService {
 
     const hashedPassword = password ? await bcrypt.hash(password, 10) : undefined;
 
-    return prisma.user.create({
+    const staff = await prisma.user.create({
       data: {
         name,
         email,
@@ -31,5 +32,14 @@ export class CreateStaffService {
         role,
       },
     });
+
+    // 2. ASYNC NOTIFICATION: Staff Invite Email
+    NotificationService.sendStaffInviteEmail({
+        email,
+        name,
+        role: staff.role
+    }).catch(err => console.error("Staff invite email failed:", err));
+
+    return staff;
   }
 }

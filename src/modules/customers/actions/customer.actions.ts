@@ -4,6 +4,7 @@ import { CustomerQueries } from "../queries/customer.queries";
 import { prisma } from "@/services/prisma.service";
 import bcrypt from "bcryptjs";
 import { UserRole } from "@prisma/client";
+import { NotificationService } from "@/services/notification.service";
 
 /**
  * Fetch all data required for the Customer Management Dashboard
@@ -73,7 +74,15 @@ export async function registerCustomerAction(data: {
     });
 
     if (existingUser) {
-      return { success: false, error: "Digital identity already exists." };
+      return { success: false, error: "An account with this email already exists." };
+    }
+
+    const existingCustomerPhone = await prisma.customer.findUnique({
+      where: { phone: data.phone },
+    });
+
+    if (existingCustomerPhone) {
+      return { success: false, error: "This phone number is already registered to another account." };
     }
 
     const hashedPassword = await bcrypt.hash(data.password, 12);
@@ -105,6 +114,13 @@ export async function registerCustomerAction(data: {
       return { user, customer };
     });
 
+    // 3. ASYNC NOTIFICATION: Welcome SMS
+    // We do this after the transaction is safe
+    NotificationService.sendWelcomeSms({
+        phone: data.phone,
+        name: data.name
+    }).catch(err => console.error("Welcome SMS failed:", err));
+
     return {
       success: true,
       data: {
@@ -115,10 +131,21 @@ export async function registerCustomerAction(data: {
     };
   } catch (error) {
     console.error("Registration error:", error);
-    // Return a more descriptive error for the UI
+    
+    // Handle Prisma unique constraint errors that might slip through race conditions
+    if ((error as any).code === 'P2002') {
+      const target = (error as any).meta?.target;
+      if (Array.isArray(target) && target.includes('phone')) {
+        return { success: false, error: "This phone number is already in use." };
+      }
+      if (Array.isArray(target) && target.includes('email')) {
+        return { success: false, error: "This email address is already in use." };
+      }
+    }
+
     return { 
       success: false, 
-      error: error instanceof Error ? error.message : "Failed to create customer account." 
+      error: "Failed to create customer account. Please verify your details." 
     };
   }
 }
@@ -133,5 +160,153 @@ export async function searchCustomersAction(query?: string) {
   } catch (error) {
     console.error("Error searching customers:", error);
     return { success: false, error: "Failed to locate patrons" };
+  }
+}
+
+/**
+ * Rapid creation of customers from the POS interface
+ */
+export async function createPOSCustomerAction(data: {
+  name: string;
+  email: string;
+  phone: string;
+}) {
+  try {
+    // Default password as requested
+    const defaultPassword = "123456";
+    
+    // Delegate to existing robust registration logic
+    return registerCustomerAction({
+      ...data,
+      password: defaultPassword
+    });
+  } catch (error: any) {
+    console.error("POS Customer Creation Error:", error);
+    return { success: false, error: error.message || "Failed to create customer" };
+  }
+}
+/**
+ * Update patron details (Self-service)
+ */
+export async function updatePatronDetailsAction(data: {
+  customerId: string;
+  name?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  imageUrl?: string;
+}) {
+  try {
+    const { customerId, ...updateData } = data;
+    
+    // Check if email or phone is being updated and if it's already in use
+    if (updateData.email) {
+      const existingUser = await prisma.user.findFirst({
+        where: { email: updateData.email, NOT: { customerId } },
+      });
+      if (existingUser) return { success: false, error: "Email already in use." };
+    }
+
+    if (updateData.phone) {
+      const existingCustomer = await prisma.customer.findFirst({
+        where: { phone: updateData.phone, NOT: { id: customerId } },
+      });
+      if (existingCustomer) return { success: false, error: "Phone number already in use." };
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Update Customer record
+      const customer = await tx.customer.update({
+        where: { id: customerId },
+        data: {
+          name: updateData.name,
+          email: updateData.email,
+          phone: updateData.phone,
+          address: updateData.address,
+          image: updateData.imageUrl,
+        },
+      });
+
+      // 2. Update linked User record if name or email changed
+      if (updateData.name || updateData.email || updateData.imageUrl) {
+        await tx.user.updateMany({
+          where: { customerId },
+          data: {
+            name: updateData.name,
+            email: updateData.email,
+            image: updateData.imageUrl,
+          },
+        });
+      }
+
+      return customer;
+    });
+
+    return { success: true, data: JSON.parse(JSON.stringify(result)) };
+  } catch (error: any) {
+    console.error("Update Patron Error:", error);
+    return { success: false, error: error.message || "Failed to update details" };
+  }
+}
+
+/**
+ * Delete/Close patron account
+ */
+export async function deletePatronAccountAction(customerId: string) {
+  try {
+    await prisma.$transaction(async (tx) => {
+      // 1. Delete associated user accounts first (to satisfy constraints)
+      await tx.user.deleteMany({
+        where: { customerId },
+      });
+
+      // 2. Delete the customer record
+      await tx.customer.delete({
+        where: { id: customerId },
+      });
+    });
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("Delete Account Error:", error);
+    return { success: false, error: error.message || "Failed to close account" };
+  }
+}
+/**
+ * Change patron password
+ */
+export async function changePatronPasswordAction(data: {
+  customerId: string;
+  oldPassword?: string;
+  newPassword: string;
+}) {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { customerId: data.customerId },
+    });
+
+    if (!user || !user.password) {
+      return { success: false, error: "Identity authentication failed." };
+    }
+
+    // Only verify old password if it was provided (some accounts might have different flows)
+    if (data.oldPassword) {
+      const isPasswordValid = await bcrypt.compare(data.oldPassword, user.password);
+      if (!isPasswordValid) {
+        return { success: false, error: "Existing password verification failed." };
+      }
+    }
+
+    const hashedNewPassword = await bcrypt.hash(data.newPassword, 12);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { password: hashedNewPassword },
+    });
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("Change Password Error:", error);
+    return { success: false, error: error.message || "Failed to modify security credentials" };
   }
 }

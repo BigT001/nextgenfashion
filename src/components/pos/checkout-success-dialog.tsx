@@ -76,7 +76,7 @@ export function CheckoutSuccessDialog({
                 <div className="relative z-10 space-y-4">
                     <h2 className="text-4xl font-black text-white tracking-tight leading-tight">Revenue <br />Secured</h2>
                     <Badge className="bg-white/10 text-white border-none font-black text-[10px] px-4 py-1 uppercase tracking-widest">
-                        NEXTGEN FASHION OS
+                        NEXTGEN KIDDIES OS
                     </Badge>
                 </div>
             </div>
@@ -138,7 +138,7 @@ export function CheckoutSuccessDialog({
                         {/* Thermal Receipt Component */}
                         <div className="bg-zinc-50 dark:bg-zinc-900 p-8 rounded-3xl border-2 border-dashed border-border/50 font-mono text-[10px] uppercase tracking-tighter leading-relaxed">
                             <div className="text-center space-y-2 mb-6">
-                                <p className="font-black text-sm tracking-[0.2em]">NEXTGEN FASHION</p>
+                                <p className="font-black text-sm tracking-[0.2em]">NEXTGEN KIDDIES</p>
                                 <p>Operational Outlet 01</p>
                                 <p className="opacity-50">Lagos, Nigeria</p>
                             </div>

@@ -22,6 +22,7 @@ export class CreateProductService {
       basePrice: productData.basePrice,
       costPrice: (productData as any).costPrice,
       tax: (productData as any).tax,
+      targetGender: productData.targetGender,
       images: productData.images || [],
       category: { connect: { id: productData.categoryId } },
       variants: {

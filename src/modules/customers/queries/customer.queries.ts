@@ -68,14 +68,16 @@ export const CustomerQueries = {
       include: {
         sales: {
           orderBy: { createdAt: 'desc' },
-          take: 10,
-          select: {
-            id: true,
-            orderNumber: true,
-            totalAmount: true,
-            status: true,
-            createdAt: true,
-            paymentMethod: true
+          include: {
+            items: {
+              include: {
+                variant: {
+                  include: {
+                    product: true
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -83,10 +85,24 @@ export const CustomerQueries = {
 
     if (!customer) return null;
 
-    // Calculate Extended Metrics from actual sales data
+    // Calculate Extended Metrics from ALL sales data
     const totalSpent = customer.sales.reduce((sum, s) => sum + Number(s.totalAmount), 0);
     const orderCount = customer.sales.length;
     const aov = orderCount > 0 ? totalSpent / orderCount : 0;
+
+    // Analyze Behavior: Top Categories or Products
+    const productFrequency: Record<string, number> = {};
+    customer.sales.forEach(sale => {
+      sale.items.forEach(item => {
+        const name = item.variant.product.name;
+        productFrequency[name] = (productFrequency[name] || 0) + item.quantity;
+      });
+    });
+
+    const topProducts = Object.entries(productFrequency)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 3)
+      .map(([name, qty]) => ({ name, qty }));
 
     // Calculate Spending Trend (last 6 months)
     const trend = Array.from({ length: 6 }).map((_, i) => {
@@ -107,12 +123,13 @@ export const CustomerQueries = {
       ...customer,
       email: customer.email || "",
       phone: customer.phone || "",
-      sales: customer.sales,
+      sales: customer.sales.slice(0, 10), // Only return last 10 for UI performance
       metrics: {
         ltv: totalSpent,
         orderCount,
         aov,
-        lastActive: customer.sales[0]?.createdAt || customer.createdAt
+        lastActive: customer.sales[0]?.createdAt || customer.createdAt,
+        topProducts
       },
       trend
     };

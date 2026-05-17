@@ -155,6 +155,27 @@ export function CustomerDetailModal({ customerId, onClose }: CustomerDetailModal
 
                     <Separator className="bg-border/30" />
 
+                    {data.metrics.topProducts && data.metrics.topProducts.length > 0 && (
+                        <>
+                            <div className="space-y-6">
+                                <div className="flex items-center justify-between">
+                                    <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-orange-500">FREQUENT CURATIONS</h4>
+                                    <Star className="size-4 text-orange-500/30" />
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    {data.metrics.topProducts.map((p: any, i: number) => (
+                                        <div key={i} className="p-4 rounded-2xl bg-orange-50 dark:bg-orange-500/5 border border-orange-100 dark:border-orange-500/10 flex flex-col gap-2">
+                                            <span className="text-[8px] font-black uppercase tracking-widest text-orange-600/60">Top {i+1}</span>
+                                            <span className="font-bold text-xs truncate text-orange-950 dark:text-orange-200">{p.name}</span>
+                                            <span className="text-[10px] font-black text-orange-600">{p.qty} Units</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                            <Separator className="bg-border/30" />
+                        </>
+                    )}
+
                     <div className="space-y-6">
                         <div className="flex items-center justify-between">
                             <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-brand-silver">PATRON TRAJECTORY</h4>

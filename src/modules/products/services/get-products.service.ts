@@ -11,11 +11,13 @@ import { serialize } from "@/lib/utils";
 export class GetProductsService {
   static async execute(params?: {
     categoryId?: string;
+    targetGender?: string;
     search?: string;
     includeVariants?: boolean;
   }) {
     const searchParams = {
       categoryId: params?.categoryId,
+      targetGender: params?.targetGender,
       search: params?.search,
       includeVariants: params?.includeVariants,
     };

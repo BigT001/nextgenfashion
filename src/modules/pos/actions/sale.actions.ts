@@ -36,7 +36,7 @@ export async function createSaleAction(data: {
     revalidatePath("/dashboard/pos");
     revalidatePath("/dashboard/orders");
     
-    return { success: true, data: result };
+    return { success: true, data: JSON.parse(JSON.stringify(result)) };
   } catch (error: any) {
     console.error("POS Sale Action Error:", error);
     return { success: false, error: error.message };

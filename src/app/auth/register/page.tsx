@@ -1,43 +1,73 @@
 import { RegisterForm } from "@/components/auth/register-form";
-import { Sparkles, ShieldCheck } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { Suspense } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { ProductQueries } from "@/modules/products/queries/product.queries";
 
-export default function RegisterPage() {
+export default async function RegisterPage() {
+  // Fetch a real product image from the database
+  const featuredProducts = await ProductQueries.findFeatured(10);
+  // Pick one that has an image
+  const productWithImage = featuredProducts.find(p => p.images && p.images.length > 0);
+  const displayImage = productWithImage?.images[0] || "https://images.unsplash.com/photo-1519689680058-324335c77eba?auto=format&fit=crop&q=80&w=1000";
+
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-brand-mesh p-4 py-20 relative overflow-hidden">
-      <div className="absolute inset-0 bg-white/40 backdrop-blur-3xl" />
-      
-      <div className="w-full max-w-[600px] animate-slow-fade relative z-10">
-        <div className="flex flex-col items-center mb-12 text-center">
-          <div className="size-20 bg-brand-navy/10 rounded-3xl flex items-center justify-center mb-8 ring-8 ring-brand-navy/5 group">
-            <Sparkles className="size-10 text-brand-navy animate-pulse" />
+    <div className="min-h-screen w-full flex items-center justify-center bg-[#F8FAFC] p-4 md:p-6 relative overflow-hidden">
+      {/* Background Orbs */}
+      <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-pink-500/5 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-blue-500/5 rounded-full blur-[120px] pointer-events-none" />
+
+      <div className="w-full max-w-6xl bg-white rounded-[2.5rem] md:rounded-[3.5rem] shadow-[0_32px_120px_-20px_rgba(0,0,0,0.08)] border border-white overflow-hidden flex flex-col lg:flex-row h-full max-h-[850px] relative z-10">
+        
+        {/* Left: Creative Side */}
+        <div className="lg:w-[45%] relative overflow-hidden bg-brand-navy group hidden lg:block">
+          <Image 
+            src={displayImage}
+            alt="NextGen Kiddies"
+            fill
+            className="object-cover opacity-90 group-hover:scale-110 transition-transform duration-[2s] ease-out"
+            priority
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-brand-navy/60 via-transparent to-transparent" />
+          
+          <div className="absolute bottom-12 left-12 right-12">
+             <p className="text-white text-lg font-black leading-relaxed tracking-tight max-w-xs drop-shadow-xl">
+               {productWithImage ? `Showcasing: ${productWithImage.name}` : "Join the elite network of parents defining the next generation of kids fashion."}
+             </p>
           </div>
-          <h1 className="text-5xl font-black tracking-tight text-gradient mb-4">Customer Signup</h1>
-          <p className="text-muted-foreground font-black text-[10px] uppercase tracking-[0.3em]">NextGen Digital Account Protocol</p>
+          
+          {/* Logo overlay */}
+          <div className="absolute top-12 left-12">
+            <Link href="/" className="flex items-center gap-3 group/logo">
+                <div className="size-10 bg-white rounded-xl p-1 shadow-2xl group-hover/logo:scale-110 transition-transform">
+                    <Image src="/images/logonextgen.png" alt="Logo" width={40} height={40} className="object-contain h-full w-full" />
+                </div>
+                <span className="text-white font-black tracking-tighter text-sm">NEXTGEN KIDDIES</span>
+            </Link>
+          </div>
         </div>
 
-        <div className="glass-card border-none p-10 md:p-16 rounded-[3rem] shadow-2xl shadow-brand-navy/5 relative overflow-hidden bg-white/80">
-          <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-brand-navy to-brand-silver opacity-50" />
-          
-          <div className="mb-12">
-            <h2 className="text-3xl font-black tracking-tight leading-none">Global Access</h2>
-            <p className="text-sm text-muted-foreground mt-2 font-medium">Join our curated network of fashion enthusiasts.</p>
-          </div>
-          
-          <Suspense fallback={<div className="h-[400px] flex items-center justify-center"><div className="animate-spin size-10 border-4 border-brand-navy border-t-transparent rounded-full" /></div>}>
-            <RegisterForm />
-          </Suspense>
+        {/* Right: Functional Side */}
+        <div className="flex-1 p-8 lg:p-16 flex flex-col justify-center relative bg-white overflow-y-auto">
+          <div className="max-w-[440px] mx-auto w-full space-y-6 lg:space-y-8">
+            <div className="space-y-3">
+               <h1 className="text-3xl lg:text-4xl font-black tracking-tighter text-zinc-900 leading-none">Create Account</h1>
+               <p className="text-zinc-500 text-sm font-medium">Register as a new patron below.</p>
+            </div>
 
-          <div className="mt-12 pt-8 border-t border-border/30 flex items-center justify-center gap-4 opacity-40">
-            <ShieldCheck className="size-4" />
-            <span className="text-[9px] font-black uppercase tracking-[0.4em]">NextGen Integrity Standard</span>
+            <Suspense fallback={<div className="h-[400px] flex items-center justify-center"><div className="animate-spin size-10 border-4 border-brand-navy border-t-transparent rounded-full" /></div>}>
+              <RegisterForm />
+            </Suspense>
           </div>
         </div>
-
-        <p className="text-center mt-12 text-[10px] text-muted-foreground/60 font-black uppercase tracking-widest">
-          &copy; {new Date().getFullYear()} NextGen Fashion. All rights reserved.
-        </p>
       </div>
+
+      {/* Floating back to home */}
+      <Link href="/" className="absolute top-6 left-6 lg:top-8 lg:left-8 z-20 hidden lg:flex items-center gap-2 text-xs font-black uppercase tracking-widest text-zinc-400 hover:text-brand-navy transition-colors">
+        <ArrowLeft className="size-4" />
+        Return Home
+      </Link>
     </div>
   );
 }

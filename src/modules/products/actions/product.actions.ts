@@ -83,7 +83,11 @@ export async function deleteProductAction(id: string) {
 
 export async function updateStockAction(variantId: string, quantityChange: number, reason: string) {
   try {
-    const result = await UpdateStockService.execute(variantId, quantityChange, reason);
+    const { auth } = await import("@/services/auth.service");
+    const session = await auth();
+    const actor = session?.user?.name || session?.user?.email || "System Admin";
+
+    const result = await UpdateStockService.execute(variantId, quantityChange, reason, actor);
     revalidatePath("/inventory");
     return { success: true, data: JSON.parse(JSON.stringify(result)) };
   } catch (error: any) {
@@ -139,6 +143,55 @@ export async function getProductBySkuAction(sku: string) {
     return { success: true, data: JSON.parse(JSON.stringify(variant)) };
   } catch (error: any) {
     console.error("Fetch by SKU error:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function toggleSuspendProductAction(productId: string) {
+  try {
+    const { prisma } = await import("@/services/prisma.service");
+    const { InventoryQueries } = await import("@/modules/inventory/queries/inventory.queries");
+
+    const product = await prisma.product.findUnique({
+      where: { id: productId },
+      include: { variants: true }
+    });
+
+    if (!product) throw new Error("Product not found");
+
+    const newSuspendedState = !product.isSuspended;
+
+    await prisma.product.update({
+      where: { id: productId },
+      data: { isSuspended: newSuspendedState }
+    });
+
+    const { auth } = await import("@/services/auth.service");
+    const session = await auth();
+    const actor = session?.user?.name || session?.user?.email || "System Admin";
+
+    // Log the suspension event for all variants so it shows in their history
+    for (const variant of product.variants) {
+      await InventoryQueries.createAuditLog({
+        userId: actor,
+        action: newSuspendedState ? "PRODUCT_SUSPENDED" : "PRODUCT_ACTIVATED",
+        entity: "ProductVariant",
+        entityId: variant.id,
+        details: {
+          reason: newSuspendedState ? "Admin manually suspended product" : "Admin manually activated product",
+          productId: product.id
+        }
+      });
+    }
+
+    revalidatePath("/inventory");
+    revalidatePath("/dashboard/inventory");
+    revalidatePath("/dashboard/products");
+    revalidatePath("/");
+    
+    return { success: true, isSuspended: newSuspendedState };
+  } catch (error: any) {
+    console.error("Suspend error:", error);
     return { success: false, error: error.message };
   }
 }

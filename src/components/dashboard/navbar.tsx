@@ -26,7 +26,7 @@ export function Navbar() {
   const currentPath = paths[paths.length - 1] || "Dashboard";
 
   return (
-    <header className="h-20 w-full flex items-center gap-6 px-6 bg-white/50 dark:bg-zinc-950/50 backdrop-blur-2xl border-b border-border/30 sticky top-0 z-40">
+    <header className="h-20 w-full flex items-center gap-6 px-6 bg-white/50 dark:bg-zinc-950/50 backdrop-blur-2xl border-b-2 border-brand-navy/5 shadow-sm sticky top-0 z-40">
       <div className="flex flex-1 items-center gap-8">
         <SidebarTrigger className="-ml-1 size-10 rounded-xl hover:bg-brand-navy/5 hover:text-brand-navy transition-colors" />
         

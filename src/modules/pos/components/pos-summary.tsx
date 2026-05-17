@@ -12,12 +12,16 @@ import {
   Zap, 
   ShoppingCart,
   Percent,
-  Hash
+  Hash,
+  PauseCircle,
+  XCircle,
+  MoreHorizontal
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { POSCustomerSearch } from "./pos-customer-search";
 import { useState } from "react";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { toast } from "sonner";
 
 interface POSSummaryProps {
   onCheckout: (paymentMethod: "CASH" | "CARD" | "TRANSFER") => Promise<void>;
@@ -33,25 +37,52 @@ export function POSSummary({ onCheckout, isProcessing }: POSSummaryProps) {
     total, 
     discount, 
     discountType,
-    setDiscount 
+    setDiscount,
+    clearCart,
+    suspendSale
   } = usePOSStore();
   
   const [paymentMethod, setPaymentMethod] = useState<"CASH" | "CARD" | "TRANSFER">("CASH");
 
+  const handleCancel = () => {
+    if (cart.length === 0) return;
+    if (confirm("Are you sure you want to cancel this sale? All items will be removed.")) {
+        clearCart();
+        toast.success("Sale cancelled");
+    }
+  };
+
+  const handleSuspend = () => {
+    if (cart.length === 0) return;
+    suspendSale();
+    toast.success("Sale suspended successfully");
+  };
+
   return (
-    <Card className="border-none shadow-2xl glass-card overflow-hidden flex flex-col h-full rounded-[2.5rem]">
+    <Card className="border-none shadow-2xl glass-card overflow-hidden flex flex-col h-fit rounded-[2.5rem]">
       <CardHeader className="p-8 border-b border-border/50 bg-white/40 dark:bg-zinc-900/40">
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <CardTitle className="text-xl font-black tracking-tight flex items-center gap-2">
-                <ShoppingCart className="size-5 text-brand-navy" />
-                Register
-              </CardTitle>
-              <p className="text-[10px] text-muted-foreground font-black uppercase tracking-[0.2em]">Live Transaction</p>
-            </div>
-            <div className="size-10 rounded-2xl bg-brand-navy/5 flex items-center justify-center">
-                <Hash className="size-5 text-brand-navy" />
+        <div className="space-y-6">
+          <div className="flex items-center justify-end">
+            <div className="flex items-center gap-2">
+                <Button variant="outline" size="icon" className="h-10 w-10 rounded-xl border-zinc-200">
+                    <MoreHorizontal className="size-4" />
+                </Button>
+                <Button 
+                    variant="outline" 
+                    className="h-10 px-4 rounded-xl gap-2 border-orange-200 text-orange-600 hover:bg-orange-50 font-bold text-xs"
+                    onClick={handleSuspend}
+                >
+                    <PauseCircle className="size-4" />
+                    Suspend Sale
+                </Button>
+                <Button 
+                    variant="outline" 
+                    className="h-10 px-4 rounded-xl gap-2 border-rose-200 text-rose-600 hover:bg-rose-50 font-bold text-xs"
+                    onClick={handleCancel}
+                >
+                    <XCircle className="size-4" />
+                    Cancel Sale
+                </Button>
             </div>
           </div>
           
@@ -59,119 +90,51 @@ export function POSSummary({ onCheckout, isProcessing }: POSSummaryProps) {
         </div>
       </CardHeader>
 
-      <CardContent className="flex-1 p-8 space-y-6 overflow-y-auto scrollbar-hide">
-        <div className="space-y-4">
-            <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Item Tiers:</span>
-                <span className="text-[10px] font-black uppercase tracking-widest text-brand-navy bg-brand-navy/5 px-3 py-1 rounded-full">Standard</span>
-            </div>
-            
-            <div className="space-y-3">
-                <div className="flex items-center justify-between group">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Global Discount:</span>
-                    <div className="flex items-center gap-2">
-                        <div className="flex rounded-lg overflow-hidden border border-zinc-200">
-                            <button 
-                                onClick={() => setDiscount(discount, "PERCENTAGE")}
-                                className={cn("p-1.5", discountType === "PERCENTAGE" ? "bg-brand-navy text-white" : "bg-white text-zinc-400")}
-                            >
-                                <Percent className="size-3" />
-                            </button>
-                            <button 
-                                onClick={() => setDiscount(discount, "FIXED")}
-                                className={cn("p-1.5", discountType === "FIXED" ? "bg-brand-navy text-white" : "bg-white text-zinc-400")}
-                            >
-                                <Hash className="size-3" />
-                            </button>
-                        </div>
-                        <Input 
-                            type="number"
-                            className="h-8 w-20 text-right text-xs font-bold border-zinc-200"
-                            value={discount || ""}
-                            placeholder="0"
-                            onChange={(e) => setDiscount(Number(e.target.value))}
-                        />
-                    </div>
-                </div>
-
-                <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground group-hover:text-brand-navy cursor-pointer">Edit Taxes:</span>
-                    <span className="text-xs font-bold">7.5% (VAT)</span>
-                </div>
-            </div>
-        </div>
-
-        <div className="pt-6 border-t border-dashed border-border/50 space-y-3">
-          <div className="flex justify-between items-center text-sm">
-            <span className="font-bold text-muted-foreground">Sub Total:</span>
-            <span className="font-black text-foreground">₦{subtotal.toLocaleString()}</span>
-          </div>
-          <div className="flex justify-between items-center text-sm">
-            <span className="font-bold text-muted-foreground">VAT (7.5%):</span>
-            <span className="font-black text-foreground">₦{Math.round(taxAmount).toLocaleString()}</span>
-          </div>
-        </div>
-
-        <div className="pt-6 bg-brand-navy/[0.02] p-6 rounded-3xl border border-brand-navy/10">
+      <CardContent className="p-8 space-y-6 overflow-y-auto scrollbar-hide">
+        <div className="pt-6 bg-white/50 p-6 rounded-[2rem] border border-zinc-100">
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Final Total</span>
-                    <p className="text-2xl font-black tracking-tighter text-emerald-500">₦{Math.round(total).toLocaleString()}</p>
+                    <span className="text-[12px] font-black uppercase tracking-widest text-muted-foreground">Total</span>
+                    <p className="text-3xl font-black tracking-tighter text-emerald-500">₦{Math.round(total).toLocaleString()}</p>
                 </div>
-                <div className="space-y-1 text-right border-l border-brand-navy/10 pl-4">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Amount Due</span>
-                    <p className="text-2xl font-black tracking-tighter text-rose-500">₦{Math.round(total).toLocaleString()}</p>
+                <div className="space-y-1 text-right border-l border-zinc-200 pl-4">
+                    <span className="text-[12px] font-black uppercase tracking-widest text-muted-foreground">Amount Due</span>
+                    <p className="text-3xl font-black tracking-tighter text-orange-500">₦{Math.round(total).toLocaleString()}</p>
                 </div>
+            </div>
+        </div>
+
+        <div className="space-y-4">
+            <div className="flex items-center gap-3">
+                <div className="flex gap-2 w-full">
+                    {["CASH", "TRANSFER", "POS"].map((method) => (
+                        <Button 
+                            key={method}
+                            variant={paymentMethod === (method === "POS" ? "CARD" : method) ? "default" : "outline"}
+                            size="sm"
+                            className={cn(
+                                "flex-1 h-9 rounded-xl font-bold text-[10px] uppercase tracking-widest",
+                                paymentMethod === (method === "POS" ? "CARD" : method) ? "bg-blue-500 text-white border-none shadow-md shadow-blue-500/20" : "border-zinc-200"
+                            )}
+                            onClick={() => setPaymentMethod(method === "POS" ? "CARD" : method as any)}
+                        >
+                            {method}
+                        </Button>
+                    ))}
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4">
+                <Button 
+                    className="h-14 w-full rounded-2xl bg-blue-500 hover:bg-blue-600 text-white font-black text-sm uppercase tracking-widest shadow-xl shadow-blue-500/20"
+                    disabled={cart.length === 0 || isProcessing}
+                    onClick={() => onCheckout(paymentMethod)}
+                >
+                    {isProcessing ? <LoadingSpinner size="sm" variant="white" /> : "Complete Sale"}
+                </Button>
             </div>
         </div>
       </CardContent>
-
-      <CardFooter className="p-8 bg-zinc-50 dark:bg-zinc-900 flex flex-col gap-6">
-        <div className="grid grid-cols-3 gap-3 w-full">
-          {[
-            { id: "CASH", icon: Banknote, color: "text-emerald-500", label: "Cash" },
-            { id: "TRANSFER", icon: Smartphone, color: "text-blue-500", label: "Transfer" },
-            { id: "CARD", icon: CreditCard, color: "text-purple-500", label: "Card" },
-          ].map((method) => (
-            <Button 
-              key={method.id}
-              variant="outline" 
-              onClick={() => setPaymentMethod(method.id as any)}
-              className={cn(
-                "flex-col h-20 gap-2 border-2 transition-all rounded-2xl bg-white dark:bg-zinc-950 shadow-sm",
-                paymentMethod === method.id 
-                  ? "border-brand-navy bg-brand-navy/5 text-brand-navy shadow-lg shadow-brand-navy/10" 
-                  : "hover:border-brand-navy/50 hover:bg-brand-navy/[0.02] border-border/50"
-              )}
-            >
-              <method.icon className={cn("h-6 w-6", method.color)} />
-              <span className="text-[9px] font-black uppercase tracking-widest">{method.label}</span>
-            </Button>
-          ))}
-        </div>
-
-        <Button 
-          className="w-full h-20 text-xl font-black rounded-3xl bg-brand-navy hover:bg-brand-navy/90 text-white shadow-2xl shadow-brand-navy/40 active:scale-[0.98] transition-all group overflow-hidden relative"
-          disabled={cart.length === 0 || isProcessing}
-          onClick={() => onCheckout(paymentMethod)}
-        >
-          <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-500" />
-          {isProcessing ? (
-            <LoadingSpinner size="sm" variant="white" />
-          ) : (
-            <div className="flex items-center justify-center gap-3 relative z-10">
-              <Zap className="size-6 fill-white animate-pulse" />
-              COMPLETE TRANSACTION
-            </div>
-          )}
-        </Button>
-        
-        <div className="pt-2">
-            <Button variant="ghost" className="w-full h-8 text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/50 hover:text-brand-navy hover:bg-transparent">
-                Keyboard Shortcuts Help
-            </Button>
-        </div>
-      </CardFooter>
     </Card>
   );
 }

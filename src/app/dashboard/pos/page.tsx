@@ -14,7 +14,10 @@ import {
   ShoppingCart,
   Package,
   Zap,
-  LayoutGrid
+  LayoutGrid,
+  History,
+  Play,
+  Trash
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +34,13 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { CheckoutSuccessDialog } from "@/components/pos/checkout-success-dialog";
 import { POSItemTable } from "@/modules/pos/components/pos-item-table";
 import { POSSummary } from "@/modules/pos/components/pos-summary";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogTrigger 
+} from "@/components/ui/dialog";
 
 export default function POSPage() {
   const { 
@@ -38,7 +48,10 @@ export default function POSPage() {
     addItem, 
     total, 
     customer,
-    clearCart 
+    clearCart,
+    suspendedSales,
+    resumeSale,
+    deleteSuspendedSale
   } = usePOSStore();
   
   const [search, setSearch] = useState("");
@@ -46,6 +59,7 @@ export default function POSPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [viewMode, setViewMode] = useState<"GRID" | "CART">("CART");
+  const [isSuspendedOpen, setIsSuspendedOpen] = useState(false);
   
   // Success Dialog State
   const [isSuccessOpen, setIsSuccessOpen] = useState(false);
@@ -155,7 +169,7 @@ export default function POSPage() {
                     )}
                 >
                     <LayoutGrid className="size-4" />
-                    Show Grid
+                    Show Products
                 </Button>
                 <Button size="icon" className="h-12 w-12 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-brand-navy rounded-2xl transition-all active:scale-95 border-none">
                     <ScanLine className="h-5 w-5" />
@@ -199,8 +213,18 @@ export default function POSPage() {
                                     >
                                         <CardContent className="p-4 space-y-3">
                                             <div className="aspect-square bg-muted/30 rounded-2xl mb-2 flex flex-col items-center justify-center relative overflow-hidden group-hover:bg-brand-navy/5 transition-colors">
-                                                <Zap className="size-8 text-brand-navy/20 group-hover:text-brand-navy/40 transition-colors" />
-                                                <span className="mt-2 text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">{variant.sku}</span>
+                                                {product.images && product.images.length > 0 ? (
+                                                    <img 
+                                                        src={product.images[0]} 
+                                                        alt={product.name} 
+                                                        className="size-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                                    />
+                                                ) : (
+                                                    <>
+                                                        <Zap className="size-8 text-brand-navy/20 group-hover:text-brand-navy/40 transition-colors" />
+                                                        <span className="mt-2 text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">{variant.sku}</span>
+                                                    </>
+                                                )}
                                                 
                                                 {variant.inventory && (
                                                     <div className="absolute top-2 right-2">
@@ -248,7 +272,7 @@ export default function POSPage() {
       </div>
 
       {/* Summary & Checkout (Right Sidebar) */}
-      <div className="lg:col-span-4 flex flex-col h-full">
+      <div className="lg:col-span-4 flex flex-col h-fit">
          <POSSummary onCheckout={handleCheckout} isProcessing={isProcessing} />
       </div>
 

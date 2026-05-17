@@ -77,6 +77,7 @@ const productSchema = z.object({
   tax: z.coerce.number().optional(),
   hasTax: z.boolean().optional(),
   warehouseId: z.string().optional(),
+  targetGender: z.enum(["BOYS", "GIRLS", "BOTH"]),
 });
 
 type ProductFormValues = z.infer<typeof productSchema>;
@@ -141,6 +142,7 @@ export function ProductForm({
       tax: initialData.tax || 7.5,
       hasTax: !!initialData.tax && initialData.tax > 0,
       warehouseId: initialData.variants?.[0]?.inventory?.warehouseId || "",
+      targetGender: initialData.targetGender || "BOTH",
     } : {
       name: "",
       description: "",
@@ -157,6 +159,7 @@ export function ProductForm({
       tax: 7.5,
       hasTax: false,
       warehouseId: "",
+      targetGender: "BOTH",
     },
   });
 
@@ -231,7 +234,7 @@ export function ProductForm({
   };
 
   const handleTabChange = async (value: string) => {
-    const order = ["product", "media", "pricing", "logistics"];
+    const order = ["product", "media", "pricing"];
     const currentIndex = order.indexOf(activeTab);
     const targetIndex = order.indexOf(value);
     
@@ -382,7 +385,7 @@ export function ProductForm({
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-          <TabsList className="flex w-full bg-brand-navy/[0.04] p-1.5 rounded-2xl h-14 border border-brand-navy/10 mb-8 overflow-x-auto scrollbar-hide">
+          <TabsList className="flex w-full bg-brand-navy/[0.04] p-1.5 rounded-2xl h-12 border border-brand-navy/10 mb-6 overflow-x-auto scrollbar-hide">
             <TabsTrigger value="product" className="flex-1 rounded-xl font-black text-[11px] uppercase tracking-widest gap-2 data-[state=active]:bg-brand-navy data-[state=active]:text-white transition-all shadow-sm">
               <LayoutGrid className="size-4" /> INFO
             </TabsTrigger>
@@ -392,18 +395,15 @@ export function ProductForm({
             <TabsTrigger value="pricing" className="flex-1 rounded-xl font-black text-[11px] uppercase tracking-widest gap-2 data-[state=active]:bg-brand-navy data-[state=active]:text-white transition-all shadow-sm">
               <Banknote className="size-4" /> FINANCE
             </TabsTrigger>
-            <TabsTrigger value="logistics" className="flex-1 rounded-xl font-black text-[11px] uppercase tracking-widest gap-2 data-[state=active]:bg-brand-navy data-[state=active]:text-white transition-all shadow-sm">
-              <Warehouse className="size-4" /> STORAGE
-            </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="product" className="space-y-6 animate-in fade-in-50 duration-500 outline-none">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-5 p-7 bg-brand-navy/[0.02] border border-brand-navy/10 rounded-[2.5rem] shadow-inner">
+          <TabsContent value="product" className="space-y-4 animate-in fade-in-50 duration-500 outline-none">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-4 p-5 bg-brand-navy/[0.02] border border-brand-navy/10 rounded-3xl shadow-inner">
                 <FormField control={form.control} name="name" render={({ field }) => (
                   <FormItem className="space-y-2">
                     <FormLabel className="text-[11px] font-black uppercase tracking-widest text-brand-navy">Product Name</FormLabel>
-                    <FormControl><Input placeholder="e.g. Midnight Silk Blouse" className="h-12 bg-white border-2 border-brand-navy/5 rounded-xl font-bold text-brand-navy focus:border-brand-navy/20 transition-all" {...field} /></FormControl>
+                    <FormControl><Input placeholder="e.g. Midnight Silk Blouse" className="h-10 bg-white border-2 border-brand-navy/5 rounded-xl font-bold text-brand-navy focus:border-brand-navy/20 transition-all" {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
@@ -415,7 +415,7 @@ export function ProductForm({
                           <FormItem className="flex-1">
                             <Select onValueChange={field.onChange} value={field.value}>
                               <FormControl>
-                                <SelectTrigger className="h-12 bg-white border-2 border-brand-navy/5 rounded-xl font-bold text-brand-navy">
+                                <SelectTrigger className="h-10 bg-white border-2 border-brand-navy/5 rounded-xl font-bold text-brand-navy">
                                   <SelectValue placeholder="Select Category">
                                     {categories.find(c => c.id === field.value)?.name}
                                   </SelectValue>
@@ -434,7 +434,7 @@ export function ProductForm({
                           </FormItem>
                         )} />
                         <Dialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen}>
-                            <DialogTrigger render={<Button type="button" variant="outline" className="size-12 shrink-0 rounded-xl border-2 border-brand-navy/10 hover:bg-brand-navy hover:text-white" />}>
+                            <DialogTrigger render={<Button type="button" variant="outline" className="size-10 shrink-0 rounded-xl border-2 border-brand-navy/10 hover:bg-brand-navy hover:text-white" />}>
                                 <Plus className="size-5" />
                             </DialogTrigger>
                             <DialogContent className="max-w-xs glass-card border-none p-10 rounded-[3rem] shadow-2xl">
@@ -449,12 +449,36 @@ export function ProductForm({
                 <FormField control={form.control} name="description" render={({ field }) => (
                   <FormItem className="space-y-2">
                     <FormLabel className="text-[11px] font-black uppercase tracking-widest text-brand-navy">Product Description</FormLabel>
-                    <FormControl><Textarea placeholder="Material, fit, and seasonal inspiration..." className="resize-none h-32 bg-white border-2 border-brand-navy/5 rounded-xl font-medium p-4 text-sm leading-relaxed text-brand-navy" {...field} /></FormControl>
+                    <FormControl><Textarea placeholder="Material, fit, and seasonal inspiration..." className="resize-none h-20 bg-white border-2 border-brand-navy/5 rounded-xl font-medium p-3 text-sm leading-relaxed text-brand-navy" {...field} /></FormControl>
+                  </FormItem>
+                )} />
+
+                <FormField control={form.control} name="targetGender" render={({ field }) => (
+                  <FormItem className="space-y-3">
+                    <FormLabel className="text-[11px] font-black uppercase tracking-widest text-brand-navy">Target Audience</FormLabel>
+                    <div className="flex bg-brand-navy/5 p-1 rounded-2xl border border-brand-navy/10">
+                      {["BOYS", "GIRLS", "BOTH"].map((option) => (
+                        <button
+                          key={option}
+                          type="button"
+                          onClick={() => field.onChange(option)}
+                          className={cn(
+                            "flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                            field.value === option 
+                              ? "bg-brand-navy text-white shadow-md scale-[1.02]" 
+                              : "text-brand-navy/40 hover:text-brand-navy hover:bg-brand-navy/5"
+                          )}
+                        >
+                          {option}
+                        </button>
+                      ))}
+                    </div>
+                    <FormMessage />
                   </FormItem>
                 )} />
               </div>
 
-              <div className="space-y-5 p-7 bg-brand-navy/[0.02] border border-brand-navy/10 rounded-[2.5rem] shadow-inner">
+              <div className="space-y-4 p-5 bg-brand-navy/[0.02] border border-brand-navy/10 rounded-3xl shadow-inner">
                 <FormField control={form.control} name="sku" render={({ field }) => (
                   <FormItem className="space-y-2">
                     <div className="flex justify-between items-center px-1">
@@ -473,7 +497,7 @@ export function ProductForm({
                     </div>
                     <FormControl>
                         <div className="relative group">
-                            <Input placeholder={isScanMode ? "Scan barcode now..." : "Auto-generating..."} readOnly={!isScanMode} className={cn("h-14 bg-white border-2 rounded-xl font-black text-brand-navy transition-all pl-12", isScanMode ? "border-brand-navy shadow-lg" : "border-brand-navy/5 opacity-80 cursor-not-allowed")} {...field} onChange={(e) => {
+                            <Input placeholder={isScanMode ? "Scan barcode now..." : "Auto-generating..."} readOnly={!isScanMode} className={cn("h-10 bg-white border-2 rounded-xl font-black text-brand-navy transition-all pl-12", isScanMode ? "border-brand-navy shadow-md" : "border-brand-navy/5 opacity-80 cursor-not-allowed")} {...field} onChange={(e) => {
                                 field.onChange(e);
                                 if (isScanMode) handleSkuLookup(e.target.value);
                             }} />
@@ -490,13 +514,13 @@ export function ProductForm({
                     <FormField control={form.control} name="color" render={({ field }) => (
                       <FormItem className="space-y-2">
                         <FormLabel className="text-[11px] font-black uppercase tracking-widest text-brand-navy">Color</FormLabel>
-                        <FormControl><Input placeholder="e.g. Navy" className="h-12 bg-white border-2 border-brand-navy/5 rounded-xl font-bold text-brand-navy" {...field} /></FormControl>
+                        <FormControl><Input placeholder="e.g. Navy" className="h-10 bg-white border-2 border-brand-navy/5 rounded-xl font-bold text-brand-navy" {...field} /></FormControl>
                       </FormItem>
                     )} />
                     <FormField control={form.control} name="size" render={({ field }) => (
                       <FormItem className="space-y-2">
                         <FormLabel className="text-[11px] font-black uppercase tracking-widest text-brand-navy">Size</FormLabel>
-                        <FormControl><Input placeholder="e.g. XL" className="h-12 bg-white border-2 border-brand-navy/5 rounded-xl font-bold text-brand-navy" {...field} /></FormControl>
+                        <FormControl><Input placeholder="e.g. XL" className="h-10 bg-white border-2 border-brand-navy/5 rounded-xl font-bold text-brand-navy" {...field} /></FormControl>
                       </FormItem>
                     )} />
                 </div>
@@ -504,38 +528,38 @@ export function ProductForm({
                 <FormField control={form.control} name="quantity" render={({ field }) => (
                   <FormItem className="space-y-2">
                     <FormLabel className="text-[11px] font-black uppercase tracking-widest text-brand-navy">Quantity in Stock</FormLabel>
-                    <FormControl><Input type="number" placeholder="0" className="h-12 bg-white border-2 border-brand-navy/5 rounded-xl font-bold text-brand-navy" {...field} /></FormControl>
+                    <FormControl><Input type="number" placeholder="0" className="h-10 bg-white border-2 border-brand-navy/5 rounded-xl font-bold text-brand-navy" {...field} /></FormControl>
                   </FormItem>
                 )} />
 
                 <FormField control={form.control} name="tags" render={({ field }) => (
                   <FormItem className="space-y-2">
                     <FormLabel className="text-[11px] font-black uppercase tracking-widest text-brand-navy">Search Tags</FormLabel>
-                    <FormControl><Input placeholder="luxury, summer, silk" className="h-12 bg-white border-2 border-brand-navy/5 rounded-xl font-bold text-brand-navy" {...field} /></FormControl>
+                    <FormControl><Input placeholder="luxury, summer, silk" className="h-10 bg-white border-2 border-brand-navy/5 rounded-xl font-bold text-brand-navy" {...field} /></FormControl>
                   </FormItem>
                 )} />
               </div>
             </div>
           </TabsContent>
 
-          <TabsContent value="pricing" className="space-y-6 animate-in slide-in-from-right-10 duration-500 outline-none">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-              <div className="space-y-6 p-10 bg-brand-navy/[0.02] border border-brand-navy/10 rounded-[3rem] shadow-inner">
+          <TabsContent value="pricing" className="space-y-4 animate-in slide-in-from-right-10 duration-500 outline-none">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl mx-auto">
+              <div className="space-y-4 p-6 bg-brand-navy/[0.02] border border-brand-navy/10 rounded-3xl shadow-inner">
                 <FormField control={form.control} name="costPrice" render={({ field }) => (
                   <FormItem className="space-y-2">
                     <FormLabel className="text-[11px] font-black uppercase tracking-widest text-brand-navy">Cost Price (₦)</FormLabel>
-                    <FormControl><Input type="number" className="h-16 bg-white border-2 border-brand-navy/5 rounded-2xl font-black text-brand-navy text-2xl" {...field} /></FormControl>
+                    <FormControl><Input type="number" className="h-12 bg-white border-2 border-brand-navy/5 rounded-xl font-black text-brand-navy text-xl" {...field} /></FormControl>
                   </FormItem>
                 )} />
                 <FormField control={form.control} name="sellingPrice" render={({ field }) => (
                   <FormItem className="space-y-2">
                     <FormLabel className="text-[11px] font-black uppercase tracking-widest text-brand-navy">Selling Price (₦)</FormLabel>
-                    <FormControl><Input type="number" className="h-16 bg-white border-2 border-brand-navy/20 rounded-2xl font-black text-brand-navy text-2xl shadow-sm focus:border-brand-navy transition-all" {...field} /></FormControl>
+                    <FormControl><Input type="number" className="h-12 bg-white border-2 border-brand-navy/20 rounded-xl font-black text-brand-navy text-xl shadow-sm focus:border-brand-navy transition-all" {...field} /></FormControl>
                   </FormItem>
                 )} />
               </div>
 
-              <div className="space-y-6 p-10 bg-brand-navy/[0.02] border border-brand-navy/10 rounded-[3rem] shadow-inner">
+              <div className="space-y-4 p-6 bg-brand-navy/[0.02] border border-brand-navy/10 rounded-3xl shadow-inner">
                 <FormField control={form.control} name="hasTax" render={({ field }) => (
                   <FormItem className="flex items-center gap-4 space-y-0 mb-4 bg-white/50 p-4 rounded-2xl border border-brand-navy/5">
                     <FormControl>
@@ -549,100 +573,129 @@ export function ProductForm({
                 
                 <FormField control={form.control} name="tax" render={({ field }) => (
                   <FormItem className="space-y-2">
-                    <FormControl><Input type="number" disabled={!form.watch("hasTax")} className={cn("h-16 bg-white border-2 rounded-2xl font-black text-brand-navy text-2xl transition-all", !form.watch("hasTax") ? "opacity-30 border-brand-navy/5" : "border-brand-navy/5")} {...field} /></FormControl>
+                    <FormControl><Input type="number" disabled={!form.watch("hasTax")} className={cn("h-12 bg-white border-2 rounded-xl font-black text-brand-navy text-xl transition-all", !form.watch("hasTax") ? "opacity-30 border-brand-navy/5" : "border-brand-navy/5")} {...field} /></FormControl>
                   </FormItem>
                 )} />
                 <FormField control={form.control} name="discount" render={({ field }) => (
                   <FormItem className="space-y-2">
                     <FormLabel className="text-[11px] font-black uppercase tracking-widest text-brand-navy">Fixed Discount (₦)</FormLabel>
-                    <FormControl><Input type="number" className="h-16 bg-white border-2 border-brand-navy/5 rounded-2xl font-bold text-brand-navy text-xl" {...field} /></FormControl>
+                    <FormControl><Input type="number" className="h-12 bg-white border-2 border-brand-navy/5 rounded-xl font-bold text-brand-navy text-lg" {...field} /></FormControl>
                   </FormItem>
                 )} />
               </div>
             </div>
           </TabsContent>
 
-          <TabsContent value="logistics" className="space-y-6 animate-in slide-in-from-left-10 duration-500 outline-none">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
-              <div className="space-y-10 p-12 bg-brand-navy/[0.02] border border-brand-navy/10 rounded-[4rem]">
-                <div className="flex justify-between items-start">
-                    <div className="space-y-3">
-                        <h3 className="text-3xl font-black tracking-tighter text-brand-navy uppercase">Logistics Intake</h3>
-                        <p className="text-sm text-brand-navy/60 font-bold uppercase tracking-widest">Select physical storage destination</p>
-                    </div>
-                    <Dialog open={isWarehouseDialogOpen} onOpenChange={setIsWarehouseDialogOpen}>
-                        <DialogTrigger render={<Button type="button" variant="outline" className="size-12 rounded-2xl border-2 border-brand-navy/10 hover:bg-brand-navy hover:text-white" />}>
-                            <Plus className="size-5" />
-                        </DialogTrigger>
-                        <DialogContent className="max-w-sm glass-card border-none p-10 rounded-[3rem] shadow-2xl">
-                            <h4 className="text-sm font-black uppercase tracking-widest mb-6 text-brand-navy">Register Hub</h4>
-                            <div className="space-y-4 mb-8">
-                                <Input placeholder="Hub Name (e.g. Lekki North)" value={newWhName} onChange={(e) => setNewWhName(e.target.value)} className="h-12 bg-muted/30 border-none rounded-xl font-bold" />
-                                <Input placeholder="Geographic Location" value={newWhLoc} onChange={(e) => setNewWhLoc(e.target.value)} className="h-12 bg-muted/30 border-none rounded-xl font-bold" />
-                            </div>
-                            <Button onClick={handleAddWarehouse} disabled={isAddingWarehouse} className="w-full bg-brand-navy text-white h-14 font-black text-[10px] uppercase tracking-widest rounded-xl shadow-xl">{isAddingWarehouse ? "Registering..." : "Confirm Deployment"}</Button>
-                        </DialogContent>
-                    </Dialog>
+          <TabsContent value="logistics" className="space-y-8 animate-in slide-in-from-left-10 duration-500 outline-none">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+              {/* Left Column: Selection */}
+              <div className="lg:col-span-7 space-y-6">
+                <div className="p-8 bg-brand-navy/[0.02] border border-brand-navy/10 rounded-[2.5rem] shadow-inner">
+                  <div className="space-y-2 mb-8">
+                    <h3 className="text-2xl font-black tracking-tighter text-brand-navy uppercase">Inventory Destination</h3>
+                    <p className="text-[10px] text-brand-navy/40 font-black uppercase tracking-widest">Select where this stock will be housed</p>
+                  </div>
+                  
+                  <FormField control={form.control} name="warehouseId" render={({ field }) => (
+                    <FormItem className="space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <button
+                          type="button"
+                          onClick={() => field.onChange("")}
+                          className={cn(
+                            "flex flex-col items-start p-5 rounded-2xl border-2 transition-all text-left",
+                            !field.value 
+                              ? "border-brand-navy bg-brand-navy/5 shadow-md" 
+                              : "border-brand-navy/5 bg-white hover:border-brand-navy/20"
+                          )}
+                        >
+                          <HardDrive className={cn("size-5 mb-3", !field.value ? "text-brand-navy" : "text-brand-navy/20")} />
+                          <span className="text-[11px] font-black uppercase tracking-widest text-brand-navy">Virtual Stock</span>
+                          <span className="text-[9px] font-bold opacity-40 uppercase">No physical hub</span>
+                        </button>
+
+                        {warehouses.map((wh) => (
+                          <button
+                            key={wh.id}
+                            type="button"
+                            onClick={() => field.onChange(wh.id)}
+                            className={cn(
+                              "flex flex-col items-start p-5 rounded-2xl border-2 transition-all text-left",
+                              field.value === wh.id 
+                                ? "border-brand-navy bg-brand-navy/5 shadow-md" 
+                                : "border-brand-navy/5 bg-white hover:border-brand-navy/20"
+                            )}
+                          >
+                            <MapPin className={cn("size-5 mb-3", field.value === wh.id ? "text-brand-navy" : "text-brand-navy/20")} />
+                            <span className="text-[11px] font-black uppercase tracking-widest text-brand-navy truncate w-full">{wh.name}</span>
+                            <span className="text-[9px] font-bold opacity-40 uppercase truncate w-full">{wh.location || "Central Hub"}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </FormItem>
+                  )} />
                 </div>
-                
-                <FormField control={form.control} name="warehouseId" render={({ field }) => (
-                  <FormItem className="space-y-4">
-                    <FormLabel className="text-[12px] font-black uppercase tracking-widest text-brand-navy">Active Storage Hub</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || undefined}>
-                        <FormControl>
-                            <SelectTrigger className="h-16 bg-white border-2 border-brand-navy/20 rounded-2xl font-black text-xl px-8 text-brand-navy shadow-sm">
-                                <SelectValue placeholder="Select Warehouse Hub" />
-                            </SelectTrigger>
-                        </FormControl>
-                        <SelectContent className="glass-card border-none rounded-[2rem] p-4 shadow-2xl">
-                            <SelectItem value="none" className="rounded-xl h-14 font-black focus:bg-brand-navy/5 px-8 uppercase text-muted-foreground/40 italic">
-                                NO PHYSICAL HUB (VIRTUAL ONLY)
-                            </SelectItem>
-                            {warehouses.length > 0 && warehouses.map((wh) => (
-                                <SelectItem key={wh.id} value={wh.id} className="rounded-xl h-14 font-black focus:bg-brand-navy/5 px-8 uppercase">
-                                    {wh.name}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                  </FormItem>
-                )} />
 
                 {form.watch("warehouseId") && (
-                    <div className="space-y-5 px-2 animate-in fade-in duration-500">
-                        <div className="flex justify-between items-center">
-                            <span className="text-[11px] font-black uppercase tracking-widest text-brand-navy/60">Hub Operating Capacity</span>
-                            <span className="text-[12px] font-black text-brand-navy">
-                                {Math.floor(Math.random() * (90 - 40) + 40)}% FULL
-                            </span>
-                        </div>
-                        <div className="h-3 w-full bg-brand-navy/10 rounded-full overflow-hidden shadow-inner">
-                            <div className="h-full bg-brand-navy w-[65%] rounded-full shadow-lg transition-all duration-1000" />
-                        </div>
+                  <div className="p-8 bg-emerald-500/5 border border-emerald-500/10 rounded-[2.5rem] animate-in fade-in slide-in-from-top-4">
+                    <div className="flex items-center gap-4 text-emerald-600">
+                      <div className="size-10 rounded-full bg-emerald-500/10 flex items-center justify-center">
+                        <ShieldCheck className="size-5" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-[10px] font-black uppercase tracking-widest">Inflow Authorized</p>
+                        <p className="text-xs font-bold opacity-70">Stock will be registered to {warehouses.find(w => w.id === form.watch("warehouseId"))?.name}</p>
+                      </div>
                     </div>
+                  </div>
                 )}
               </div>
 
-              <div className="relative aspect-video rounded-[4rem] overflow-hidden border-4 border-white shadow-2xl group bg-muted/20">
-                {form.watch("warehouseId") ? (
-                  <>
-                    <div className="absolute inset-0 bg-gradient-to-t from-brand-navy to-transparent z-10 opacity-70" />
-                    <div className="absolute bottom-12 left-12 z-20 text-white">
-                        <h4 className="text-4xl font-black tracking-tighter uppercase">
-                            {warehouses.find(w => w.id === form.watch("warehouseId"))?.name}
-                        </h4>
-                        <p className="text-[12px] font-black opacity-60 mt-3 uppercase tracking-[0.4em]">
-                            {warehouses.find(w => w.id === form.watch("warehouseId"))?.location || "ZONE A-12 • BATCH ALPHA-01"}
-                        </p>
-                    </div>
-                    <img src="https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&q=80&w=1000" className="object-cover w-full h-full grayscale group-hover:grayscale-0 transition-all duration-1000" alt="Warehouse" />
-                  </>
-                ) : (
-                  <div className="w-full h-full flex flex-col items-center justify-center text-brand-navy/20 gap-4">
-                    <HardDrive className="size-20" />
-                    <span className="font-black text-xs uppercase tracking-widest">Select Storage Destination</span>
+              {/* Right Column: Quick Add */}
+              <div className="lg:col-span-5">
+                <div className="p-8 bg-brand-navy text-white rounded-[2.5rem] shadow-2xl space-y-8 sticky top-0">
+                  <div className="space-y-2">
+                    <h3 className="text-xl font-black tracking-tighter uppercase">Quick Register Hub</h3>
+                    <p className="text-[9px] opacity-40 font-black uppercase tracking-[0.3em]">Expand Logistics Network</p>
                   </div>
-                )}
+
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <label className="text-[9px] font-black uppercase tracking-widest opacity-40">Hub Name</label>
+                      <Input 
+                        placeholder="e.g. Lagos Mainland" 
+                        value={newWhName} 
+                        onChange={(e) => setNewWhName(e.target.value)}
+                        className="bg-white/10 border-none h-12 rounded-xl text-white font-bold placeholder:text-white/20"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[9px] font-black uppercase tracking-widest opacity-40">Geographic Zone</label>
+                      <Input 
+                        placeholder="e.g. Ikeja, Lagos" 
+                        value={newWhLoc} 
+                        onChange={(e) => setNewWhLoc(e.target.value)}
+                        className="bg-white/10 border-none h-12 rounded-xl text-white font-bold placeholder:text-white/20"
+                      />
+                    </div>
+                    <Button 
+                      onClick={handleAddWarehouse} 
+                      disabled={isAddingWarehouse || !newWhName}
+                      className="w-full bg-white text-brand-navy hover:bg-white/90 h-14 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-xl transition-all"
+                    >
+                      {isAddingWarehouse ? "SYNCHRONIZING..." : "CONFIRM DEPLOYMENT"}
+                    </Button>
+                  </div>
+
+                  <div className="pt-6 border-t border-white/10">
+                    <div className="flex items-center gap-3 opacity-40">
+                      <AlertCircle className="size-4" />
+                      <p className="text-[9px] font-bold uppercase tracking-widest leading-relaxed">
+                        Registered hubs are immediately available for inventory allocation across all product lines.
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </TabsContent>
@@ -683,24 +736,24 @@ export function ProductForm({
           </TabsContent>
         </Tabs>
 
-        <div className="flex justify-between items-center pt-10 border-t-2 border-brand-navy/5">
+        <div className="flex justify-between items-center pt-4 mt-4 border-t-2 border-brand-navy/5">
           <div className="flex gap-4">
             {activeTab !== "product" && (
                 <Button variant="ghost" onClick={() => {
-                    const order = ["product", "media", "pricing", "logistics"];
+                    const order = ["product", "media", "pricing"];
                     setActiveTab(order[order.indexOf(activeTab) - 1]);
-                }} type="button" className="text-xs font-black uppercase tracking-[0.3em] h-14 px-10 rounded-2xl hover:bg-brand-navy/5 text-brand-navy transition-all">BACK</Button>
+                }} type="button" className="text-xs font-black uppercase tracking-[0.3em] h-12 px-8 rounded-xl hover:bg-brand-navy/5 text-brand-navy transition-all">BACK</Button>
             )}
           </div>
           <div className="flex gap-4">
-            <Button variant="ghost" onClick={onClose} type="button" className="text-xs font-black uppercase tracking-[0.3em] h-14 px-12 rounded-2xl hover:bg-rose-500/5 text-rose-600 transition-all">CANCEL</Button>
-            {activeTab !== "logistics" ? (
+            <Button variant="ghost" onClick={onClose} type="button" className="text-xs font-black uppercase tracking-[0.3em] h-12 px-8 rounded-xl hover:bg-rose-500/5 text-rose-600 transition-all">CANCEL</Button>
+            {activeTab !== "pricing" ? (
                 <Button onClick={() => {
-                    const order = ["product", "media", "pricing", "logistics"];
+                    const order = ["product", "media", "pricing"];
                     handleTabChange(order[order.indexOf(activeTab) + 1]);
-                }} type="button" className="bg-brand-navy text-white font-black text-xs uppercase tracking-[0.3em] h-16 px-16 rounded-2xl shadow-2xl shadow-brand-navy/20 active:scale-95 transition-all">CONTINUE</Button>
+                }} type="button" className="bg-brand-navy text-white font-black text-xs uppercase tracking-[0.3em] h-12 px-10 rounded-xl shadow-lg shadow-brand-navy/20 active:scale-95 transition-all">CONTINUE</Button>
             ) : (
-                <Button type="submit" disabled={isSubmitting} className="bg-brand-navy text-white font-black text-xs uppercase tracking-[0.4em] h-16 px-20 rounded-2xl shadow-[0_0_40px_rgba(var(--brand-navy-rgb),0.5)] active:scale-95 transition-all">
+                <Button type="submit" disabled={isSubmitting} className="bg-brand-navy text-white font-black text-xs uppercase tracking-[0.4em] h-12 px-12 rounded-xl shadow-[0_0_20px_rgba(var(--brand-navy-rgb),0.5)] active:scale-95 transition-all">
                   {isSubmitting ? "SAVING..." : "SAVE"}
                   <Save className="ml-5 h-6 w-6" />
                 </Button>

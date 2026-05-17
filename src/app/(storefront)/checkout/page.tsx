@@ -104,7 +104,7 @@ export default function CheckoutPage() {
   };
 
   const steps: { id: CheckoutStep; label: string; icon: any }[] = [
-    { id: "IDENTITY", label: "IDENTITY", icon: User },
+    { id: "IDENTITY", label: "ACCOUNT", icon: User },
     { id: "LOGISTICS", label: "LOGISTICS", icon: Truck },
     { id: "PAYMENT", label: "SETTLE", icon: CreditCard },
   ];
@@ -162,14 +162,14 @@ export default function CheckoutPage() {
                             <User className="size-8" />
                         </div>
                         <div className="space-y-1">
-                            <h2 className="text-3xl font-black tracking-tight">Patron Identity</h2>
+                            <h2 className="text-3xl font-black tracking-tight">Patron Account</h2>
                             <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">PERSONAL INTEL FOR FULFILLMENT</p>
                         </div>
                     </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div className="space-y-3 md:col-span-2">
-                            <Label htmlFor="fullName" className="text-[10px] font-black uppercase tracking-[0.2em] ml-2 opacity-60">Full Legal Identity</Label>
+                            <Label htmlFor="fullName" className="text-[10px] font-black uppercase tracking-[0.2em] ml-2 opacity-60">Full Legal Name</Label>
                             <Input 
                                 id="fullName" 
                                 name="fullName" 

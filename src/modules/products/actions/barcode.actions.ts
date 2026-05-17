@@ -6,10 +6,12 @@ import { prisma } from "@/services/prisma.service";
 /**
  * Generate a barcode for a specific variant
  */
-export async function getVariantBarcodeAction(variantId: string) {
+export async function getVariantBarcodeAction(variantId?: string, sku?: string) {
   try {
+    if (!variantId && !sku) return { success: false, error: "Identifier not provided" };
+
     const variant = await prisma.productVariant.findUnique({
-      where: { id: variantId },
+      where: variantId ? { id: variantId } : { sku: sku },
       select: { sku: true, barcode: true }
     });
 

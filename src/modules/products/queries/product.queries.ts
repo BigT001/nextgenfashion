@@ -9,12 +9,25 @@ import { Prisma } from "@prisma/client";
 export class ProductQueries {
   static async findAll(params: {
     categoryId?: string;
+    targetGender?: string;
     search?: string;
     includeVariants?: boolean;
   }) {
     return await prisma.product.findMany({
       where: {
-        ...(params.categoryId && { categoryId: params.categoryId }),
+        isSuspended: false,
+        ...(params.targetGender && {
+          OR: [
+            { targetGender: params.targetGender as any },
+            { targetGender: "BOTH" }
+          ]
+        }),
+        ...(params.categoryId && {
+          OR: [
+            { categoryId: params.categoryId },
+            { category: { name: { equals: params.categoryId, mode: "insensitive" } } }
+          ]
+        }),
         ...(params.search && {
           OR: [
             { name: { contains: params.search, mode: "insensitive" } },
@@ -35,7 +48,7 @@ export class ProductQueries {
    */
   static async findFeatured(limit = 8) {
     return await prisma.product.findMany({
-      where: {},
+      where: { isSuspended: false },
       take: limit,
       include: {
         category: true,
@@ -59,20 +72,41 @@ export class ProductQueries {
     });
   }
 
-  static async findCategories() {
+  static async findCategories(targetGender?: string) {
+    const genderFilter = targetGender ? {
+      OR: [
+        { targetGender: targetGender as any },
+        { targetGender: "BOTH" as any }
+      ]
+    } : undefined;
+
     return await prisma.category.findMany({
+      where: targetGender ? {
+        products: {
+          some: genderFilter
+        }
+      } : undefined,
       orderBy: { name: "asc" },
       include: {
         _count: {
-          select: { products: true },
+          select: { 
+            products: targetGender ? { where: genderFilter } : true 
+          },
+        },
+        products: {
+          where: genderFilter,
+          take: 1,
+          select: { images: true },
         },
       },
     });
   }
 
-  static async create(data: Prisma.ProductCreateInput) {
-    return await (prisma.product as any).create({
-      data,
+  static async create(data: any) {
+    return await prisma.product.create({
+      data: {
+        ...data,
+      },
       include: {
         variants: {
           include: {
@@ -83,7 +117,7 @@ export class ProductQueries {
     });
   }
 
-  static async update(id: string, data: Prisma.ProductUpdateInput) {
+  static async update(id: string, data: any) {
     return await prisma.product.update({
       where: { id },
       data,

@@ -123,7 +123,7 @@ export function OrderReceipt({ orderId, onClose }: OrderReceiptProps) {
             </div>
 
             <div class="footer">
-              <div class="footer-text">Thank you for your acquisition. NextGen Fashion Architecture · 2024</div>
+              <div class="footer-text">Thank you for your acquisition. NextGen Kiddies Architecture · 2024</div>
               <div class="footer-text" style="margin-top:8px">For support: support@nextgenfashion.com</div>
             </div>
           </div>
@@ -273,7 +273,7 @@ export function OrderReceipt({ orderId, onClose }: OrderReceiptProps) {
             {/* Footer */}
             <div className="flex items-center justify-center gap-4 text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 pt-4 border-t border-border/30">
               <ShieldCheck className="size-4" />
-              NextGen Fashion Architecture · Integrity Guaranteed
+              NextGen Kiddies Architecture · Integrity Guaranteed
             </div>
           </div>
         ) : (

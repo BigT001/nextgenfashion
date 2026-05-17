@@ -88,7 +88,7 @@ export function RegisterForm() {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
         <FormField
           control={form.control}
           name="name"
@@ -100,7 +100,7 @@ export function RegisterForm() {
                   <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input 
                     placeholder="ENTER FULL NAME" 
-                    className="pl-12 h-14 bg-white/50 dark:bg-zinc-900/50 border-none shadow-sm focus-visible:ring-brand-navy rounded-2xl font-bold" 
+                    className="pl-12 h-12 bg-zinc-50 border-none shadow-sm focus-visible:ring-brand-navy rounded-xl font-bold" 
                     {...field} 
                   />
                 </div>
@@ -110,19 +110,19 @@ export function RegisterForm() {
           )}
         />
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div className="space-y-3">
             <FormField
               control={form.control}
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-2">Digital Identity (Email)</FormLabel>
+                  <FormLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-2">Digital Account (Email)</FormLabel>
                   <FormControl>
                     <div className="relative">
                       <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input 
                         placeholder="NAME@DOMAIN.COM" 
-                        className="pl-12 h-14 bg-white/50 dark:bg-zinc-900/50 border-none shadow-sm focus-visible:ring-brand-navy rounded-2xl font-bold" 
+                        className="pl-12 h-12 bg-zinc-50 border-none shadow-sm focus-visible:ring-brand-navy rounded-xl font-bold" 
                         {...field} 
                       />
                     </div>
@@ -143,7 +143,7 @@ export function RegisterForm() {
                       <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input 
                         placeholder="+234 ..." 
-                        className="pl-12 h-14 bg-white/50 dark:bg-zinc-900/50 border-none shadow-sm focus-visible:ring-brand-navy rounded-2xl font-bold" 
+                        className="pl-12 h-12 bg-zinc-50 border-none shadow-sm focus-visible:ring-brand-navy rounded-xl font-bold" 
                         {...field} 
                       />
                     </div>
@@ -154,7 +154,7 @@ export function RegisterForm() {
             />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div className="space-y-3">
             <FormField
               control={form.control}
               name="password"
@@ -167,7 +167,7 @@ export function RegisterForm() {
                       <Input 
                         type="password" 
                         placeholder="••••••••" 
-                        className="pl-12 h-14 bg-white/50 dark:bg-zinc-900/50 border-none shadow-sm focus-visible:ring-brand-navy rounded-2xl font-bold" 
+                        className="pl-12 h-12 bg-zinc-50 border-none shadow-sm focus-visible:ring-brand-navy rounded-xl font-bold" 
                         {...field} 
                       />
                     </div>
@@ -189,7 +189,7 @@ export function RegisterForm() {
                       <Input 
                         type="password" 
                         placeholder="••••••••" 
-                        className="pl-12 h-14 bg-white/50 dark:bg-zinc-900/50 border-none shadow-sm focus-visible:ring-brand-navy rounded-2xl font-bold" 
+                        className="pl-12 h-12 bg-zinc-50 border-none shadow-sm focus-visible:ring-brand-navy rounded-xl font-bold" 
                         {...field} 
                       />
                     </div>
@@ -203,7 +203,7 @@ export function RegisterForm() {
         <Button 
           type="submit" 
           disabled={isLoading}
-          className="w-full h-16 bg-brand-navy hover:bg-brand-navy/90 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-2xl shadow-brand-navy/20 active:scale-95 transition-all mt-4"
+          className="w-full h-14 bg-brand-navy hover:bg-brand-navy/90 text-white font-black text-xs uppercase tracking-widest rounded-xl shadow-2xl shadow-brand-navy/20 active:scale-95 transition-all mt-2"
         >
           {isLoading ? (
             <LoadingSpinner size="sm" variant="white" />
@@ -215,7 +215,7 @@ export function RegisterForm() {
           )}
         </Button>
 
-        <div className="text-center pt-6 border-t border-border/30">
+        <div className="text-center pt-2">
             <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                 Already have an account? {" "}
                 <Link href="/auth/login" className="text-brand-navy hover:underline">SIGN IN HERE</Link>
