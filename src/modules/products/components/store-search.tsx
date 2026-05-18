@@ -27,7 +27,7 @@ export function StoreSearch({ open, setOpen }: StoreSearchProps) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="sm:max-w-[600px] bg-white p-0 overflow-hidden border-none shadow-2xl">
         <DialogTitle className="sr-only">Search Catalogue</DialogTitle>
-        <form onSubmit={handleSearch} className="relative flex items-center p-6 bg-white border-b border-zinc-100">
+        <form onSubmit={handleSearch} className="relative flex items-center p-6 bg-white border-b border-zinc-100 pr-16">
           <Search className="absolute left-10 size-6 text-zinc-400" />
           <input 
             type="text" 
@@ -37,13 +37,6 @@ export function StoreSearch({ open, setOpen }: StoreSearchProps) {
             className="w-full pl-14 pr-4 py-4 text-xl font-bold bg-transparent outline-none text-zinc-900 placeholder:text-zinc-300"
             autoFocus
           />
-          <button 
-            type="button"
-            onClick={() => setOpen(false)}
-            className="p-2 hover:bg-zinc-100 rounded-full transition-colors"
-          >
-            <X className="size-5 text-zinc-500" />
-          </button>
         </form>
         <div className="p-8 bg-zinc-50/50">
           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-4">Quick Search</p>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useScrollAnimation } from "@/hooks/use-scroll-animation";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
 interface AnimatedSectionProps {
@@ -16,26 +16,31 @@ export function AnimatedSection({
   animation = "fade-up",
   delay = 0,
 }: AnimatedSectionProps) {
-  const { ref, visible } = useScrollAnimation(0.1);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    // Smooth transition on client mount
+    const timer = setTimeout(() => setMounted(true), 50);
+    return () => clearTimeout(timer);
+  }, []);
 
   const baseHidden: Record<string, string> = {
-    "fade-up":    "opacity-0 translate-y-12",
-    "fade-left":  "opacity-0 -translate-x-12",
-    "fade-right": "opacity-0 translate-x-12",
-    "zoom-in":    "opacity-0 scale-90",
+    "fade-up":    "opacity-0 translate-y-4",
+    "fade-left":  "opacity-0 -translate-x-4",
+    "fade-right": "opacity-0 translate-x-4",
+    "zoom-in":    "opacity-0 scale-95",
   };
 
   const baseVisible = "opacity-100 translate-y-0 translate-x-0 scale-100";
 
   return (
     <div
-      ref={ref}
       className={cn(
         "transition-all duration-700 ease-out",
-        visible ? baseVisible : baseHidden[animation],
+        mounted ? baseVisible : baseHidden[animation],
         className
       )}
-      style={{ transitionDelay: visible ? `${delay}ms` : "0ms" }}
+      style={{ transitionDelay: `${delay}ms` }}
     >
       {children}
     </div>

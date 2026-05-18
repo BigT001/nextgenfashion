@@ -23,21 +23,62 @@ export default async function LandingPage() {
     ]);
     featuredProducts = products;
     dbCategories = cats;
-  } catch {
+  } catch (err) {
+    console.error("[LANDING_PAGE] DB Query failed:", err);
     featuredProducts = [];
     dbCategories = [];
   }
 
-  const categories = dbCategories.map(cat => {
-    // Priority: 1. Dedicated Category Image, 2. First Product Image, 3. Null (show fallback icon)
-    const displayImage = cat.image || (cat.products?.[0]?.images?.[0]) || null;
+  const fallbackCategories = [
+    {
+      name: "Tops",
+      image: "https://images.unsplash.com/photo-1622290291468-a28f7a7dc6a8?auto=format&fit=crop&q=80&w=300",
+      href: "/shop?category=tops"
+    },
+    {
+      name: "Bottoms",
+      image: "https://images.unsplash.com/photo-1503919545889-aef636e10ad4?auto=format&fit=crop&q=80&w=300",
+      href: "/shop?category=bottoms"
+    },
+    {
+      name: "Dresses",
+      image: "https://images.unsplash.com/photo-1518831959646-742c3a14ebf7?auto=format&fit=crop&q=80&w=300",
+      href: "/shop?category=dresses"
+    },
+    {
+      name: "Footwear",
+      image: "https://images.unsplash.com/photo-1529604278261-8bfcb381165f?auto=format&fit=crop&q=80&w=300",
+      href: "/shop?category=footwear"
+    },
+    {
+      name: "Accessories",
+      image: "https://images.unsplash.com/photo-1513373190622-214cc9291083?auto=format&fit=crop&q=80&w=300",
+      href: "/shop?category=accessories"
+    },
+    {
+      name: "Boys",
+      image: "https://images.unsplash.com/photo-1519241047957-be31d7379a5d?auto=format&fit=crop&q=80&w=300",
+      href: "/shop?category=boys"
+    },
+    {
+      name: "Girls",
+      image: "https://images.unsplash.com/photo-1518831959646-742c3a14ebf7?auto=format&fit=crop&q=80&w=300",
+      href: "/shop?category=girls"
+    }
+  ];
 
-    return {
-      name: cat.name,
-      image: displayImage,
-      href: `/shop?category=${cat.id}`
-    };
-  });
+  const categories = dbCategories.length > 0
+    ? dbCategories.map(cat => {
+        const premiumMatch = fallbackCategories.find(f => f.name.toLowerCase() === cat.name.toLowerCase());
+        const displayImage = cat.image || premiumMatch?.image || (cat.products?.[0]?.images?.[0]) || "https://images.unsplash.com/photo-1513373190622-214cc9291083?auto=format&fit=crop&q=80&w=300";
+
+        return {
+          name: cat.name,
+          image: displayImage,
+          href: `/shop?category=${cat.id}`
+        };
+      })
+    : fallbackCategories;
 
   return (
     <div className="flex flex-col bg-white overflow-x-hidden">
@@ -218,10 +259,10 @@ export default async function LandingPage() {
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 max-w-5xl mx-auto">
               {[
-                { id: "mock1", name: "Premium Kids Set", price: 15000, category: { name: "Boys" }, images: ["https://images.unsplash.com/photo-1519241047957-be31d7379a5d?auto=format&fit=crop&q=80&w=600"] },
-                { id: "mock2", name: "Summer Dress", price: 12500, category: { name: "Girls" }, images: ["https://images.unsplash.com/photo-1518831959646-742c3a14ebf7?auto=format&fit=crop&q=80&w=600"] },
-                { id: "mock3", name: "Baby Sneakers", price: 8000, category: { name: "Footwear" }, images: ["https://images.unsplash.com/photo-1529604278261-8bfcb381165f?auto=format&fit=crop&q=80&w=600"] },
-                { id: "mock4", name: "Cozy Jacket", price: 21000, category: { name: "Winter" }, images: ["https://images.unsplash.com/photo-1622290291468-a28f7a7dc6a8?auto=format&fit=crop&q=80&w=600"] }
+                { id: "mock1", name: "Premium Kids Set", basePrice: 15000, category: { name: "Boys" }, images: ["https://images.unsplash.com/photo-1519241047957-be31d7379a5d?auto=format&fit=crop&q=80&w=600"] },
+                { id: "mock2", name: "Summer Dress", basePrice: 12500, category: { name: "Girls" }, images: ["https://images.unsplash.com/photo-1518831959646-742c3a14ebf7?auto=format&fit=crop&q=80&w=600"] },
+                { id: "mock3", name: "Baby Sneakers", basePrice: 8000, category: { name: "Footwear" }, images: ["https://images.unsplash.com/photo-1529604278261-8bfcb381165f?auto=format&fit=crop&q=80&w=600"] },
+                { id: "mock4", name: "Cozy Jacket", basePrice: 21000, category: { name: "Winter" }, images: ["https://images.unsplash.com/photo-1622290291468-a28f7a7dc6a8?auto=format&fit=crop&q=80&w=600"] }
               ].map((product, i) => (
                 <AnimatedSection key={product.id} animation="fade-up" delay={i * 70}>
                   <ProductCard product={product as any} />
