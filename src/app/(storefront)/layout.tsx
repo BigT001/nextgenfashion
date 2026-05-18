@@ -119,7 +119,7 @@ export default function StoreLayout({ children }: { children: React.ReactNode })
               alt="NextGen Fashion"
               width={160}
               height={56}
-              className="object-contain h-12 w-auto group-hover:scale-105 transition-transform"
+              className="object-contain h-8 md:h-12 w-auto group-hover:scale-105 transition-transform"
               priority
             />
           </Link>
@@ -169,34 +169,81 @@ export default function StoreLayout({ children }: { children: React.ReactNode })
             {/* Mobile hamburger */}
             <button
               className="lg:hidden p-2 rounded-xl text-zinc-600 hover:bg-zinc-100 transition-colors"
-              onClick={() => setMobileOpen(!mobileOpen)}
+              onClick={() => setMobileOpen(true)}
             >
-              {mobileOpen ? <X className="size-6" /> : <Menu className="size-6" />}
+              <Menu className="size-6" />
             </button>
           </div>
         </div>
 
-        {/* Mobile Nav */}
-        {mobileOpen && (
-          <div className="lg:hidden border-t border-zinc-100 bg-white px-6 py-4 space-y-1 shadow-inner">
-            {navLinks.map((link, i) => (
-              <Link
-                key={i}
-                href={link.href}
-                onClick={() => setMobileOpen(false)}
-                className="block py-2.5 px-4 text-sm font-black uppercase tracking-widest text-zinc-700 hover:text-white hover:bg-[#0B1E3F] rounded-xl transition-all"
-              >
-                {link.label}
-              </Link>
-            ))}
-            <Link
-              href={status === "authenticated" ? "/account" : "/auth/login"}
+        {/* Mobile Nav - Slide-out Drawer from Left */}
+        {mounted && (
+          <>
+            {/* Backdrop overlay */}
+            <div 
+              className={cn(
+                "fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm lg:hidden transition-opacity duration-300 pointer-events-none opacity-0",
+                mobileOpen && "pointer-events-auto opacity-100"
+              )}
               onClick={() => setMobileOpen(false)}
-              className="block py-2.5 px-4 text-sm font-black uppercase tracking-widest text-white bg-pink-500 rounded-xl transition-all text-center mt-2 shadow-md"
+            />
+            {/* Drawer Container */}
+            <div 
+              className={cn(
+                "fixed top-0 bottom-0 left-0 z-[101] w-[280px] bg-white lg:hidden transition-all duration-300 ease-out transform shadow-2xl flex flex-col -translate-x-full",
+                mobileOpen && "translate-x-0"
+              )}
             >
-              MY ACCOUNT
-            </Link>
-          </div>
+              {/* Drawer Header */}
+              <div className="flex items-center justify-between px-6 py-5 border-b border-zinc-100">
+                <Link href="/" onClick={() => setMobileOpen(false)} className="flex items-center">
+                  <Image
+                    src="/images/logonextgen.png"
+                    alt="NextGen Fashion"
+                    width={110}
+                    height={40}
+                    className="object-contain h-8 w-auto"
+                  />
+                </Link>
+                <button
+                  onClick={() => setMobileOpen(false)}
+                  className="p-2 rounded-xl text-zinc-600 hover:bg-zinc-100 transition-colors"
+                >
+                  <X className="size-6" />
+                </button>
+              </div>
+
+              {/* Drawer Links */}
+              <div className="flex-1 overflow-y-auto px-6 py-6 space-y-2">
+                {navLinks.map((link, i) => (
+                  <Link
+                    key={i}
+                    href={link.href}
+                    onClick={() => setMobileOpen(false)}
+                    className={cn(
+                      "block py-3 px-4 text-xs font-black uppercase tracking-widest rounded-xl transition-all",
+                      pathname === link.href 
+                        ? "text-white bg-[#0B1E3F] shadow-md shadow-[#0B1E3F]/20" 
+                        : "text-zinc-700 hover:bg-zinc-50"
+                    )}
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+              </div>
+
+              {/* Drawer Footer Account CTA */}
+              <div className="p-6 border-t border-zinc-100">
+                <Link
+                  href={status === "authenticated" ? "/account" : "/auth/login"}
+                  onClick={() => setMobileOpen(false)}
+                  className="block py-4 px-4 text-xs font-black uppercase tracking-widest text-white bg-pink-500 rounded-xl transition-all text-center shadow-lg hover:bg-pink-600 active:scale-95"
+                >
+                  MY ACCOUNT
+                </Link>
+              </div>
+            </div>
+          </>
         )}
       </header>
 

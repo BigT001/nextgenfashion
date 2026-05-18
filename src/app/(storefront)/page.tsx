@@ -43,7 +43,7 @@ export default async function LandingPage() {
     <div className="flex flex-col bg-white overflow-x-hidden">
 
       {/* ═══════════════════ HERO — Full-width Sky Blue (reference match) ══════ */}
-      <section className="relative overflow-hidden" style={{ background: "linear-gradient(180deg,#1ab2f5 0%,#29ccf5 30%,#5dd8f8 65%,#b3ecfc 85%,#e0f7ff 100%)", minHeight: "82vh" }}>
+      <section className="relative overflow-hidden min-h-[520px] md:min-h-[82vh]" style={{ background: "linear-gradient(180deg,#1ab2f5 0%,#29ccf5 30%,#5dd8f8 65%,#b3ecfc 85%,#e0f7ff 100%)" }}>
 
         {/* ── Sun ── */}
         <div className="absolute top-6 left-8 z-10 animate-float" style={{ animationDuration: "6s" }}>
@@ -97,7 +97,7 @@ export default async function LandingPage() {
         </div>
 
         {/* ── Offer badge ── */}
-        <div className="relative z-20 pt-8 flex justify-center">
+        <div className="relative z-20 pt-8 hidden md:flex justify-center">
           <div className="inline-flex items-center gap-2 bg-yellow-400 text-yellow-900 font-black text-xs uppercase tracking-widest px-6 py-2 rounded-full shadow-lg border-2 border-yellow-300">
             🎉 Get upto 30% off on Kids Collection — Limited Time!
           </div>
@@ -120,7 +120,7 @@ export default async function LandingPage() {
         </div>
 
         {/* ── Baby image — full-width, centred, no split ── */}
-        <div className="relative z-10 flex justify-center items-end px-4">
+        <div className="relative z-10 flex justify-center items-end px-4 translate-y-[16px] md:translate-y-[24px]">
           <div className="relative w-full max-w-3xl">
             {/* Baby playing on ground — prominent like reference */}
             <img
