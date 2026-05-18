@@ -125,7 +125,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     <Sidebar collapsible="icon" className="border-r-0 bg-brand-navy" {...props}>
       {/* High-Fidelity Header - Compact */}
       <SidebarHeader className="h-20 flex items-center justify-center border-b border-white/10">
-        <div className="flex items-center gap-3 px-4 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:justify-center w-full group">
+        <Link href="/" className="flex items-center gap-3 px-4 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:justify-center w-full group cursor-pointer">
           <div className="flex aspect-square size-10 items-center justify-center rounded-xl bg-white shadow-lg shadow-brand-navy/5 group-hover:scale-105 transition-transform duration-500 ring-1 ring-border/50 p-1.5 shrink-0">
             <Image 
                 src="/images/logonextgen.png" 
@@ -139,7 +139,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <span className="font-black text-base tracking-tighter text-white">Business</span>
             <span className="text-[10px] uppercase tracking-[0.3em] text-white/60 font-black">Suite</span>
           </div>
-        </div>
+        </Link>
       </SidebarHeader>
       
       {/* Navigation Content - Optimized Spacing */}

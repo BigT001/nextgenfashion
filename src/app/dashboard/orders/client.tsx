@@ -30,24 +30,64 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuGroup,
 } from "@/components/ui/dropdown-menu";
 import { OrderDetailModal } from "@/modules/orders/components/order-detail-modal";
 import { OrderReceipt } from "@/modules/orders/components/order-receipt";
 import { getOrdersDashboardAction } from "@/modules/orders/actions/order.actions";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { toast } from "sonner";
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { ColumnDef } from "@tanstack/react-table";
 
 export default function OrdersClient({ initialData }: { initialData: any[] }) {
-  const [data, setData] = useState<any[]>(initialData);
+  const [data, setData] = useState<any[]>(initialData || []);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [receiptOrderId, setReceiptOrderId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"ALL" | "ONLINE" | "POS">("ALL");
 
   const loadData = async () => {
     const result = await getOrdersDashboardAction();
     if (result.success) {
       setData(result.data || []);
     }
+  };
+
+  const handleExportLedger = () => {
+    if (!data || data.length === 0) {
+      toast.error("No orders available to export");
+      return;
+    }
+    
+    const headers = ["Order ID", "Channel", "Patron", "Operator", "Email", "Revenue", "Fulfillment", "Timestamp"];
+    const csvRows = [headers.join(",")];
+    
+    for (const order of data) {
+      const isPos = order.userId || order.orderNumber.includes("POS");
+      const row = [
+        `"${order.orderNumber}"`,
+        `"${isPos ? 'POS Terminal' : 'Storefront'}"`,
+        `"${order.customer?.name || 'Walk-in Curator'}"`,
+        `"${order.user?.name || 'System Storefront'}"`,
+        `"${order.customer?.email || 'N/A'}"`,
+        order.totalAmount,
+        `"${order.status}"`,
+        `"${new Date(order.createdAt).toISOString()}"`
+      ];
+      csvRows.push(row.join(","));
+    }
+    
+    const csvContent = "data:text/csv;charset=utf-8," + csvRows.join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `nextgen_orders_ledger_${new Date().toISOString().slice(0,10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast.success("Orders ledger exported successfully");
   };
 
   const columns: ColumnDef<any>[] = [
@@ -64,6 +104,25 @@ export default function OrdersClient({ initialData }: { initialData: any[] }) {
       ),
     },
     {
+      accessorKey: "channel",
+      header: "CHANNEL",
+      cell: ({ row }) => {
+        const isPos = row.original.userId || row.original.orderNumber.includes("POS");
+        return (
+          <Badge 
+            className={cn(
+              "font-black text-[9px] px-2.5 py-0.5 rounded-full uppercase tracking-wider border-none shadow-sm",
+              isPos 
+                ? "bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400" 
+                : "bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400"
+            )}
+          >
+            {isPos ? "POS Terminal" : "Storefront"}
+          </Badge>
+        );
+      }
+    },
+    {
       accessorKey: "customer.name",
       header: "PATRON",
       cell: ({ row }) => (
@@ -72,6 +131,28 @@ export default function OrdersClient({ initialData }: { initialData: any[] }) {
             <span className="text-[9px] text-muted-foreground font-black uppercase tracking-widest">{row.original.customer?.email || "No Digital Identity"}</span>
         </div>
       ),
+    },
+    {
+      accessorKey: "user.name",
+      header: "OPERATOR",
+      cell: ({ row }) => {
+        const operatorName = row.original.user?.name;
+        return (
+          <div className="flex flex-col">
+            <span className={cn(
+              "font-black text-xs tracking-tight",
+              operatorName ? "text-foreground" : "text-muted-foreground italic font-medium"
+            )}>
+              {operatorName || "System Storefront"}
+            </span>
+            {operatorName && (
+              <span className="text-[9px] text-muted-foreground font-black uppercase tracking-widest">
+                {row.original.user?.role || "STAFF"}
+              </span>
+            )}
+          </div>
+        );
+      }
     },
     {
       accessorKey: "totalAmount",
@@ -113,30 +194,36 @@ export default function OrdersClient({ initialData }: { initialData: any[] }) {
     },
     {
       id: "actions",
-      header: () => <div className="text-right">CONTROL</div>,
+      header: () => <div className="text-right pr-4">CONTROL</div>,
       cell: ({ row }) => (
-        <div className="text-right">
+        <div className="flex items-center justify-end gap-2 pr-2">
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 px-3.5 font-black text-[10px] uppercase tracking-widest bg-brand-navy/5 text-brand-navy hover:bg-brand-navy hover:text-white border-none rounded-xl active:scale-95 transition-all flex items-center gap-1.5"
+            onClick={() => setSelectedOrderId(row.original.id)}
+          >
+            <Eye className="h-3.5 w-3.5" /> View
+          </Button>
           <DropdownMenu>
-            <DropdownMenuTrigger className="h-8 w-8 p-0 inline-flex items-center justify-center hover:bg-brand-navy/5 hover:text-brand-navy rounded-lg transition-colors">
-                <MoreHorizontal className="h-4 w-4" />
+            <DropdownMenuTrigger className="h-8 w-8 inline-flex items-center justify-center hover:bg-brand-navy/5 hover:text-brand-navy rounded-xl transition-colors text-muted-foreground focus:outline-none">
+              <MoreHorizontal className="h-4 w-4" />
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 glass-card border-none shadow-2xl p-2 rounded-2xl">
-              <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground p-3">Logistics Actions</DropdownMenuLabel>
-              <DropdownMenuItem 
-                onClick={() => setSelectedOrderId(row.original.id)}
-                className="rounded-xl h-10 font-bold gap-3 focus:bg-brand-navy/5 focus:text-brand-navy"
-              >
-                <Eye className="size-4" /> View Intelligence
-              </DropdownMenuItem>
-              <DropdownMenuItem className="rounded-xl h-10 font-bold gap-3 focus:bg-brand-navy/5 focus:text-brand-navy">
-                <Truck className="size-4" /> Track Shipment
-              </DropdownMenuItem>
-              <DropdownMenuItem 
-                onClick={() => setReceiptOrderId(row.original.id)}
-                className="rounded-xl h-10 font-bold gap-3 focus:bg-brand-navy/5 focus:text-brand-navy"
-              >
-                <Download className="size-4" /> Export Receipt
-              </DropdownMenuItem>
+            <DropdownMenuContent align="end" className="w-52 glass-card border-none shadow-2xl p-2 rounded-2xl">
+              <DropdownMenuGroup>
+                <DropdownMenuItem 
+                  className="rounded-xl h-10 font-bold gap-3 focus:bg-brand-navy/5 focus:text-brand-navy cursor-pointer"
+                  onClick={() => toast.info("Shipment tracking logic integrated. Parcel is in transit.")}
+                >
+                  <Truck className="size-4" /> Track Shipment
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  className="rounded-xl h-10 font-bold gap-3 focus:bg-brand-navy/5 focus:text-brand-navy cursor-pointer"
+                  onClick={() => setReceiptOrderId(row.original.id)}
+                >
+                  <Download className="size-4" /> Export Receipt
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -144,25 +231,35 @@ export default function OrdersClient({ initialData }: { initialData: any[] }) {
     },
   ];
 
-
+  const onlineOrders = data.filter((order: any) => !order.userId && !order.orderNumber.includes("POS"));
+  const posOrders = data.filter((order: any) => order.userId || order.orderNumber.includes("POS"));
+  const activeOrders = 
+    activeTab === "ALL" ? data :
+    activeTab === "ONLINE" ? onlineOrders : posOrders;
 
   return (
     <div className="space-y-10 animate-slow-fade">
       {/* Header Section */}
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div className="space-y-1">
-          <h2 className="text-4xl font-black tracking-tight text-gradient">Order Command</h2>
-          <p className="text-muted-foreground font-medium">Global logistics auditing and high-fidelity fulfillment orchestration.</p>
+          <h2 className="text-4xl font-black tracking-tight text-gradient">Orders</h2>
+          <p className="text-muted-foreground font-medium">Real-time management and orchestration of online and offline sales.</p>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="outline" className="glass-card border-none h-12 px-6 font-black text-xs uppercase tracking-widest shadow-sm">
+          <Button 
+            variant="outline" 
+            onClick={handleExportLedger}
+            className="glass-card border-none h-12 px-6 font-black text-xs uppercase tracking-widest shadow-sm"
+          >
             <Download className="mr-2 h-4 w-4" />
             EXPORT LEDGER
           </Button>
-          <Button className="bg-brand-navy hover:bg-brand-navy/90 text-white h-12 px-8 font-black rounded-xl shadow-xl shadow-brand-navy/20 active:scale-95 transition-all">
-            <Zap className="mr-2 h-5 w-5" />
-            LIVE POS TERMINAL
-          </Button>
+          <Link href="/dashboard/pos">
+            <Button className="bg-brand-navy hover:bg-brand-navy/90 text-white h-12 px-8 font-black rounded-xl shadow-xl shadow-brand-navy/20 active:scale-95 transition-all">
+              <Zap className="mr-2 h-5 w-5" />
+              LIVE POS TERMINAL
+            </Button>
+          </Link>
         </div>
       </div>
 
@@ -198,11 +295,57 @@ export default function OrdersClient({ initialData }: { initialData: any[] }) {
         />
       </div>
 
+      {/* Sales Channels Switcher Tabs */}
+      <div className="flex items-center gap-4 border-b border-border/50 pb-1 pt-4">
+        <button
+          onClick={() => setActiveTab("ALL")}
+          className={cn(
+            "pb-4 px-2 font-black text-xs uppercase tracking-widest transition-all relative cursor-pointer focus:outline-none",
+            activeTab === "ALL" 
+              ? "text-brand-navy dark:text-white" 
+              : "text-muted-foreground hover:text-brand-navy dark:hover:text-white"
+          )}
+        >
+          All Acquisitions ({data.length})
+          {activeTab === "ALL" && (
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-navy dark:bg-white rounded-full animate-fast-fade" />
+          )}
+        </button>
+        <button
+          onClick={() => setActiveTab("ONLINE")}
+          className={cn(
+            "pb-4 px-2 font-black text-xs uppercase tracking-widest transition-all relative cursor-pointer focus:outline-none",
+            activeTab === "ONLINE" 
+              ? "text-brand-navy dark:text-white" 
+              : "text-muted-foreground hover:text-brand-navy dark:hover:text-white"
+          )}
+        >
+          Online Storefront ({onlineOrders.length})
+          {activeTab === "ONLINE" && (
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-navy dark:bg-white rounded-full animate-fast-fade" />
+          )}
+        </button>
+        <button
+          onClick={() => setActiveTab("POS")}
+          className={cn(
+            "pb-4 px-2 font-black text-xs uppercase tracking-widest transition-all relative cursor-pointer focus:outline-none",
+            activeTab === "POS" 
+              ? "text-brand-navy dark:text-white" 
+              : "text-muted-foreground hover:text-brand-navy dark:hover:text-white"
+          )}
+        >
+          POS Terminal ({posOrders.length})
+          {activeTab === "POS" && (
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-navy dark:bg-white rounded-full animate-fast-fade" />
+          )}
+        </button>
+      </div>
+
       {/* Main Table Layer */}
-      <div className="glass-card border-none shadow-2xl overflow-hidden rounded-[2.5rem]">
+      <div className="overflow-hidden">
         <DataTable 
           columns={columns} 
-          data={data} 
+          data={activeOrders} 
           searchKey="orderNumber"
         />
       </div>

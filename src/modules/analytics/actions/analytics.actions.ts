@@ -8,10 +8,12 @@ import { AnalyticsQueries } from "../queries/analytics.queries";
  */
 export async function getExecutiveDashboardAction() {
   try {
-    const [kpis, trend, topProducts] = await Promise.all([
+    const [kpis, trend, topProducts, recentSales, lowStockItems] = await Promise.all([
       AnalyticsQueries.getExecutiveKPIs(),
       AnalyticsQueries.getRevenueTrend(),
-      AnalyticsQueries.getTopProducts()
+      AnalyticsQueries.getTopProducts(),
+      AnalyticsQueries.getRecentSales(),
+      AnalyticsQueries.getLowStockItems()
     ]);
 
     return {
@@ -19,7 +21,9 @@ export async function getExecutiveDashboardAction() {
       data: {
         kpis,
         trend,
-        topProducts
+        topProducts,
+        recentSales,
+        lowStockItems
       }
     };
   } catch (error) {

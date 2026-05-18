@@ -30,26 +30,53 @@ import { getExecutiveDashboardAction } from "@/modules/analytics/actions/analyti
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { cn } from "@/lib/utils";
 
+import { useSession } from "next-auth/react";
+import { AlertTriangle } from "lucide-react";
+
 export default function AnalyticsPage() {
+  const { data: session, status } = useSession();
   const [data, setData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     async function loadData() {
+      const role = (session?.user as any)?.role;
+      if (role === "STAFF") {
+        setIsLoading(false);
+        return;
+      }
+
       const result = await getExecutiveDashboardAction();
       if (result.success) {
         setData(result.data);
       }
       setIsLoading(false);
     }
-    loadData();
-  }, []);
+    if (status !== "loading") {
+      loadData();
+    }
+  }, [session, status]);
 
-  if (isLoading) {
+  if (status === "loading" || isLoading) {
     return (
       <div className="h-[80vh] flex flex-col items-center justify-center space-y-4">
         <LoadingSpinner size="lg" />
         <p className="text-sm font-bold uppercase tracking-widest text-muted-foreground animate-pulse">Aggregating Intelligence...</p>
+      </div>
+    );
+  }
+
+  const userRole = (session?.user as any)?.role || "STAFF";
+  if (userRole === "STAFF") {
+    return (
+      <div className="h-[75vh] flex flex-col items-center justify-center text-center p-8">
+        <div className="size-16 bg-rose-500/10 rounded-[2rem] flex items-center justify-center text-rose-500 mb-6 animate-pulse">
+          <AlertTriangle className="size-8" />
+        </div>
+        <h3 className="text-2xl font-black tracking-tight text-foreground">Access Restricted</h3>
+        <p className="text-sm text-muted-foreground max-w-sm mt-2 font-medium">
+          This logistical analytics suite is reserved for administrative clearance. Contact System Admin to request access.
+        </p>
       </div>
     );
   }

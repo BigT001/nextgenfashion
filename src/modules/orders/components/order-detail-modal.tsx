@@ -41,6 +41,232 @@ import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { toast } from "sonner";
 
+const DUMMY_ORDER_DETAILS: Record<string, any> = {};
+/*
+  "dummy-1": {
+    orderNumber: "NG-WEB-73A",
+    paymentMethod: "CARD",
+    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+    status: "COMPLETED",
+    totalAmount: 280000,
+    customer: {
+      name: "Adora Nwosu",
+      email: "adora@nextgen.com",
+      phone: "+234 812 345 6789",
+      address: "No. 12 Joel Ogunnaike Street, Ikeja GRA, Lagos, Nigeria"
+    },
+    items: [
+      {
+        id: "item-1",
+        quantity: 1,
+        price: 180000,
+        variant: {
+          size: "M",
+          sku: "NG-TX-001",
+          product: {
+            name: "NextGen Luxury Velvet Tuxedo",
+            images: []
+          }
+        }
+      },
+      {
+        id: "item-2",
+        quantity: 2,
+        price: 50000,
+        variant: {
+          size: "L",
+          sku: "NG-PS-002",
+          product: {
+            name: "Classic Silk Pocket Square",
+            images: []
+          }
+        }
+      }
+    ]
+  },
+  "dummy-2": {
+    orderNumber: "NG-WEB-92B",
+    paymentMethod: "TRANSFER",
+    createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
+    status: "PENDING",
+    totalAmount: 145000,
+    customer: {
+      name: "Chinedu Okafor",
+      email: "chinedu@luxury.io",
+      phone: "+234 809 876 5432",
+      address: "Penthouse B, Eko Atlantic Towers, Victoria Island, Lagos, Nigeria"
+    },
+    items: [
+      {
+        id: "item-3",
+        quantity: 1,
+        price: 145000,
+        variant: {
+          size: "XL",
+          sku: "NG-SW-002",
+          product: {
+            name: "Signature Cashmere Wool Sweater",
+            images: []
+          }
+        }
+      }
+    ]
+  },
+  "dummy-3": {
+    orderNumber: "NG-WEB-45C",
+    paymentMethod: "CARD",
+    createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+    status: "COMPLETED",
+    totalAmount: 420000,
+    customer: {
+      name: "Zara Bello",
+      email: "zara.b@couture.com",
+      phone: "+234 901 234 5678",
+      address: "Maitama Heights, Block 4, Abuja, Nigeria"
+    },
+    items: [
+      {
+        id: "item-4",
+        quantity: 1,
+        price: 270000,
+        variant: {
+          size: "S",
+          sku: "NG-GW-003",
+          product: {
+            name: "Premium Satin Evening Gown",
+            images: []
+          }
+        }
+      },
+      {
+        id: "item-5",
+        quantity: 1,
+        price: 150000,
+        variant: {
+          size: "S",
+          sku: "NG-BT-004",
+          product: {
+            name: "Monogrammed Leather Belt",
+            images: []
+          }
+        }
+      }
+    ]
+  },
+  "dummy-4": {
+    orderNumber: "NG-WEB-11D",
+    paymentMethod: "TRANSFER",
+    createdAt: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString(),
+    status: "CANCELLED",
+    totalAmount: 890000,
+    customer: {
+      name: "Tunde Folawiyo",
+      email: "tunde@folawiyogroup.com",
+      phone: "+234 803 111 2222",
+      address: "Folawiyo Towers, 22 Glover Road, Ikoyi, Lagos, Nigeria"
+    },
+    items: [
+      {
+        id: "item-6",
+        quantity: 2,
+        price: 445000,
+        variant: {
+          size: "XXL",
+          sku: "NG-LF-005",
+          product: {
+            name: "Handcrafted Italian Leather Loafers",
+            images: []
+          }
+        }
+      }
+    ]
+  },
+  "dummy-5": {
+    orderNumber: "ORD-POS-88X",
+    paymentMethod: "CASH",
+    createdAt: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
+    status: "COMPLETED",
+    totalAmount: 75000,
+    customer: null,
+    items: [
+      {
+        id: "item-7",
+        quantity: 1,
+        price: 75000,
+        variant: {
+          size: "L",
+          sku: "NG-SH-006",
+          product: {
+            name: "Classic Linen Summer Shirt",
+            images: []
+          }
+        }
+      }
+    ]
+  },
+  "dummy-6": {
+    orderNumber: "ORD-POS-54Y",
+    paymentMethod: "CARD",
+    createdAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
+    status: "COMPLETED",
+    totalAmount: 120000,
+    customer: null,
+    items: [
+      {
+        id: "item-8",
+        quantity: 2,
+        price: 60000,
+        variant: {
+          size: "M",
+          sku: "NG-CH-007",
+          product: {
+            name: "Slim Fit Stretch Chino",
+            images: []
+          }
+        }
+      }
+    ]
+  },
+  "dummy-7": {
+    orderNumber: "ORD-POS-21Z",
+    paymentMethod: "POS",
+    createdAt: new Date(Date.now() - 26 * 60 * 60 * 1000).toISOString(),
+    status: "COMPLETED",
+    totalAmount: 310000,
+    customer: null,
+    items: [
+      {
+        id: "item-9",
+        quantity: 1,
+        price: 250000,
+        variant: {
+          size: "L",
+          sku: "NG-BZ-008",
+          product: {
+            name: "Tailored Premium Blazer",
+            images: []
+          }
+        }
+      },
+      {
+        id: "item-10",
+        quantity: 1,
+        price: 60000,
+        variant: {
+          size: "L",
+          sku: "NG-SH-009",
+          product: {
+            name: "Oxford Button-Down Cotton Shirt",
+            images: []
+          }
+        }
+      }
+    ]
+  }
+};
+
+*/
+
 interface OrderDetailModalProps {
   orderId: string | null;
   onClose: () => void;

@@ -1,5 +1,8 @@
 import { getStaffAction } from "@/modules/staff/actions/staff.actions";
 import { StaffTable } from "@/modules/staff/components/staff-table";
+import { auth } from "@/services/auth.service";
+import { UserRole } from "@/modules/auth/constants";
+import { redirect } from "next/navigation";
 
 export const metadata = {
   title: "Staff Management - NextGen Fashion",
@@ -7,9 +10,13 @@ export const metadata = {
 };
 
 export default async function StaffPage() {
-  // Try to use a central auth utility if it exists, otherwise fallback to next-auth
-  // Or check if there is an auth guard wrapper around this route.
-  
+  const session = await auth();
+  const userRole = (session?.user as any)?.role as UserRole || UserRole.STAFF;
+
+  if (userRole !== UserRole.SUPERADMIN && userRole !== UserRole.ADMIN) {
+    redirect("/dashboard");
+  }
+
   const res = await getStaffAction();
   
   if (!res.success) {

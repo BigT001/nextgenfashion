@@ -10,11 +10,13 @@ import {
   DialogFooter
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, ShoppingBag, Printer, Mail, ArrowRight, Zap, Receipt, Smartphone, Banknote, CreditCard } from "lucide-react";
+import { CheckCircle2, ShoppingBag, Printer, Mail, ArrowRight, Zap, Receipt, Smartphone, Banknote, CreditCard, Loader2 } from "lucide-react";
 import confetti from "canvas-confetti";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { BarcodeVisualizer } from "@/modules/products/components/barcode-visualizer";
+import { toast } from "sonner";
+import { dispatchReceiptEmailAction } from "@/modules/pos/actions/sale.actions";
 
 interface CheckoutSuccessDialogProps {
   isOpen: boolean;
@@ -34,6 +36,7 @@ export function CheckoutSuccessDialog({
 }: CheckoutSuccessDialogProps) {
   const [mounted, setMounted] = useState(false);
   const [showReceipt, setShowReceipt] = useState(false);
+  const [isDispatching, setIsDispatching] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -63,6 +66,90 @@ export function CheckoutSuccessDialog({
 
   if (!mounted || !orderData) return null;
 
+  const handlePrint = () => {
+    const printContent = `
+      <html>
+        <head>
+          <title>Receipt - ${orderData.orderNumber}</title>
+          <style>
+            body {
+              font-family: monospace;
+              font-size: 12px;
+              padding: 20px;
+              width: 300px;
+              margin: 0 auto;
+              text-transform: uppercase;
+              line-height: 1.5;
+            }
+            .text-center { text-align: center; }
+            .bold { font-weight: bold; }
+            .my-4 { margin: 15px 0; border-top: 1px dashed #000; }
+            .flex { display: flex; justify-content: space-between; }
+          </style>
+        </head>
+        <body>
+          <div class="text-center bold" style="font-size: 16px; letter-spacing: 2px;">NEXTGEN KIDDIES</div>
+          <div class="text-center">Operational Outlet 01</div>
+          <div class="text-center" style="opacity: 0.7;">Lagos, Nigeria</div>
+          <div class="my-4"></div>
+          <div class="flex"><span>ORDER ID:</span><span class="bold">${orderData.orderNumber}</span></div>
+          <div class="flex"><span>TIMESTAMP:</span><span class="bold">${new Date().toLocaleDateString()}</span></div>
+          <div class="flex"><span>OPERATOR:</span><span class="bold">ADMINISTRATOR</span></div>
+          <div class="my-4"></div>
+          <div class="flex bold" style="font-size: 14px;"><span>TOTAL SETTLED</span><span>₦${orderData.totalAmount.toLocaleString()}</span></div>
+          <div class="flex"><span>PAYMENT TYPE</span><span>${orderData.paymentMethod}</span></div>
+          <div class="flex"><span>VAT INCL (7.5%)</span><span>₦ ${(orderData.totalAmount * 0.075).toLocaleString()}</span></div>
+          <div class="my-4"></div>
+          <div class="text-center bold" style="font-size: 10px; margin-top: 20px;">*** TRANSACTION VERIFIED ***</div>
+          <div class="text-center" style="font-size: 9px; opacity: 0.5; margin-top: 5px;">THANK YOU FOR YOUR PATRONAGE</div>
+        </body>
+      </html>
+    `;
+    const printWindow = window.open("", "_blank");
+    if (printWindow) {
+      printWindow.document.write(printContent);
+      printWindow.document.close();
+      printWindow.focus();
+      printWindow.print();
+      printWindow.close();
+      toast.success("Thermal receipt sent to printer spool!");
+    }
+  };
+
+  const handleDispatchEmail = async () => {
+    const email = prompt("Enter customer email address for digital receipt dispatch:", "");
+    if (!email) return;
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      toast.error("Please enter a valid email address.");
+      return;
+    }
+
+    setIsDispatching(true);
+    try {
+      const result = await dispatchReceiptEmailAction({
+        email,
+        orderNumber: orderData.orderNumber,
+        totalAmount: orderData.totalAmount
+      });
+
+      if (result.success) {
+        if (result.isMock) {
+          toast.info(`Digital receipt simulation: Dispatched to ${email}`);
+        } else {
+          toast.success(`Digital receipt successfully dispatched to ${email}!`);
+        }
+      } else {
+        toast.error(result.error || "Failed to dispatch email");
+      }
+    } catch (e) {
+      toast.error("An error occurred while dispatching email.");
+    } finally {
+      setIsDispatching(false);
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl glass-card border-none p-0 overflow-hidden shadow-2xl animate-in zoom-in-95 duration-500 rounded-[3rem]">
@@ -74,7 +161,7 @@ export function CheckoutSuccessDialog({
                     <CheckCircle2 className="size-12 text-emerald-500" />
                 </div>
                 <div className="relative z-10 space-y-4">
-                    <h2 className="text-4xl font-black text-white tracking-tight leading-tight">Revenue <br />Secured</h2>
+                    <h2 className="text-4xl font-black text-blue-600 tracking-tight leading-tight">Transaction <br />Completed</h2>
                     <Badge className="bg-white/10 text-white border-none font-black text-[10px] px-4 py-1 uppercase tracking-widest">
                         NEXTGEN KIDDIES OS
                     </Badge>
@@ -122,11 +209,20 @@ export function CheckoutSuccessDialog({
                                 VIEW THERMAL RECEIPT
                             </Button>
                             <div className="grid grid-cols-2 gap-4">
-                                <Button variant="outline" className="h-14 rounded-2xl font-black text-[10px] uppercase tracking-widest border-border/50 hover:bg-zinc-50 transition-all">
-                                    <Mail className="size-4 mr-2" />
+                                <Button 
+                                  variant="outline" 
+                                  onClick={handleDispatchEmail}
+                                  disabled={isDispatching}
+                                  className="h-14 rounded-2xl font-black text-[10px] uppercase tracking-widest border-border/50 hover:bg-zinc-50 transition-all"
+                                >
+                                    {isDispatching ? <Loader2 className="size-4 mr-2 animate-spin" /> : <Mail className="size-4 mr-2" />}
                                     DISPATCH EMAIL
                                 </Button>
-                                <Button variant="outline" className="h-14 rounded-2xl font-black text-[10px] uppercase tracking-widest border-border/50 hover:bg-zinc-50 transition-all">
+                                <Button 
+                                  variant="outline" 
+                                  onClick={handlePrint}
+                                  className="h-14 rounded-2xl font-black text-[10px] uppercase tracking-widest border-border/50 hover:bg-zinc-50 transition-all"
+                                >
                                     <Printer className="size-4 mr-2" />
                                     AUTO PRINT
                                 </Button>

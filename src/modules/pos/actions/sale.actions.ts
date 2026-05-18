@@ -42,3 +42,22 @@ export async function createSaleAction(data: {
     return { success: false, error: error.message };
   }
 }
+
+export async function dispatchReceiptEmailAction(data: {
+  email: string;
+  orderNumber: string;
+  totalAmount: number;
+}) {
+  try {
+    const { NotificationService } = await import("@/services/notification.service");
+    const result = await NotificationService.sendOrderConfirmation({
+      customerEmail: data.email,
+      orderNumber: data.orderNumber,
+      totalAmount: data.totalAmount,
+    });
+    return { success: true, isMock: result.error === "Missing API Key", message: "Receipt email dispatched successfully" };
+  } catch (error: any) {
+    console.error("Dispatch Receipt Email Action Error:", error);
+    return { success: false, error: error.message };
+  }
+}

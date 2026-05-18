@@ -30,12 +30,16 @@ export const AnalyticsQueries = {
 
     // 1. Total Revenue (Lifetime)
     const totalRevenue = await prisma.sale.aggregate({
+      where: {
+        status: { not: "CANCELLED" }
+      },
       _sum: { totalAmount: true }
     });
 
     // 2. Today's Revenue
     const todayRevenue = await prisma.sale.aggregate({
       where: {
+        status: { not: "CANCELLED" },
         createdAt: {
           gte: startOfToday,
           lte: endOfToday,
@@ -45,7 +49,11 @@ export const AnalyticsQueries = {
     });
 
     // 3. Total Sales Count
-    const totalSales = await prisma.sale.count();
+    const totalSales = await prisma.sale.count({
+      where: {
+        status: { not: "CANCELLED" }
+      }
+    });
 
     // 4. Low Stock Count — compare quantity against default threshold (5)
     const lowStockCount = await prisma.inventory.count({
@@ -56,11 +64,21 @@ export const AnalyticsQueries = {
       }
     });
 
+    // 5. Total physical inventory quantity
+    const totalInventory = await prisma.inventory.aggregate({
+      _sum: { quantity: true }
+    });
+
+    // 6. Active Customers Count
+    const activeCustomers = await prisma.customer.count();
+
     return {
       lifetimeRevenue: Number(totalRevenue._sum.totalAmount || 0),
       todayRevenue: Number(todayRevenue._sum.totalAmount || 0),
       totalSales,
-      lowStockCount
+      lowStockCount,
+      totalInventory: Number(totalInventory._sum.quantity || 0),
+      activeCustomers
     };
   },
 
@@ -78,6 +96,7 @@ export const AnalyticsQueries = {
 
       const dailyRevenue = await prisma.sale.aggregate({
         where: {
+          status: { not: "CANCELLED" },
           createdAt: {
             gte: start,
             lte: end,
@@ -129,5 +148,42 @@ export const AnalyticsQueries = {
     );
 
     return hydratedProducts;
+  },
+
+  /**
+   * Get 5 most recent transactions with hydrated customer and cashier information
+   */
+  async getRecentSales() {
+    return await prisma.sale.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 5,
+      include: {
+        customer: true,
+        user: {
+          select: { name: true }
+        }
+      }
+    });
+  },
+
+  /**
+   * Get 5 physical items with low stock (quantity <= 5) for alert highlights
+   */
+  async getLowStockItems() {
+    return await prisma.inventory.findMany({
+      where: {
+        quantity: {
+          lte: 5
+        }
+      },
+      take: 5,
+      include: {
+        variant: {
+          include: {
+            product: true
+          }
+        }
+      }
+    });
   }
 };
