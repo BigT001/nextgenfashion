@@ -7,6 +7,10 @@ export class DeleteStaffService {
       throw new Error("User not found");
     }
 
+    if (user.role === "SUPERADMIN") {
+      throw new Error("Super admin accounts cannot be deleted");
+    }
+
     return prisma.user.delete({
       where: { id },
     });

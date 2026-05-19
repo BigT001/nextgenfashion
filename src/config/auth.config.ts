@@ -9,13 +9,46 @@ export const authConfig = {
       const isLoggedIn = !!auth?.user;
       const userRole = (auth?.user as any)?.role;
       console.log(`[AUTH_CONFIG] Path: ${nextUrl.pathname}, LoggedIn: ${isLoggedIn}, Role: ${userRole}`);
-      console.log(`[AUTH_CONFIG] FULL AUTH OBJ:`, JSON.stringify(auth, null, 2));
       const isOnDashboard = nextUrl.pathname.startsWith("/dashboard");
       const isOnAccount = nextUrl.pathname.startsWith("/account");
       
       if (isOnDashboard) {
-        if (isLoggedIn && (userRole === "SUPERADMIN" || userRole === "ADMIN" || userRole === "STAFF")) return true;
-        return Response.redirect(new URL("/auth/staff", nextUrl));
+        if (!isLoggedIn) {
+          return Response.redirect(new URL("/auth/staff", nextUrl));
+        }
+
+        if (userRole !== "SUPERADMIN" && userRole !== "ADMIN" && userRole !== "STAFF") {
+          return Response.redirect(new URL("/auth/staff", nextUrl));
+        }
+
+        // If user is STAFF, enforce module permissions
+        if (userRole === "STAFF") {
+          const userPermissions = (auth?.user as any)?.permissions || [];
+          
+          if (nextUrl.pathname.startsWith("/dashboard/pos") && !userPermissions.includes("POS")) {
+            return Response.redirect(new URL("/dashboard?error=AccessDenied", nextUrl));
+          }
+          if (nextUrl.pathname.startsWith("/dashboard/products") && !userPermissions.includes("PRODUCTS")) {
+            return Response.redirect(new URL("/dashboard?error=AccessDenied", nextUrl));
+          }
+          if (nextUrl.pathname.startsWith("/dashboard/inventory") && !userPermissions.includes("INVENTORY")) {
+            return Response.redirect(new URL("/dashboard?error=AccessDenied", nextUrl));
+          }
+          if (nextUrl.pathname.startsWith("/dashboard/orders") && !userPermissions.includes("ORDERS")) {
+            return Response.redirect(new URL("/dashboard?error=AccessDenied", nextUrl));
+          }
+          if (nextUrl.pathname.startsWith("/dashboard/customers") && !userPermissions.includes("CUSTOMERS")) {
+            return Response.redirect(new URL("/dashboard?error=AccessDenied", nextUrl));
+          }
+          if (nextUrl.pathname.startsWith("/dashboard/staff") && !userPermissions.includes("STAFF")) {
+            return Response.redirect(new URL("/dashboard?error=AccessDenied", nextUrl));
+          }
+          if (nextUrl.pathname.startsWith("/dashboard/analytics") && !userPermissions.includes("ANALYTICS")) {
+            return Response.redirect(new URL("/dashboard?error=AccessDenied", nextUrl));
+          }
+        }
+
+        return true;
       }
 
       if (isOnAccount) {
@@ -30,6 +63,8 @@ export const authConfig = {
         token.id = user.id;
         token.role = (user as any).role;
         token.customerId = (user as any).customerId;
+        token.category = (user as any).category;
+        token.permissions = (user as any).permissions;
       }
       return token;
     },
@@ -38,6 +73,8 @@ export const authConfig = {
         (session.user as any).id = token.id as string || token.sub as string;
         (session.user as any).role = token.role as string;
         (session.user as any).customerId = token.customerId as string;
+        (session.user as any).category = token.category as string;
+        (session.user as any).permissions = token.permissions as string[];
       }
       return session;
     },

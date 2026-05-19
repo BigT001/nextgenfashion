@@ -17,6 +17,9 @@ export class GetStaffService {
         email: true,
         role: true,
         image: true,
+        isSuspended: true,
+        category: true,
+        permissions: true,
       },
     });
   }

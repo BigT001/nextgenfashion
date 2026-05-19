@@ -8,11 +8,14 @@ export interface CreateStaffDTO {
   email: string;
   password?: string;
   role: UserRole;
+  isSuspended?: boolean;
+  category?: string;
+  permissions?: string[];
 }
 
 export class CreateStaffService {
   static async execute(data: CreateStaffDTO) {
-    const { name, email, password, role } = data;
+    const { name, email, password, role, isSuspended = false, category = "Staff", permissions = [] } = data;
 
     const existingUser = await prisma.user.findUnique({
       where: { email },
@@ -30,6 +33,9 @@ export class CreateStaffService {
         email,
         password: hashedPassword,
         role,
+        isSuspended,
+        category,
+        permissions,
       },
     });
 

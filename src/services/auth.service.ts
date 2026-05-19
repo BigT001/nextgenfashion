@@ -27,6 +27,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         if (!user || !user.password) return null;
 
+        if (user.isSuspended) {
+          console.log(`[AUTH] Login blocked: User ${credentials.email} is suspended.`);
+          return null;
+        }
+
         const isPasswordValid = await bcrypt.compare(credentials.password as string, user.password);
         console.log(`[AUTH] Password valid: ${isPasswordValid}`);
 
@@ -37,7 +42,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             email: user.email,
             role: user.role,
             customerId: user.customerId,
-          };
+            category: user.category,
+            permissions: user.permissions,
+          } as any;
         }
 
         return null;

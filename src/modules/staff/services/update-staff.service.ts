@@ -7,11 +7,14 @@ export interface UpdateStaffDTO {
   email?: string;
   password?: string;
   role?: UserRole;
+  isSuspended?: boolean;
+  category?: string;
+  permissions?: string[];
 }
 
 export class UpdateStaffService {
   static async execute(id: string, data: UpdateStaffDTO) {
-    const { name, email, password, role } = data;
+    const { name, email, password, role, isSuspended, category, permissions } = data;
 
     if (email) {
       const existingUser = await prisma.user.findUnique({
@@ -23,7 +26,13 @@ export class UpdateStaffService {
       }
     }
 
-    const updateData: any = { name, email, role };
+    const updateData: any = {};
+    if (name !== undefined) updateData.name = name;
+    if (email !== undefined) updateData.email = email;
+    if (role !== undefined) updateData.role = role;
+    if (isSuspended !== undefined) updateData.isSuspended = isSuspended;
+    if (category !== undefined) updateData.category = category;
+    if (permissions !== undefined) updateData.permissions = permissions;
 
     if (password) {
       updateData.password = await bcrypt.hash(password, 10);

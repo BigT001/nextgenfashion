@@ -145,7 +145,24 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       {/* Navigation Content - Optimized Spacing */}
       <SidebarContent className="px-3 group-data-[collapsible=icon]:px-2 pt-2">
         {data.navMain.map((group) => {
-          const visibleItems = group.items.filter(item => item.roles.includes(userRole));
+          const userPermissions = (session?.user as any)?.permissions || [];
+          const visibleItems = group.items.filter(item => {
+            if (!item.roles.includes(userRole)) return false;
+            if (userRole === "SUPERADMIN" || userRole === "ADMIN") return true;
+            
+            // Map item url to permission key
+            let permKey: string | null = null;
+            if (item.url.includes("/pos")) permKey = "POS";
+            else if (item.url.includes("/products")) permKey = "PRODUCTS";
+            else if (item.url.includes("/inventory")) permKey = "INVENTORY";
+            else if (item.url.includes("/orders")) permKey = "ORDERS";
+            else if (item.url.includes("/customers")) permKey = "CUSTOMERS";
+            else if (item.url.includes("/staff")) permKey = "STAFF";
+            else if (item.url.includes("/analytics")) permKey = "ANALYTICS";
+            
+            if (!permKey) return true; // general paths (like dashboard) have no restrictions
+            return userPermissions.includes(permKey);
+          });
           if (visibleItems.length === 0) return null;
 
           return (

@@ -41,6 +41,9 @@ model User {
   password      String?
   role          UserRole  @default(STAFF)
   customerId    String?   @unique
+  isSuspended   Boolean   @default(false)
+  category      String?   @default("Staff")
+  permissions   String[]  @default([])
   accounts      Account[]
   sales         Sale[]
   sessions      Session[]

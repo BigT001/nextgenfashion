@@ -35,6 +35,8 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 
 interface DashboardClientProps {
   initialData: {
@@ -140,10 +142,15 @@ function timeAgo(dateString: string) {
 export function DashboardClient({ initialData }: DashboardClientProps) {
   const [isMounted, setIsMounted] = useState(false);
   const { data: session } = useSession();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     setIsMounted(true);
-  }, []);
+    const error = searchParams.get("error");
+    if (error === "AccessDenied") {
+      toast.error("Access Denied: You do not have permission to view that page.");
+    }
+  }, [searchParams]);
 
   const user = session?.user as any;
   const userRole = user?.role || "STAFF";
