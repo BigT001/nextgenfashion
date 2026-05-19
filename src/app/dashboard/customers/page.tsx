@@ -19,11 +19,11 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
-import { MetricCard } from "@/components/dashboard/metric-card";
 import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -122,23 +122,24 @@ export default function CustomersPage() {
                 <MoreHorizontal className="h-4 w-4" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56 glass-card border-none shadow-2xl p-2 rounded-2xl">
-              <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground p-3">Relationship Actions</DropdownMenuLabel>
-              <DropdownMenuItem 
-                onClick={() => setSelectedCustomerId(row.original.id)}
-                className="rounded-xl h-10 font-bold gap-3 focus:bg-brand-navy/5 focus:text-brand-navy"
-              >
-                <Eye className="size-4" /> View Intelligence
-              </DropdownMenuItem>
-              <DropdownMenuItem className="rounded-xl h-10 font-bold gap-3 focus:bg-brand-navy/5 focus:text-brand-navy">
-                <Mail className="size-4" /> Dispatch Briefing
-              </DropdownMenuItem>
-              <DropdownMenuItem className="rounded-xl h-10 font-bold gap-3 focus:bg-brand-navy/5 focus:text-brand-navy">
-                <TrendingUp className="size-4" /> Set Priority
-              </DropdownMenuItem>
+              <DropdownMenuGroup>
+                <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground p-3">Customer Actions</DropdownMenuLabel>
+                <DropdownMenuItem 
+                  onClick={() => setSelectedCustomerId(row.original.id)}
+                  className="rounded-xl h-10 font-bold gap-3 focus:bg-brand-navy/5 focus:text-brand-navy"
+                >
+                  <Eye className="size-4" /> View Details
+                </DropdownMenuItem>
+                <DropdownMenuItem className="rounded-xl h-10 font-bold gap-3 focus:bg-brand-navy/5 focus:text-brand-navy">
+                  <Mail className="size-4" /> Send Email
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
               <DropdownMenuSeparator className="bg-border/30" />
-              <DropdownMenuItem className="rounded-xl h-10 font-bold gap-3 text-destructive focus:bg-destructive/5">
-                <Trash2 className="size-4" /> Anonymize Data
-              </DropdownMenuItem>
+              <DropdownMenuGroup>
+                <DropdownMenuItem className="rounded-xl h-10 font-bold gap-3 text-destructive focus:bg-destructive/5">
+                  <Trash2 className="size-4" /> Remove Customer
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -170,44 +171,17 @@ export default function CustomersPage() {
           </Button>
           <Button className="bg-brand-navy hover:bg-brand-navy/90 text-white h-12 px-8 font-black rounded-xl shadow-xl shadow-brand-navy/20 active:scale-95 transition-all">
             <UserPlus className="mr-2 h-5 w-5" />
-            REGISTER PATRON
+            REGISTER CUSTOMER
           </Button>
         </div>
       </div>
 
-      {/* CRM KPIs */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <MetricCard
-          title="Total Patrons"
-          value={data.kpis.totalCustomers}
-          icon={Users}
-          description="Registered fashion curators"
-          variant="slate"
-        />
-        <MetricCard
-          title="Average LTV"
-          value={`₦${Math.round(data.kpis.avgLTV).toLocaleString()}`}
-          icon={TrendingUp}
-          description="Mean patron value impact"
-          variant="pink"
-        />
-        <MetricCard
-            title="VIP Loyalty"
-            value={data.customers.filter((c: any) => c.totalSpent > 100000).length}
-            icon={Star}
-            description="Patrons above 100K LTV"
-            variant="blue"
-        />
-      </div>
-
-      {/* Main Table Layer */}
-      <div className="glass-card border-none shadow-2xl overflow-hidden rounded-[2.5rem]">
-        <DataTable 
-          columns={columns} 
-          data={data.customers} 
-          searchKey="name"
-        />
-      </div>
+      <DataTable 
+        columns={columns} 
+        data={data.customers} 
+        searchKey="name"
+        onRowClick={(row) => setSelectedCustomerId(row.id)}
+      />
 
       {/* Intelligence Portal Modal */}
       <CustomerDetailModal 

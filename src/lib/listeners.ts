@@ -21,6 +21,26 @@ events.on(SYSTEM_EVENTS.SALE.CREATED, async (data) => {
     
     // Reaction B: PERSISTENCE - Audit Log
     // Creating a senior-level, immutable record of the transaction
+    const itemsWithDetails = [];
+    if (data.items && data.items.length > 0) {
+      for (const item of data.items) {
+        const variant = await prisma.productVariant.findUnique({
+          where: { id: item.variantId },
+          include: { product: true },
+        });
+        if (variant) {
+          itemsWithDetails.push({
+            productName: variant.product.name,
+            sku: variant.sku,
+            size: variant.size,
+            color: variant.color,
+            quantity: item.quantity,
+            price: item.price,
+          });
+        }
+      }
+    }
+
     await prisma.auditLog.create({
       data: {
         userId: data.userId,
@@ -31,6 +51,7 @@ events.on(SYSTEM_EVENTS.SALE.CREATED, async (data) => {
           orderNumber: data.orderNumber,
           totalAmount: data.totalAmount,
           itemCount: data.items.length,
+          items: itemsWithDetails,
         },
       },
     });

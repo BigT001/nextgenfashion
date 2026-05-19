@@ -21,6 +21,11 @@ export class DecrementStockService {
     const updatedInventory = await InventoryQueries.updateQuantity(variantId, -quantity, tx);
 
     // 3. Log the audit record
+    const variant = await tx.productVariant.findUnique({
+      where: { id: variantId },
+      include: { product: true },
+    });
+
     await InventoryQueries.createAuditLog({
       userId,
       action: "STOCK_DECREMENT",
@@ -30,6 +35,7 @@ export class DecrementStockService {
         change: -quantity,
         reason: "Customer Purchase",
         newQuantity: updatedInventory.quantity,
+        productName: variant ? `${variant.product.name} (${variant.size || ""}${variant.color ? ` / ${variant.color}` : ""})` : variantId,
       },
     }, tx);
 

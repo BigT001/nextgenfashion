@@ -16,6 +16,11 @@ export class UpdateStockService {
     return await prisma.$transaction(async (tx) => {
       const updatedInventory = await InventoryQueries.updateQuantity(variantId, quantityChange, tx);
 
+      const variant = await tx.productVariant.findUnique({
+        where: { id: variantId },
+        include: { product: true },
+      });
+
       await InventoryQueries.createAuditLog({
         userId,
         action: quantityChange < 0 ? "STOCK_DECREMENT" : "STOCK_INCREMENT",
@@ -25,6 +30,7 @@ export class UpdateStockService {
           change: quantityChange,
           reason,
           newQuantity: updatedInventory.quantity,
+          productName: variant ? `${variant.product.name} (${variant.size || ""}${variant.color ? ` / ${variant.color}` : ""})` : variantId,
         },
       }, tx);
 

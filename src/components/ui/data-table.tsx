@@ -32,6 +32,7 @@ interface DataTableProps<TData, TValue> {
   data: TData[];
   searchKey?: string;
   renderSubComponent?: (props: { row: any }) => React.ReactNode;
+  onRowClick?: (row: TData) => void;
 }
 
 export function DataTable<TData, TValue>({
@@ -39,6 +40,7 @@ export function DataTable<TData, TValue>({
   data,
   searchKey,
   renderSubComponent,
+  onRowClick,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
@@ -98,11 +100,11 @@ export function DataTable<TData, TValue>({
                   return (
                     <TableHead key={header.id} className="font-bold text-xs uppercase tracking-wider h-12">
                       {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
+                         ? null
+                         : flexRender(
+                             header.column.columnDef.header,
+                             header.getContext()
+                           )}
                     </TableHead>
                   );
                 })}
@@ -115,7 +117,19 @@ export function DataTable<TData, TValue>({
                 <React.Fragment key={row.id}>
                   <TableRow
                     data-state={row.getIsSelected() && "selected"}
-                    className={cn("hover:bg-brand-navy/5 transition-colors border-border/50", row.getIsExpanded() && "bg-brand-navy/5 border-b-transparent")}
+                    className={cn(
+                      "hover:bg-brand-navy/5 transition-colors border-border/50",
+                      onRowClick && "cursor-pointer",
+                      row.getIsExpanded() && "bg-brand-navy/5 border-b-transparent"
+                    )}
+                    onClick={(e) => {
+                      // Don't trigger row click if clicking interactive elements (buttons, inputs, dropdowns)
+                      const target = e.target as HTMLElement;
+                      if (target.closest("button") || target.closest("a") || target.closest("[role='menuitem']") || target.closest("[data-state]")) {
+                        return;
+                      }
+                      onRowClick?.(row.original);
+                    }}
                   >
                     {row.getVisibleCells().map((cell) => (
                       <TableCell key={cell.id} className="py-4">

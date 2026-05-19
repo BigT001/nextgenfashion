@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Fragment } from "react";
+import { useState } from "react";
 import { UserRole } from "@prisma/client";
 import {
   Table,
@@ -12,7 +12,16 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MoreHorizontal, Edit, Trash2, Plus, UserCircle, Ban, ShieldCheck, ChevronDown, ChevronRight } from "lucide-react";
+import { 
+  MoreHorizontal, 
+  Edit, 
+  Trash2, 
+  Plus, 
+  UserCircle, 
+  Ban, 
+  ShieldCheck, 
+  Eye
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,6 +43,7 @@ import {
 import { toast } from "sonner";
 import { deleteStaffAction, updateStaffAction } from "../actions/staff.actions";
 import { StaffDialog } from "./staff-dialog";
+import { StaffDetailsDialog } from "./staff-details-dialog";
 
 interface StaffMember {
   id: string;
@@ -53,11 +63,13 @@ interface StaffTableProps {
 export function StaffTable({ data }: StaffTableProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null);
-  const [expandedStaffId, setExpandedStaffId] = useState<string | null>(null);
   
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [staffToDelete, setStaffToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [selectedStaffDetails, setSelectedStaffDetails] = useState<StaffMember | null>(null);
 
   const handleEdit = (staff: StaffMember) => {
     setSelectedStaff(staff);
@@ -135,7 +147,6 @@ export function StaffTable({ data }: StaffTableProps) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[50px]"></TableHead>
               <TableHead>User</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Category</TableHead>
@@ -147,182 +158,115 @@ export function StaffTable({ data }: StaffTableProps) {
           <TableBody>
             {data.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center">
+                <TableCell colSpan={6} className="h-24 text-center">
                   No staff members found.
                 </TableCell>
               </TableRow>
             ) : (
               data.map((staff) => (
-                <Fragment key={staff.id}>
-                  <TableRow 
-                    className="cursor-pointer hover:bg-zinc-50/50 transition-colors"
-                    onClick={() => setExpandedStaffId(expandedStaffId === staff.id ? null : staff.id)}
-                  >
-                    <TableCell className="w-[50px]">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 hover:bg-zinc-100 rounded-full"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setExpandedStaffId(expandedStaffId === staff.id ? null : staff.id);
-                        }}
-                      >
-                        {expandedStaffId === staff.id ? (
-                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                <TableRow 
+                  key={staff.id}
+                  className="cursor-pointer hover:bg-zinc-50/50 transition-colors"
+                  onClick={() => {
+                    setSelectedStaffDetails(staff);
+                    setIsDetailsOpen(true);
+                  }}
+                >
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center">
+                        {staff.image ? (
+                          <img src={staff.image} alt={staff.name || "User"} className="h-8 w-8 rounded-full object-cover" />
                         ) : (
-                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                          <UserCircle className="h-5 w-5 text-muted-foreground" />
                         )}
-                      </Button>
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center">
-                          {staff.image ? (
-                            <img src={staff.image} alt={staff.name || "User"} className="h-8 w-8 rounded-full object-cover" />
-                          ) : (
-                            <UserCircle className="h-5 w-5 text-muted-foreground" />
-                          )}
-                        </div>
-                        {staff.name || "Unknown"}
                       </div>
-                    </TableCell>
-                    <TableCell>{staff.email}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">
-                        {staff.category || "Staff"}
+                      {staff.name || "Unknown"}
+                    </div>
+                  </TableCell>
+                  <TableCell>{staff.email}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline">
+                      {staff.category || "Staff"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={getRoleBadgeVariant(staff.role)}>
+                      {staff.role}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {staff.isSuspended ? (
+                      <Badge variant="destructive">Suspended</Badge>
+                    ) : (
+                      <Badge className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-none hover:bg-emerald-500/10">
+                        Active
                       </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={getRoleBadgeVariant(staff.role)}>
-                        {staff.role}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {staff.isSuspended ? (
-                        <Badge variant="destructive">Suspended</Badge>
-                      ) : (
-                        <Badge className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-none hover:bg-emerald-500/10">
-                          Active
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger 
-                          className="h-8 w-8 p-0 inline-flex items-center justify-center rounded-md hover:bg-accent hover:text-accent-foreground"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <span className="sr-only">Open menu</span>
-                          <MoreHorizontal className="h-4 w-4" />
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuGroup>
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleEdit(staff);
-                              }}
-                            >
-                              <Edit className="mr-2 h-4 w-4" /> Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleToggleSuspend(staff);
-                              }}
-                            >
-                              {staff.isSuspended ? (
-                                <>
-                                  <ShieldCheck className="mr-2 h-4 w-4 text-emerald-600" />
-                                  Activate Staff
-                                </>
-                              ) : (
-                                <>
-                                  <Ban className="mr-2 h-4 w-4 text-destructive" />
-                                  Suspend Staff
-                                </>
-                              )}
-                            </DropdownMenuItem>
-                            {staff.role !== "SUPERADMIN" && (
-                              <DropdownMenuItem 
-                                className="text-destructive focus:text-destructive"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteClick(staff.id);
-                                }}
-                              >
-                                <Trash2 className="mr-2 h-4 w-4" /> Delete
-                              </DropdownMenuItem>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger 
+                        className="h-8 w-8 p-0 inline-flex items-center justify-center rounded-md hover:bg-accent hover:text-accent-foreground"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <span className="sr-only">Open menu</span>
+                        <MoreHorizontal className="h-4 w-4" />
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuGroup>
+                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                          <DropdownMenuItem 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedStaffDetails(staff);
+                              setIsDetailsOpen(true);
+                            }}
+                          >
+                            <Eye className="mr-2 h-4 w-4" /> View Details
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEdit(staff);
+                            }}
+                          >
+                            <Edit className="mr-2 h-4 w-4" /> Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleToggleSuspend(staff);
+                            }}
+                          >
+                            {staff.isSuspended ? (
+                              <>
+                                <ShieldCheck className="mr-2 h-4 w-4 text-emerald-600" />
+                                Activate Staff
+                              </>
+                            ) : (
+                              <>
+                                <Ban className="mr-2 h-4 w-4 text-destructive" />
+                                Suspend Staff
+                              </>
                             )}
-                          </DropdownMenuGroup>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-
-                  {expandedStaffId === staff.id && (
-                    <TableRow className="bg-zinc-50/30 hover:bg-zinc-50/30 border-t-0">
-                      <TableCell colSpan={7} className="p-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-top-1 duration-200">
-                          <div className="space-y-4">
-                            <div>
-                              <h4 className="text-xs font-black uppercase tracking-[0.2em] text-zinc-400 mb-2">Permissions & Access Control</h4>
-                              <div className="flex flex-wrap gap-1.5">
-                                {staff.permissions && staff.permissions.length > 0 ? (
-                                  staff.permissions.map((p) => {
-                                    const label = p === "POS" ? "Point of Sale (POS)"
-                                                : p === "PRODUCTS" ? "Product Management"
-                                                : p === "INVENTORY" ? "Inventory Management"
-                                                : p === "ORDERS" ? "Order Management"
-                                                : p === "CUSTOMERS" ? "Customer Relations"
-                                                : p === "STAFF" ? "Staff Management"
-                                                : p === "ANALYTICS" ? "Analytics & Audit"
-                                                : p;
-                                    return (
-                                      <Badge key={p} className="bg-brand-navy/15 text-brand-navy border-none hover:bg-brand-navy/20 font-semibold px-2.5 py-1">
-                                        {label}
-                                      </Badge>
-                                    );
-                                  })
-                                ) : (
-                                  <span className="text-xs text-muted-foreground italic">No special modules assigned (Dashboard access only)</span>
-                                )}
-                              </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                              <div>
-                                <h4 className="text-xs font-black uppercase tracking-[0.2em] text-zinc-400">Category</h4>
-                                <p className="text-sm font-semibold mt-1 text-zinc-800">{staff.category || "Staff"}</p>
-                              </div>
-                              <div>
-                                <h4 className="text-xs font-black uppercase tracking-[0.2em] text-zinc-400">Security Clearance</h4>
-                                <p className="text-sm font-semibold mt-1 text-zinc-800">{staff.role}</p>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="space-y-4 border-l pl-6 border-zinc-100">
-                            <div>
-                              <h4 className="text-xs font-black uppercase tracking-[0.2em] text-zinc-400 mb-2">Monitoring & Activity Notice</h4>
-                              <p className="text-xs text-zinc-500 leading-relaxed bg-zinc-50/50 p-3 rounded-lg border border-zinc-100">
-                                All activities on this account are monitored and stored for auditing purposes. Deletion or unauthorized access attempts are logged and flagged automatically.
-                              </p>
-                            </div>
-                            <div className="flex items-center gap-4 text-xs">
-                              <span className="text-zinc-400">Status:</span>
-                              {staff.isSuspended ? (
-                                <span className="text-destructive font-bold uppercase tracking-wider">SUSPENDED</span>
-                              ) : (
-                                <span className="text-emerald-600 font-bold uppercase tracking-wider">ACTIVE & MONITORED</span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </Fragment>
+                          </DropdownMenuItem>
+                          {staff.role !== "SUPERADMIN" && (
+                            <DropdownMenuItem 
+                              className="text-destructive focus:text-destructive"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteClick(staff.id);
+                              }}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" /> Delete
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuGroup>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
               ))
             )}
           </TableBody>
@@ -334,6 +278,17 @@ export function StaffTable({ data }: StaffTableProps) {
           open={isDialogOpen} 
           onOpenChange={setIsDialogOpen} 
           staff={selectedStaff}
+        />
+      )}
+
+      {isDetailsOpen && (
+        <StaffDetailsDialog
+          open={isDetailsOpen}
+          onOpenChange={setIsDetailsOpen}
+          staff={selectedStaffDetails}
+          onEdit={handleEdit}
+          onToggleSuspend={handleToggleSuspend}
+          onDelete={handleDeleteClick}
         />
       )}
 

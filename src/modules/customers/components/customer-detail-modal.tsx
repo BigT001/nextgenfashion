@@ -63,16 +63,16 @@ export function CustomerDetailModal({ customerId, onClose }: CustomerDetailModal
 
   return (
     <Dialog open={!!customerId} onOpenChange={() => onClose()}>
-      <DialogContent className="max-w-4xl p-0 overflow-hidden border-none glass-card shadow-2xl bg-white/80 dark:bg-zinc-950/80 backdrop-blur-3xl rounded-[3rem]">
+      <DialogContent className="max-w-5xl w-[95vw] h-[85vh] max-h-[90vh] overflow-hidden flex flex-col p-0 border-none glass-card shadow-2xl bg-white dark:bg-zinc-950 rounded-[3rem]">
         {isLoading ? (
           <div className="h-[500px] flex flex-col items-center justify-center space-y-4">
             <LoadingSpinner size="lg" />
             <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground animate-pulse">Auditing Relationship History...</p>
           </div>
         ) : data ? (
-          <div className="flex flex-col md:flex-row h-full">
+          <div className="flex flex-col md:flex-row h-full overflow-hidden">
             {/* Left: Identity & Metrics */}
-            <div className="md:w-1/3 bg-brand-mesh p-10 flex flex-col justify-between text-white border-r border-white/10">
+            <div className="md:w-1/3 bg-brand-mesh p-10 flex flex-col justify-between text-white border-r border-white/10 overflow-y-auto">
                 <div className="space-y-8 relative z-10">
                     <div className="size-24 bg-white/20 backdrop-blur-xl rounded-[2.5rem] flex items-center justify-center shadow-2xl ring-8 ring-white/5 group overflow-hidden">
                         <User className="size-12 text-white group-hover:scale-110 transition-transform" />
@@ -115,7 +115,7 @@ export function CustomerDetailModal({ customerId, onClose }: CustomerDetailModal
             </div>
 
             {/* Right: History & Actions */}
-            <div className="flex-1 p-10 bg-white dark:bg-zinc-950 overflow-y-auto max-h-[80vh] scrollbar-hide">
+            <div className="flex-1 p-10 bg-white dark:bg-zinc-950 overflow-y-auto h-full scrollbar-thin">
                 <div className="space-y-10">
                     <div className="space-y-6">
                         <div className="flex items-center justify-between">
@@ -131,22 +131,39 @@ export function CustomerDetailModal({ customerId, onClose }: CustomerDetailModal
                                 </div>
                             ) : (
                                 data.sales.map((sale: any) => (
-                                    <div key={sale.id} className="flex items-center justify-between p-5 rounded-[1.5rem] bg-zinc-50 dark:bg-zinc-900/50 hover:bg-zinc-100 transition-all group">
-                                        <div className="flex items-center gap-4">
-                                            <div className="size-10 bg-white dark:bg-zinc-800 rounded-xl flex items-center justify-center shadow-sm border border-border/10 group-hover:rotate-12 transition-transform">
-                                                <Zap className="size-4 text-brand-navy" />
+                                    <div key={sale.id} className="flex flex-col p-5 rounded-[1.5rem] bg-zinc-50 dark:bg-zinc-900/50 hover:bg-zinc-100 transition-all group gap-3">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-4">
+                                                <div className="size-10 bg-white dark:bg-zinc-800 rounded-xl flex items-center justify-center shadow-sm border border-border/10 group-hover:rotate-12 transition-transform">
+                                                    <Zap className="size-4 text-brand-navy" />
+                                                </div>
+                                                <div className="flex flex-col">
+                                                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{new Date(sale.createdAt).toLocaleDateString()}</span>
+                                                    <span className="font-black text-sm tracking-tight">{sale.orderNumber}</span>
+                                                </div>
                                             </div>
-                                            <div className="flex flex-col">
-                                                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{new Date(sale.createdAt).toLocaleDateString()}</span>
-                                                <span className="font-black text-sm tracking-tight">{sale.orderNumber}</span>
+                                            <div className="text-right flex flex-col items-end gap-1">
+                                                <span className="font-black text-sm tracking-tight text-foreground">₦{Number(sale.totalAmount).toLocaleString()}</span>
+                                                <Badge variant="outline" className="text-[8px] font-black border-none bg-emerald-500/10 text-emerald-600 px-2 tracking-widest uppercase">
+                                                    {sale.status}
+                                                </Badge>
                                             </div>
                                         </div>
-                                        <div className="text-right flex flex-col items-end gap-2">
-                                            <span className="font-black text-sm tracking-tight text-foreground">₦{Number(sale.totalAmount).toLocaleString()}</span>
-                                            <Badge variant="outline" className="text-[8px] font-black border-none bg-emerald-500/10 text-emerald-600 px-2 tracking-widest uppercase">
-                                                {sale.status}
-                                            </Badge>
-                                        </div>
+
+                                        {sale.items && sale.items.length > 0 && (
+                                            <div className="mt-1 pl-3 border-l-2 border-zinc-200 dark:border-zinc-800 space-y-1.5 text-[11px] text-zinc-500 font-medium">
+                                                {sale.items.map((item: any, idx: number) => (
+                                                    <div key={item.id || idx} className="flex justify-between items-center gap-2">
+                                                        <span>
+                                                            • {item.variant.product.name} ({item.variant.size || ""}{item.variant.color ? ` / ${item.variant.color}` : ""}) <span className="text-zinc-400 font-bold ml-1">x{item.quantity}</span>
+                                                        </span>
+                                                        <span className="text-zinc-600 dark:text-zinc-400 font-semibold">
+                                                            ₦{Number(item.price).toLocaleString()}
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
                                 ))
                             )}
