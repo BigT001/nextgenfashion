@@ -265,7 +265,7 @@ export default function StoreLayout({ children }: { children: React.ReactNode })
                   <span className="font-black text-lg tracking-tight text-white">NEXTGEN KIDDIES</span>
                 </Link>
                 <p className="text-zinc-400 font-medium leading-relaxed max-w-xs text-sm">
-                  Premium kidswear designed for play and built to last. Making every child feel confident and comfortable.
+                  Premium kids' essentials, toys, and fashion designed for play and built to last. Making every child feel confident and comfortable.
                 </p>
                 <div className="flex gap-3">
                   {[Globe, Share2, MessageSquare].map((Icon, i) => (
@@ -279,8 +279,14 @@ export default function StoreLayout({ children }: { children: React.ReactNode })
               <div>
                 <h4 className="text-xs font-black uppercase tracking-[0.3em] mb-6 text-brand-silver">SHOP</h4>
                 <ul className="space-y-3 text-sm font-bold text-zinc-400">
-                  {["Boys Collection", "Girls Collection", "Baby Wear", "School Essentials", "Sale"].map((item) => (
-                    <li key={item}><Link href="/shop" className="hover:text-white transition-colors">{item}</Link></li>
+                  {[
+                    { name: "Tops", href: "/shop?category=cmp3tpx5400011tzwzldssndb" },
+                    { name: "Bottoms", href: "/shop?category=cmp3tpxrp00021tzw7hhg25p0" },
+                    { name: "Dresses", href: "/shop?category=cmp3tpyfw00031tzwto5v9qwr" },
+                    { name: "Footwear", href: "/shop?category=cmp3tpz1100041tzw736te2cd" },
+                    { name: "Accessories", href: "/shop?category=cmp3tpzlm00051tzw7btg843y" }
+                  ].map((item) => (
+                    <li key={item.name}><Link href={item.href} className="hover:text-white transition-colors">{item.name}</Link></li>
                   ))}
                 </ul>
               </div>
