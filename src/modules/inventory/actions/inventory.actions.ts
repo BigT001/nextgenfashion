@@ -97,7 +97,29 @@ export async function getAuditLogsAction(variantId?: string) {
   try {
     const { InventoryQueries } = await import("../queries/inventory.queries");
     const logs = await InventoryQueries.findAuditLogs({ variantId });
-    return { success: true, data: JSON.parse(JSON.stringify(logs)) };
+    
+    // Hydrate logs with actual User names instead of userIds
+    const userIds = Array.from(new Set(logs.map(l => l.userId).filter(Boolean)));
+    const users = await prisma.user.findMany({
+      where: { id: { in: userIds } },
+      select: { id: true, name: true }
+    });
+
+    const userMap = new Map<string, string>();
+    users.forEach(u => {
+      if (u.name) userMap.set(u.id, u.name);
+    });
+
+    const hydratedLogs = logs.map(log => {
+      const rawUser = log.userId || "system";
+      const userName = userMap.get(rawUser) || (rawUser.toLowerCase() === "system" ? "System Admin" : rawUser);
+      return {
+        ...log,
+        userName
+      };
+    });
+
+    return { success: true, data: JSON.parse(JSON.stringify(hydratedLogs)) };
   } catch (error) {
     console.error("Error fetching audit logs:", error);
     return { success: false, error: "Failed to retrieve audit intelligence" };

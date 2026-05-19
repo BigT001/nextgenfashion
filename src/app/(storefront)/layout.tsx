@@ -148,7 +148,7 @@ export default function StoreLayout({ children }: { children: React.ReactNode })
               ))}
 
               <Link href={status === "authenticated" ? "/account" : "/auth/login"}>
-                <button className="bg-pink-500 hover:bg-pink-600 text-white text-[11px] font-black uppercase tracking-widest px-6 py-2.5 rounded-full transition-all shadow-md hover:scale-105 active:scale-95 ml-2">
+                <button className="bg-brand-navy hover:bg-brand-navy/90 text-white text-[11px] font-black uppercase tracking-widest px-6 py-2.5 rounded-full transition-all shadow-md hover:scale-105 active:scale-95 ml-2">
                   MY ACCOUNT
                 </button>
               </Link>
@@ -237,7 +237,7 @@ export default function StoreLayout({ children }: { children: React.ReactNode })
                 <Link
                   href={status === "authenticated" ? "/account" : "/auth/login"}
                   onClick={() => setMobileOpen(false)}
-                  className="block py-4 px-4 text-xs font-black uppercase tracking-widest text-white bg-pink-500 rounded-xl transition-all text-center shadow-lg hover:bg-pink-600 active:scale-95"
+                  className="block py-4 px-4 text-xs font-black uppercase tracking-widest text-white bg-brand-navy rounded-xl transition-all text-center shadow-lg hover:bg-brand-navy/90 active:scale-95"
                 >
                   MY ACCOUNT
                 </Link>
@@ -252,7 +252,7 @@ export default function StoreLayout({ children }: { children: React.ReactNode })
         <main className="flex-1 relative">{children}</main>
 
       {/* ── FOOTER ──────────────────────────────────────────────────────────── */}
-      {pathname !== "/account" && (
+      {pathname !== "/account" && pathname !== "/shop" && pathname !== "/boys" && pathname !== "/girls" && (
         <footer style={{ background: "#0B1E3F" }} className="text-white pt-20 pb-10 relative overflow-hidden">
           <div className="absolute inset-0 bg-brand-mesh opacity-10" />
           <div className="container mx-auto px-6 relative z-10">

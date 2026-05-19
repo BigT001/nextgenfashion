@@ -68,7 +68,7 @@ export default function OrdersClient({ initialData }: { initialData: any[] }) {
       const row = [
         `"${order.orderNumber}"`,
         `"${isPos ? 'POS Terminal' : 'Storefront'}"`,
-        `"${order.customer?.name || 'Walk-in Curator'}"`,
+        `"${order.customer?.name || 'Offline'}"`,
         `"${order.user?.name || 'System Storefront'}"`,
         `"${order.customer?.email || 'N/A'}"`,
         order.totalAmount,
@@ -127,7 +127,7 @@ export default function OrdersClient({ initialData }: { initialData: any[] }) {
       header: "PATRON",
       cell: ({ row }) => (
         <div className="flex flex-col">
-            <span className="font-black text-xs tracking-tight">{row.original.customer?.name || "Walk-in Curator"}</span>
+            <span className="font-black text-xs tracking-tight">{row.original.customer?.name || "Offline"}</span>
             <span className="text-[9px] text-muted-foreground font-black uppercase tracking-widest">{row.original.customer?.email || "No Digital Identity"}</span>
         </div>
       ),

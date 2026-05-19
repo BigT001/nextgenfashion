@@ -196,11 +196,18 @@ export function POSSummary({ onCheckout, isProcessing }: POSSummaryProps) {
                   {paymentMethod}
                 </Badge>
               </div>
+
+              <div className="flex justify-between items-center text-xs font-black uppercase tracking-widest">
+                <span className="text-muted-foreground">Purchase Type</span>
+                <Badge className="bg-amber-500/10 text-amber-600 border-none font-black text-[10px] tracking-widest px-3 py-1 uppercase rounded-full">
+                  OFFLINE
+                </Badge>
+              </div>
               
               <div className="flex justify-between items-center text-xs font-black uppercase tracking-widest">
                 <span className="text-muted-foreground">Client Signature</span>
                 <span className="text-foreground font-black">
-                  {customer?.name || "WALK-IN CURATOR"}
+                  {customer?.name || "OFFLINE"}
                 </span>
               </div>
               

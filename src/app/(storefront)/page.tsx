@@ -145,19 +145,34 @@ export default async function LandingPage() {
         </div>
 
         {/* ── Main hero text (centred over the image) ── */}
-        <div className="relative z-20 text-center px-4 pt-6 pb-2">
-          <h1 className="text-5xl md:text-7xl font-black tracking-tight leading-tight" style={{ color: "#0B1E3F", textShadow: "0 2px 8px rgba(255,255,255,0.6)" }}>
-            Kids Premium <span style={{ color: "#e91e63" }}>Fashion</span>
-          </h1>
-          <p className="text-blue-900/80 font-semibold text-lg mt-2 mb-6">
-            Designed for play · Built to last · Made to love
-          </p>
-          <Link href="/shop">
-            <button className="h-14 px-12 rounded-full font-black text-base text-white shadow-2xl hover:scale-105 active:scale-95 transition-all border-0"
-              style={{ background: "linear-gradient(135deg,#e91e63,#f44336)", boxShadow: "0 8px 32px rgba(233,30,99,0.4)" }}>
-              SHOP NOW →
-            </button>
-          </Link>
+        <div className="relative z-20 text-center px-4 pt-10 pb-6 flex flex-col items-center">
+          {/* Subtle glow behind text for legibility over clouds */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-white/40 blur-[50px] rounded-full pointer-events-none" />
+          
+          <div className="relative z-10">
+            <div className="inline-block mb-4 px-4 py-1.5 bg-white/40 backdrop-blur-md rounded-full border border-white/50 text-[#0B1E3F] font-black text-xs tracking-[0.25em] uppercase shadow-sm">
+              NextGen Exclusives
+            </div>
+            
+            <h1 className="text-[3.5rem] md:text-7xl lg:text-8xl font-black tracking-tighter leading-[1] md:leading-[0.95] text-[#0B1E3F] drop-shadow-sm">
+              <span className="block">Kids Premium</span>
+              <span className="block text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-rose-500 to-orange-400 mt-2 pb-2">
+                Fashion
+              </span>
+            </h1>
+            
+            <p className="text-[#0B1E3F]/80 font-black text-base md:text-xl mt-5 mb-8 max-w-md mx-auto tracking-wide">
+              Designed for play <span className="text-pink-500 mx-1">•</span> Built to last <span className="text-pink-500 mx-1">•</span> Made to love
+            </p>
+            
+            <Link href="/shop">
+              <button className="h-14 px-10 md:px-14 rounded-full font-black text-sm md:text-base text-white shadow-xl hover:scale-105 active:scale-95 transition-all border border-white/20 group relative overflow-hidden"
+                style={{ background: "linear-gradient(135deg,#e91e63,#f44336)", boxShadow: "0 8px 32px rgba(233,30,99,0.4)" }}>
+                <span className="relative z-10 flex items-center justify-center gap-2 tracking-widest">SHOP NOW <span className="group-hover:translate-x-1 transition-transform">→</span></span>
+                <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 -translate-x-[100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+              </button>
+            </Link>
+          </div>
         </div>
 
         {/* ── Baby image — full-width, centred, no split ── */}
@@ -201,7 +216,7 @@ export default async function LandingPage() {
       <LiveBrandPulse />
 
       {/* ═══════════════════ CATEGORIES ════════════════════════════════════════ */}
-      <section className="py-16 bg-white">
+      <section className="py-8 md:py-16 bg-white">
         <div className="container mx-auto px-6 md:px-12">
           <AnimatedSection className="text-center mb-10" animation="fade-up">
             <p className="text-sm font-black uppercase tracking-widest text-pink-500 mb-1">Shop by Category</p>
@@ -210,7 +225,7 @@ export default async function LandingPage() {
             </h2>
           </AnimatedSection>
 
-          <div className="flex items-center gap-5 md:gap-8 overflow-x-auto py-4 pb-8 scrollbar-hide px-6 md:justify-center">
+          <div className="flex flex-wrap items-center justify-center gap-5 md:gap-8 pt-4 pb-2 md:pb-8 px-6">
             {categories.map((cat, i) => (
               <AnimatedSection key={i} animation="zoom-in" delay={i * 60} className="flex-shrink-0">
                 <Link href={cat.href}>
@@ -239,7 +254,7 @@ export default async function LandingPage() {
       </section>
 
       {/* ═══════════════════ TRENDING PRODUCTS ══════════════════════════════════ */}
-      <section className="pt-16 pb-8 bg-white">
+      <section className="pt-4 md:pt-16 pb-8 bg-white">
         <div className="container mx-auto px-6 md:px-12">
           <AnimatedSection className="text-center mb-10" animation="fade-up">
             <p className="text-sm font-black uppercase tracking-widest text-pink-500 mb-1">Trending Products</p>
@@ -280,68 +295,74 @@ export default async function LandingPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
 
               {/* Banner 1 — Boys */}
-              <div className="relative rounded-3xl overflow-hidden h-48 flex items-center px-8 shadow-lg group cursor-pointer hover:-translate-y-1 hover:shadow-2xl transition-all duration-500"
+              <div className="relative rounded-3xl overflow-hidden h-24 md:h-48 flex items-center px-4 md:px-8 shadow-lg group cursor-pointer hover:-translate-y-1 hover:shadow-2xl transition-all duration-500"
                 style={{ background: "linear-gradient(135deg,#ffd600,#ff6f00)" }}>
-                <div className="relative z-10">
-                  <p className="text-white/80 font-black text-xs uppercase tracking-widest mb-1">Play Like</p>
-                  <h3 className="text-3xl font-black text-white leading-tight">Boy Toys<br />&amp; Fashion</h3>
-                  <Link href="/shop?category=boys">
-                    <button className="mt-4 bg-white text-yellow-700 font-black text-xs uppercase tracking-widest px-5 py-2 rounded-full group-hover:bg-yellow-50 group-hover:scale-105 transition-all">
+                <div className="relative z-10 flex w-full items-center justify-between md:block md:w-auto">
+                  <div>
+                    <p className="text-white/80 font-black text-[10px] md:text-xs uppercase tracking-widest mb-1">Play Like</p>
+                    <h3 className="text-xl md:text-3xl font-black text-white leading-tight whitespace-nowrap">Boy Toys<span className="hidden md:inline"><br /></span><span className="md:hidden"> </span>&amp; Fashion</h3>
+                  </div>
+                  <Link href="/shop?category=boys" className="ml-2 relative z-20 shrink-0">
+                    <button className="md:mt-4 bg-white text-yellow-700 font-black text-[10px] md:text-xs uppercase tracking-widest px-4 py-2 md:px-5 md:py-2 rounded-full group-hover:bg-yellow-50 group-hover:scale-105 transition-all">
                       SHOP ONLINE
                     </button>
                   </Link>
                 </div>
-                <div className="absolute right-4 bottom-0 text-7xl opacity-70 group-hover:scale-110 group-hover:rotate-6 transition-transform duration-500">🧢</div>
+                <div className="absolute right-4 bottom-0 text-5xl md:text-7xl opacity-70 group-hover:scale-110 group-hover:rotate-6 transition-transform duration-500">🧢</div>
               </div>
 
               {/* Banner 2 — Big Discount */}
-              <div className="relative rounded-3xl overflow-hidden h-48 flex items-center px-8 shadow-lg group cursor-pointer hover:-translate-y-1 hover:shadow-2xl transition-all duration-500"
+              <div className="relative rounded-3xl overflow-hidden h-24 md:h-48 flex items-center px-4 md:px-8 shadow-lg group cursor-pointer hover:-translate-y-1 hover:shadow-2xl transition-all duration-500"
                 style={{ background: "linear-gradient(135deg,#43a047,#1de9b6)" }}>
-                <div className="relative z-10">
-                  <p className="text-white/80 font-black text-xs uppercase tracking-widest mb-1">Special Deal</p>
-                  <h3 className="text-3xl font-black text-white leading-tight">Big<br />Discount</h3>
-                  <div className="mt-1 bg-yellow-400 text-yellow-900 font-black text-lg px-4 py-1 rounded-full inline-block group-hover:scale-110 transition-transform">50% OFF</div>
-                  <br />
-                  <Link href="/shop">
-                    <button className="mt-3 bg-white text-green-700 font-black text-xs uppercase tracking-widest px-5 py-2 rounded-full group-hover:bg-green-50 group-hover:scale-105 transition-all">
+                <div className="relative z-10 flex w-full items-center justify-between md:block md:w-auto">
+                  <div>
+                    <p className="text-white/80 font-black text-[10px] md:text-xs uppercase tracking-widest mb-1">Special Deal</p>
+                    <h3 className="text-xl md:text-3xl font-black text-white leading-tight whitespace-nowrap">Big<span className="hidden md:inline"><br /></span><span className="md:hidden"> </span>Discount</h3>
+                    <div className="mt-1 bg-yellow-400 text-yellow-900 font-black text-[10px] md:text-lg px-3 py-0.5 md:px-4 md:py-1 rounded-full inline-block group-hover:scale-110 transition-transform">50% OFF</div>
+                    <div className="hidden md:block h-3" />
+                  </div>
+                  <Link href="/shop" className="ml-2 relative z-20 shrink-0">
+                    <button className="md:mt-3 bg-white text-green-700 font-black text-[10px] md:text-xs uppercase tracking-widest px-4 py-2 md:px-5 md:py-2 rounded-full group-hover:bg-green-50 group-hover:scale-105 transition-all block">
                       SHOP NOW
                     </button>
                   </Link>
                 </div>
-                <div className="absolute right-4 bottom-0 text-7xl opacity-70 group-hover:scale-110 group-hover:-rotate-12 transition-transform duration-500">🎉</div>
+                <div className="absolute right-4 bottom-0 text-5xl md:text-7xl opacity-70 group-hover:scale-110 group-hover:-rotate-12 transition-transform duration-500">🎉</div>
               </div>
 
               {/* Banner 3 — Elite Selection */}
-              <div className="relative rounded-3xl overflow-hidden h-48 flex items-center px-8 shadow-lg group cursor-pointer hover:-translate-y-1 hover:shadow-2xl transition-all duration-500"
+              <div className="relative rounded-3xl overflow-hidden h-24 md:h-48 flex items-center px-4 md:px-8 shadow-lg group cursor-pointer hover:-translate-y-1 hover:shadow-2xl transition-all duration-500"
                 style={{ background: "linear-gradient(135deg,#ff8a80,#e91e63)" }}>
-                <div className="relative z-10">
-                  <p className="text-white/80 font-black text-xs uppercase tracking-widest mb-1">Style Update</p>
-                  <div className="bg-white/30 backdrop-blur-sm px-3 py-1 rounded-full text-white font-black text-sm mb-2 inline-block">Premium Range</div>
-                  <h3 className="text-3xl font-black text-white leading-tight">Elite 👗<br />Selection</h3>
-                  <Link href="/shop">
-                    <button className="mt-3 bg-white text-pink-700 font-black text-xs uppercase tracking-widest px-5 py-2 rounded-full group-hover:bg-pink-50 group-hover:scale-105 transition-all">
+                <div className="relative z-10 flex w-full items-center justify-between md:block md:w-auto">
+                  <div>
+                    <p className="text-white/80 font-black text-[10px] md:text-xs uppercase tracking-widest mb-1">Style Update</p>
+                    <div className="bg-white/30 backdrop-blur-sm px-2 py-0.5 md:px-3 md:py-1 rounded-full text-white font-black text-[10px] md:text-sm mb-1 md:mb-2 inline-block">Premium Range</div>
+                    <h3 className="text-xl md:text-3xl font-black text-white leading-tight whitespace-nowrap">Elite 👗<span className="hidden md:inline"><br /></span><span className="md:hidden"> </span>Selection</h3>
+                  </div>
+                  <Link href="/shop" className="ml-2 relative z-20 shrink-0">
+                    <button className="md:mt-3 bg-white text-pink-700 font-black text-[10px] md:text-xs uppercase tracking-widest px-4 py-2 md:px-5 md:py-2 rounded-full group-hover:bg-pink-50 group-hover:scale-105 transition-all">
                       SHOP ONLINE
                     </button>
                   </Link>
                 </div>
-                <div className="absolute right-4 bottom-0 text-7xl opacity-20 group-hover:opacity-40 transition-opacity">✨</div>
+                <div className="absolute right-4 bottom-0 text-5xl md:text-7xl opacity-20 group-hover:opacity-40 transition-opacity">✨</div>
               </div>
             </div>
 
             {/* Full-width banner */}
-            <div className="mt-5 relative rounded-3xl overflow-hidden h-36 flex items-center px-10 shadow-lg group cursor-pointer hover:shadow-2xl transition-all duration-500"
+            <div className="mt-5 relative rounded-3xl overflow-hidden h-24 md:h-36 flex flex-row items-center justify-between px-4 md:px-10 shadow-lg group cursor-pointer hover:shadow-2xl transition-all duration-500"
               style={{ background: "linear-gradient(90deg,#29b6f6 0%,#0288d1 50%,#01579b 100%)" }}>
               <div className="absolute inset-0 bg-brand-mesh opacity-10 group-hover:opacity-20 transition-opacity" />
-              <div className="relative z-10">
-                <p className="text-white/70 font-black text-xs uppercase tracking-widest mb-1">New Arrivals</p>
-                <h3 className="text-3xl md:text-4xl font-black text-white">Kids Collection {new Date().getFullYear()}</h3>
+              <div className="relative z-10 text-left mb-0">
+                <p className="text-white/70 font-black text-[10px] md:text-xs uppercase tracking-widest mb-1">New Arrivals</p>
+                <h3 className="text-xl sm:text-2xl md:text-4xl font-black text-white whitespace-nowrap">Kids Collection {new Date().getFullYear()}</h3>
               </div>
-              <Link href="/shop" className="ml-6 relative z-10">
-                <button className="bg-yellow-400 text-blue-900 font-black text-xs uppercase tracking-widest px-6 py-3 rounded-full hover:bg-yellow-300 group-hover:scale-105 transition-all shadow-lg active:scale-95">
+              <Link href="/shop" className="relative z-10 flex-shrink-0">
+                <button className="bg-yellow-400 text-blue-900 font-black text-[10px] md:text-xs uppercase tracking-widest px-4 py-2 md:px-6 md:py-3 rounded-full hover:bg-yellow-300 group-hover:scale-105 transition-all shadow-lg active:scale-95 whitespace-nowrap">
                   SHOP NOW →
                 </button>
               </Link>
-              <div className="absolute right-10 top-0 bottom-0 flex items-center opacity-10 group-hover:opacity-30 transition-opacity">
+              <div className="absolute right-10 top-0 bottom-0 hidden md:flex items-center opacity-10 group-hover:opacity-30 transition-opacity">
                 <div className="flex gap-4 text-5xl">🎒 👗 👟</div>
               </div>
             </div>
@@ -399,11 +420,10 @@ export default async function LandingPage() {
             <p className="text-zinc-500 font-medium mb-8 max-w-lg mx-auto">
               Exclusive drops, seasonal sales & style guides — straight to your inbox.
             </p>
-            <div className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
+            <div className="flex flex-col sm:flex-row gap-4 max-w-lg mx-auto w-full px-4 md:px-0">
               <input type="email" placeholder="your@email.com"
-                className="flex-1 h-14 px-6 rounded-full bg-zinc-100 border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 text-sm font-bold focus:outline-none focus:border-pink-300 focus:ring-2 focus:ring-pink-100 transition-all shadow-inner" />
-              <Button className="h-14 px-8 rounded-full font-black text-sm border-0 text-white whitespace-nowrap shadow-md hover:shadow-lg transition-all"
-                style={{ background: "linear-gradient(135deg,#e91e63,#f44336)" }}>
+                className="w-full sm:flex-1 h-16 md:h-14 px-8 rounded-full bg-zinc-100 border-2 border-zinc-200 text-zinc-900 placeholder:text-zinc-400 text-base font-bold focus:outline-none focus:border-brand-navy focus:ring-4 focus:ring-brand-navy/10 transition-all shadow-inner" />
+              <Button className="h-16 md:h-14 px-10 rounded-full font-black text-sm md:text-base border-0 text-white whitespace-nowrap shadow-lg hover:scale-105 active:scale-95 transition-all bg-brand-navy hover:bg-brand-navy/90 w-full sm:w-auto">
                 JOIN THE CLUB
               </Button>
             </div>

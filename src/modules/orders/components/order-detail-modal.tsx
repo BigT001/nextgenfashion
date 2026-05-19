@@ -400,7 +400,7 @@ export function OrderDetailModal({ orderId, onClose }: OrderDetailModalProps) {
                                 <User className="size-6" />
                             </div>
                             <div className="flex flex-col">
-                                <span className="font-black text-sm tracking-tight">{data.customer?.name || "Walk-in Curator"}</span>
+                                <span className="font-black text-sm tracking-tight">{data.customer?.name || "Offline"}</span>
                                 <span className="text-[10px] text-muted-foreground font-black uppercase tracking-widest truncate max-w-[120px]">{data.customer?.email || "No Email"}</span>
                             </div>
                         </div>

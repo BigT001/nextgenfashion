@@ -98,7 +98,8 @@ export function CheckoutSuccessDialog({
           <div class="my-4"></div>
           <div class="flex bold" style="font-size: 14px;"><span>TOTAL SETTLED</span><span>₦${orderData.totalAmount.toLocaleString()}</span></div>
           <div class="flex"><span>PAYMENT TYPE</span><span>${orderData.paymentMethod}</span></div>
-          <div class="flex"><span>VAT INCL (7.5%)</span><span>₦ ${(orderData.totalAmount * 0.075).toLocaleString()}</span></div>
+          <div class="flex"><span>PURCHASE TYPE</span><span>OFFLINE</span></div>
+          <div class="flex"><span>VAT INCL (7.5%)</span><span>₦ ${Math.round(orderData.totalAmount * (7.5 / 107.5)).toLocaleString()}</span></div>
           <div class="my-4"></div>
           <div class="text-center bold" style="font-size: 10px; margin-top: 20px;">*** TRANSACTION VERIFIED ***</div>
           <div class="text-center" style="font-size: 9px; opacity: 0.5; margin-top: 5px;">THANK YOU FOR YOUR PATRONAGE</div>
@@ -264,8 +265,12 @@ export function CheckoutSuccessDialog({
                                     <span>{orderData.paymentMethod}</span>
                                 </div>
                                 <div className="flex justify-between opacity-60">
+                                    <span>PURCHASE TYPE</span>
+                                    <span>OFFLINE</span>
+                                </div>
+                                <div className="flex justify-between opacity-60">
                                     <span>VAT INCL (7.5%)</span>
-                                    <span>₦{(orderData.totalAmount * 0.075).toLocaleString()}</span>
+                                    <span>₦{Math.round(orderData.totalAmount * (7.5 / 107.5)).toLocaleString()}</span>
                                 </div>
                             </div>
                             <Separator className="my-6 border-zinc-200 dark:border-zinc-800 border-dashed" />

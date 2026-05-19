@@ -13,12 +13,14 @@ export class GetProductsService {
     categoryId?: string;
     targetGender?: string;
     search?: string;
+    maxPrice?: number;
     includeVariants?: boolean;
   }) {
     const searchParams = {
       categoryId: params?.categoryId,
       targetGender: params?.targetGender,
       search: params?.search,
+      maxPrice: params?.maxPrice,
       includeVariants: params?.includeVariants,
     };
     const result = await ProductQueries.findAll(searchParams);

@@ -377,7 +377,7 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
             <CardContent className="px-2">
               <div className="space-y-6">
                 {recentSalesList.map((sale: any) => {
-                  const customerName = sale.customer?.name || "Walk-in Curator";
+                  const customerName = sale.customer?.name || "Offline";
                   const initials = getInitials(customerName);
                   
                   return (
@@ -423,7 +423,7 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
             <CardContent className="px-2">
               <div className="space-y-6">
                 {recentSalesList.map((sale: any) => {
-                  const customerName = sale.customer?.name || "Walk-in Curator";
+                  const customerName = sale.customer?.name || "Offline";
                   const initials = getInitials(customerName);
                   
                   return (

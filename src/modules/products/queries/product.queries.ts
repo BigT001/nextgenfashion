@@ -11,6 +11,7 @@ export class ProductQueries {
     categoryId?: string;
     targetGender?: string;
     search?: string;
+    maxPrice?: number;
     includeVariants?: boolean;
   }) {
     return await prisma.product.findMany({
@@ -33,6 +34,9 @@ export class ProductQueries {
             { name: { contains: params.search, mode: "insensitive" } },
             { description: { contains: params.search, mode: "insensitive" } },
           ],
+        }),
+        ...(params.maxPrice !== undefined && {
+          basePrice: { lte: new Prisma.Decimal(params.maxPrice) }
         }),
       },
       include: {

@@ -19,8 +19,16 @@ export function ProductActions({ product }: ProductActionsProps) {
 
   const sizes = Array.from(new Set(product.variants.map((v: any) => v.size))).filter(Boolean);
   const colors = Array.from(new Set(product.variants.map((v: any) => v.color))).filter(Boolean);
+  const totalStock = product.variants.reduce((acc: number, v: any) => acc + (v.inventory?.quantity || 0), 0);
+  const isOutOfStock = totalStock <= 0;
 
   const handleAddToCart = () => {
+    if (isOutOfStock) {
+      toast.error(`"${product.name}" is completely out of stock!`, {
+        duration: 5000,
+      });
+      return;
+    }
     if (sizes.length > 0 && !selectedSize) {
       toast.error("Please select a size to continue.");
       return;
@@ -35,6 +43,21 @@ export function ProductActions({ product }: ProductActionsProps) {
         (sizes.length === 0 || v.size === selectedSize) && 
         (colors.length === 0 || v.color === selectedColor)
     );
+
+    const stockAvailable = variant?.inventory?.quantity ?? 0;
+    if (stockAvailable <= 0) {
+      toast.error(`The selected options for "${product.name}" are out of stock!`, {
+        duration: 5000,
+      });
+      return;
+    }
+
+    if (quantity > stockAvailable) {
+      toast.error(`Only ${stockAvailable} item(s) left in stock. You cannot request ${quantity}.`, {
+        duration: 5000,
+      });
+      return;
+    }
 
     addItem({
       id: product.id,
@@ -134,10 +157,15 @@ export function ProductActions({ product }: ProductActionsProps) {
           <Button 
             size="lg" 
             onClick={handleAddToCart}
-            className="flex-[2] bg-brand-navy hover:bg-brand-navy/90 text-white h-14 rounded-xl text-sm font-black tracking-widest shadow-xl shadow-brand-navy/20 group active:scale-95 transition-all"
+            className={cn(
+              "flex-[2] h-14 rounded-xl text-sm font-black tracking-widest transition-all",
+              isOutOfStock 
+                ? "bg-rose-600 hover:bg-rose-700 text-white shadow-xl shadow-rose-600/20 cursor-not-allowed" 
+                : "bg-brand-navy hover:bg-brand-navy/90 text-white shadow-xl shadow-brand-navy/20 active:scale-95 group"
+            )}
           >
             <ShoppingCart className="mr-3 size-5 group-hover:scale-110 transition-transform" />
-            ADD TO COLLECTION
+            {isOutOfStock ? "OUT OF STOCK" : "ADD TO COLLECTION"}
           </Button>
           <div className="flex flex-1 gap-3">
             <Button size="icon" variant="outline" className="h-14 w-14 rounded-xl border-2 border-border/50 hover:text-brand-navy hover:border-brand-navy/50 transition-all glass-card">

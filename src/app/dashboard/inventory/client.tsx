@@ -203,7 +203,9 @@ export default function InventoryClient({ initialData }: { initialData: any }) {
             )}
           >
             <History className="h-3.5 w-3.5 shrink-0" />
-            <span className="truncate uppercase tracking-wide text-[10px]">{lastMovement}</span>
+            <span className="truncate uppercase tracking-wide text-[10px]">
+              {lastMovement === "SALES OUTFLOW" ? "SALES" : lastMovement}
+            </span>
           </Button>
         )
       },

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2, Activity, PackagePlus, PackageMinus, Ban, AlertCircle } from "lucide-react";
+import { Loader2, Activity, PackagePlus, PackageMinus, Ban, AlertCircle, ShoppingCart } from "lucide-react";
 import { getAuditLogsAction } from "../actions/inventory.actions";
 
 import { cn } from "@/lib/utils";
@@ -55,11 +55,12 @@ export function InventoryHistoryViewer({ variantId, refreshTrigger = 0 }: Invent
       </div>
       <div className="max-h-[650px] overflow-y-auto pr-2 space-y-3 relative before:absolute before:inset-0 before:ml-4 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-border/50 before:to-transparent custom-scrollbar">
         {logs.map((log) => {
-          const isDecrement = log.action === "STOCK_DECREMENT";
+          const reason = (log.details?.reason || log.details?.message || "").toLowerCase();
+          const isSale = log.action === "SALE_COMPLETED" || (log.action === "STOCK_DECREMENT" && (reason.includes("customer purchase") || reason.includes("sale") || reason.includes("pos")));
+          const isDecrement = log.action === "STOCK_DECREMENT" && !isSale;
           const isIncrement = log.action === "STOCK_INCREMENT";
           const isSuspend = log.action === "PRODUCT_SUSPENDED";
           const isActivate = log.action === "PRODUCT_ACTIVATED";
-          const isSale = log.action === "SALE_COMPLETED";
 
           return (
             <div key={log.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
@@ -68,7 +69,7 @@ export function InventoryHistoryViewer({ variantId, refreshTrigger = 0 }: Invent
                 {isDecrement && <PackageMinus className="size-3 text-amber-500" />}
                 {isSuspend && <Ban className="size-3 text-rose-500" />}
                 {isActivate && <Activity className="size-3 text-emerald-500" />}
-                {isSale && <AlertCircle className="size-3 text-brand-navy" />}
+                {isSale && <ShoppingCart className="size-3 text-indigo-500 animate-pulse" />}
                 {(!isIncrement && !isDecrement && !isSuspend && !isActivate && !isSale) && <Activity className="size-3 text-muted-foreground" />}
               </div>
               <div className="w-[calc(100%-3rem)] md:w-[calc(50%-2rem)] glass-card border border-brand-navy/10 p-3 rounded-xl shadow-sm">
@@ -79,10 +80,10 @@ export function InventoryHistoryViewer({ variantId, refreshTrigger = 0 }: Invent
                     isDecrement ? "text-amber-600" : "",
                     isSuspend ? "text-rose-600" : "",
                     isActivate ? "text-emerald-600" : "",
-                    isSale ? "text-brand-navy" : "",
+                    isSale ? "text-indigo-600" : "",
                     (!isIncrement && !isDecrement && !isSuspend && !isActivate && !isSale) ? "text-muted-foreground" : ""
                   )}>
-                    {log.action.replace("_", " ")}
+                    {isSale ? "SALES" : log.action.replace("_", " ")}
                   </span>
                   <span className="text-[9px] font-bold text-muted-foreground opacity-70">
                     {new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true }).format(new Date(log.createdAt))}
@@ -106,7 +107,7 @@ export function InventoryHistoryViewer({ variantId, refreshTrigger = 0 }: Invent
                 {/* Audit Author Detail */}
                 <div className="mt-2 pt-2 border-t border-border/50 flex items-center justify-between">
                   <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground opacity-60">Executed By</span>
-                  <span className="text-[9px] font-bold text-brand-navy/80">{log.userId}</span>
+                  <span className="text-[9px] font-bold text-brand-navy/80">{log.userName || log.userId}</span>
                 </div>
               </div>
             </div>

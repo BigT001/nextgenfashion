@@ -13,9 +13,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Minus, Trash2, Tag } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
-export function POSItemTable() {
+interface POSItemTableProps {
+  products: any[];
+}
+
+export function POSItemTable({ products = [] }: POSItemTableProps) {
   const { cart, updateQuantity, removeItem, updateItemDiscount } = usePOSStore();
+
+  const getStockForVariant = (variantId: string) => {
+    for (const p of products) {
+      const v = p.variants?.find((variant: any) => variant.id === variantId);
+      if (v) return v.inventory?.quantity ?? 0;
+    }
+    return 9999; // Fallback if products list not loaded yet
+  };
 
   if (cart.length === 0) {
     return (
@@ -47,6 +60,7 @@ export function POSItemTable() {
           {cart.map((item) => {
             const itemTotal = (item.price * item.quantity) - (item.discount || 0);
             const discPercent = ((item.discount || 0) / (item.price * item.quantity)) * 100;
+            const stock = getStockForVariant(item.variantId);
 
             return (
               <TableRow key={item.variantId} className="group border-b border-zinc-100 dark:border-zinc-800/50">
@@ -84,7 +98,15 @@ export function POSItemTable() {
                       variant="outline" 
                       size="icon" 
                       className="h-7 w-7 rounded-lg border-zinc-200"
-                      onClick={() => updateQuantity(item.variantId, item.quantity + 1)}
+                      onClick={() => {
+                        if (item.quantity + 1 > stock) {
+                          toast.error("Requested quantity exceeds available stock!", {
+                            description: `Only ${stock} items left in inventory.`
+                          });
+                          return;
+                        }
+                        updateQuantity(item.variantId, item.quantity + 1);
+                      }}
                     >
                       <Plus className="h-3 w-3" />
                     </Button>

@@ -63,7 +63,7 @@ export const usePOSStore = create<POSState>()(
       discount: 0,
       discountType: "FIXED",
       subtotal: 0,
-      taxRate: 0.075, // 7.5% VAT
+      taxRate: 0.0, // No extra tax on top
       taxAmount: 0,
       total: 0,
       suspendedSales: [],
@@ -141,7 +141,8 @@ export const usePOSStore = create<POSState>()(
       }),
 
       calculateTotals: () => {
-        const { cart, discount, discountType, taxRate } = get();
+        const { cart, discount, discountType } = get();
+        const taxRate = 0.0; // Force tax rate to 0.0 to prevent extra charge on checkout
         
         // 1. Calculate Base Subtotal (sum of items * quantity)
         // Note: individual item discounts are subtracted from their respective totals

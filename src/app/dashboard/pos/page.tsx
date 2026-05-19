@@ -51,7 +51,8 @@ export default function POSPage() {
     clearCart,
     suspendedSales,
     resumeSale,
-    deleteSuspendedSale
+    deleteSuspendedSale,
+    calculateTotals
   } = usePOSStore();
   
   const [search, setSearch] = useState("");
@@ -79,7 +80,8 @@ export default function POSPage() {
 
   useEffect(() => {
     fetchProducts();
-  }, [fetchProducts]);
+    calculateTotals();
+  }, [fetchProducts, calculateTotals]);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -201,6 +203,23 @@ export default function POSPage() {
                                         key={variant.id} 
                                         className="group cursor-pointer hover:scale-[1.02] active:scale-95 transition-all duration-300 border-none shadow-sm glass-card overflow-hidden rounded-[2rem]"
                                         onClick={() => {
+                                            const stock = variant.inventory?.quantity ?? 0;
+                                            if (stock <= 0) {
+                                                toast.error(`"${product.name} (${variant.size} / ${variant.color})" is out of stock!`, {
+                                                    description: "You cannot add out-of-stock items to a sale."
+                                                });
+                                                return;
+                                            }
+
+                                            // Check if already in cart and adding another exceeds stock
+                                            const existingCartItem = cart.find((i) => i.variantId === variant.id);
+                                            if (existingCartItem && existingCartItem.quantity + 1 > stock) {
+                                                toast.error("Requested quantity exceeds available stock!", {
+                                                    description: `Only ${stock} items left in inventory.`
+                                                });
+                                                return;
+                                            }
+
                                             addItem({
                                                 id: product.id,
                                                 variantId: variant.id,
@@ -265,7 +284,7 @@ export default function POSPage() {
              </>
           ) : (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <POSItemTable />
+                <POSItemTable products={products} />
             </div>
           )}
         </div>

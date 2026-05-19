@@ -8,11 +8,14 @@ import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ProductCard } from "@/modules/products/components/product-card";
 import { ProductQueries } from "@/modules/products/queries/product.queries";
+import { MobileDrawer } from "./mobile-drawer";
+import { ShopFilters } from "./shop-filters";
 
 interface ShopViewProps {
   category?: string;
   targetGender?: string;
   search?: string;
+  maxPrice?: number;
   title?: string;
   description?: string;
   badge?: string;
@@ -22,6 +25,7 @@ export async function ShopView({
   category,
   targetGender,
   search,
+  maxPrice,
   title = "EXPLORE THE COLLECTION",
   description = "Discover our complete range of premium, sustainably engineered fashion for the next generation.",
   badge = "Full Catalog 2026"
@@ -34,98 +38,39 @@ export async function ShopView({
     categoryId: category,
     targetGender: targetGender,
     search: search,
+    maxPrice: maxPrice,
   });
 
   return (
     <div className="min-h-screen bg-background selection:bg-brand-navy/30">
-      {/* Catalog Header - High-Fidelity Mesh Accent */}
-      <section className="relative pt-32 pb-20 overflow-hidden bg-zinc-950">
-        <div className="absolute inset-0 bg-brand-mesh opacity-20" />
-        <div className="container mx-auto px-6 relative z-10 text-center space-y-6">
-          <Badge className="bg-white/10 backdrop-blur-xl text-white border-white/20 px-4 py-1.5 text-xs uppercase tracking-[0.3em] font-black rounded-full">
-            {badge}
-          </Badge>
-          <h1 className="text-5xl md:text-7xl font-black text-white tracking-tighter uppercase">
-            {title.split(" ").map((word, i) => (
-              <span key={i} className={cn(i === title.split(" ").length - 1 ? "text-gradient" : "mr-4")}>
-                {word}
-                {i === title.split(" ").length - 1 ? "." : ""}
-              </span>
-            ))}
-          </h1>
-          <p className="text-zinc-400 text-lg md:text-xl max-w-2xl mx-auto font-medium">
-            {description}
-          </p>
-        </div>
-      </section>
-
       {/* Discovery Layer */}
-      <section className="py-20">
+      <section className="pt-4 md:pt-8 pb-20">
         <div className="container mx-auto px-6">
           <div className="flex flex-col lg:flex-row gap-12">
 
-            {/* Filter Sidebar - High-Fidelity Glassmorphism */}
-            <aside className="lg:w-64 space-y-10 shrink-0">
-              <div className="flex items-center justify-between pb-4 border-b border-border/30">
-                <h3 className="text-sm font-black uppercase tracking-widest flex items-center gap-2">
-                  <SlidersHorizontal className="size-4" />
-                  Filters
-                </h3>
-                <Link href={targetGender ? `/${targetGender.toLowerCase()}` : "/shop"} className="text-[10px] font-black text-brand-navy uppercase tracking-widest hover:underline">Clear</Link>
-              </div>
-
-              {/* Categories */}
-              <div className="space-y-4">
-                <h4 className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">Categories</h4>
-                <div className="flex flex-col gap-2">
-                  <Link
-                    href={targetGender ? `/${targetGender.toLowerCase()}` : "/shop"}
-                    className={cn(
-                      "text-left py-3 px-5 rounded-2xl text-sm font-bold transition-all",
-                      !category ? "bg-brand-navy/5 text-brand-navy glass-card border-none" : "hover:bg-accent hover:translate-x-1"
-                    )}
-                  >
-                    All Products
-                  </Link>
-                  {categories.map((cat) => (
-                    <Link
-                      key={cat.id}
-                      href={`${targetGender ? `/${targetGender.toLowerCase()}` : "/shop"}?category=${cat.id}`}
-                      className={cn(
-                        "text-left py-3 px-5 rounded-2xl text-sm font-bold transition-all flex items-center justify-between group",
-                        (category === cat.id || category?.toLowerCase() === cat.name.toLowerCase()) ? "bg-brand-navy/5 text-brand-navy glass-card border-none" : "hover:bg-accent hover:translate-x-1"
-                      )}
-                    >
-                      {cat.name}
-                      <span className="text-[10px] opacity-40 group-hover:opacity-100">{cat._count.products}</span>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-
-              {/* Price Range */}
-              <div className="space-y-4">
-                <h4 className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">Price Range</h4>
-                <div className="space-y-4">
-                  <div className="flex justify-between text-[10px] font-black tracking-widest uppercase">
-                    <span>₦0</span>
-                    <span>₦100,000+</span>
-                  </div>
-                  <div className="h-2 bg-accent rounded-full relative overflow-hidden">
-                    <div className="absolute inset-y-0 left-0 w-2/3 bg-brand-navy/30 rounded-full" />
-                    <div className="absolute inset-y-0 left-2/3 size-2 bg-brand-navy rounded-full -translate-x-1/2" />
-                  </div>
-                </div>
-              </div>
+            {/* Filter Sidebar - Desktop */}
+            <aside className="hidden lg:block lg:w-64 shrink-0">
+              <ShopFilters categories={categories} category={category} targetGender={targetGender} />
             </aside>
 
             {/* Product Grid */}
             <div className="flex-1 space-y-12">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-muted-foreground">Showing <span className="font-black text-foreground">{products.length}</span> luxury pieces</p>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Sort By</span>
-                  <Button variant="outline" className="h-10 rounded-xl glass-card border-none text-xs font-bold px-4">Latest Arrivals</Button>
+                  <div className="lg:hidden">
+                    <MobileDrawer>
+                      <ShopFilters categories={categories} category={category} targetGender={targetGender} />
+                    </MobileDrawer>
+                  </div>
+                  <p className="text-sm font-medium text-muted-foreground hidden sm:block">Showing <span className="font-black text-foreground">{products.length}</span> luxury pieces</p>
+                </div>
+                
+                <div className="flex items-center justify-between w-full sm:w-auto sm:justify-end gap-4">
+                  <p className="text-sm font-medium text-muted-foreground sm:hidden">Showing <span className="font-black text-foreground">{products.length}</span></p>
+                  <div className="flex items-center gap-3">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 hidden sm:inline">Sort By</span>
+                    <Button variant="outline" className="h-10 rounded-xl glass-card border-none text-xs font-bold px-4">Latest Arrivals</Button>
+                  </div>
                 </div>
               </div>
 
@@ -138,7 +83,7 @@ export async function ShopView({
                   />
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-10">
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-10">
                   {products.map((product) => (
                     <ProductCard key={product.id} product={product} />
                   ))}
