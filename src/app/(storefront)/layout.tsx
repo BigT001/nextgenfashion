@@ -269,7 +269,7 @@ export default function StoreLayout({ children }: { children: React.ReactNode })
                 </p>
                 <div className="flex gap-3">
                   {[Globe, Share2, MessageSquare].map((Icon, i) => (
-                    <Button key={i} variant="ghost" size="icon" className="size-10 rounded-2xl bg-white/10 border border-white/10 hover:bg-pink-500 hover:border-pink-500 transition-all">
+                    <Button key={i} variant="ghost" size="icon" className="size-10 rounded-2xl bg-white/10 border border-white/10 hover:bg-brand-silver hover:border-brand-silver hover:text-brand-navy transition-all">
                       <Icon className="size-4" />
                     </Button>
                   ))}
@@ -277,7 +277,7 @@ export default function StoreLayout({ children }: { children: React.ReactNode })
               </div>
 
               <div>
-                <h4 className="text-xs font-black uppercase tracking-[0.3em] mb-6 text-pink-400">SHOP</h4>
+                <h4 className="text-xs font-black uppercase tracking-[0.3em] mb-6 text-brand-silver">SHOP</h4>
                 <ul className="space-y-3 text-sm font-bold text-zinc-400">
                   {["Boys Collection", "Girls Collection", "Baby Wear", "School Essentials", "Sale"].map((item) => (
                     <li key={item}><Link href="/shop" className="hover:text-white transition-colors">{item}</Link></li>
@@ -286,7 +286,7 @@ export default function StoreLayout({ children }: { children: React.ReactNode })
               </div>
 
               <div>
-                <h4 className="text-xs font-black uppercase tracking-[0.3em] mb-6 text-pink-400">HELP</h4>
+                <h4 className="text-xs font-black uppercase tracking-[0.3em] mb-6 text-brand-silver">HELP</h4>
                 <ul className="space-y-3 text-sm font-bold text-zinc-400">
                   {["Shipping Info", "Returns & Refunds", "Size Guide", "Track Order", "Contact Us"].map((item) => (
                     <li key={item}><Link href="/contact" className="hover:text-white transition-colors">{item}</Link></li>
@@ -295,15 +295,15 @@ export default function StoreLayout({ children }: { children: React.ReactNode })
               </div>
 
               <div className="space-y-6">
-                <h4 className="text-xs font-black uppercase tracking-[0.3em] text-pink-400">NEWSLETTER</h4>
+                <h4 className="text-xs font-black uppercase tracking-[0.3em] text-brand-silver">NEWSLETTER</h4>
                 <p className="text-sm font-medium text-zinc-400 leading-relaxed">Get exclusive deals and new arrivals straight to your inbox.</p>
                 <div className="flex gap-2">
                   <input
                     type="email"
                     placeholder="Your email..."
-                    className="flex-1 h-11 px-4 rounded-full bg-white/10 border border-white/10 text-xs font-bold focus:ring-1 focus:ring-pink-500 outline-none text-white placeholder:text-zinc-500"
+                    className="flex-1 h-11 px-4 rounded-full bg-white/10 border border-white/10 text-xs font-bold focus:ring-1 focus:ring-brand-silver outline-none text-white placeholder:text-zinc-500"
                   />
-                  <Button className="h-11 px-4 rounded-full bg-pink-500 hover:bg-pink-600 text-white font-black text-xs border-0">
+                  <Button className="h-11 px-4 rounded-full bg-brand-silver hover:bg-brand-silver/90 text-brand-navy font-black text-xs border-0">
                     JOIN
                   </Button>
                 </div>
@@ -312,11 +312,11 @@ export default function StoreLayout({ children }: { children: React.ReactNode })
 
             <div className="pt-8 border-t border-white/10 flex flex-col md:flex-row items-center justify-between gap-4">
               <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500">
-                <Sparkles className="size-3 text-pink-400" />
+                <Sparkles className="size-3 text-brand-silver" />
                 POWERED BY NEXTGEN KIDDIES OS
               </div>
               <p className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-600">
-                © 2025 NEXTGEN KIDDIES. ALL RIGHTS RESERVED.
+                © {mounted ? new Date().getFullYear() : "2026"} NEXTGEN KIDDIES. ALL RIGHTS RESERVED.
               </p>
             </div>
           </div>
