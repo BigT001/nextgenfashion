@@ -184,12 +184,12 @@ export default function AccountClient({ initialPatronData, initialOrders }: Acco
               <div className="size-20 bg-brand-navy/10 rounded-[2rem] flex items-center justify-center text-brand-navy mb-8">
                   <ShieldCheck className="size-10" />
               </div>
-              <h1 className="text-4xl font-black tracking-tighter mb-4">Staff Intelligence detected</h1>
+              <h1 className="text-4xl font-black tracking-tighter mb-4">Welcome, {session?.user?.name || "Staff"}</h1>
               <p className="text-muted-foreground max-w-md mx-auto font-medium mb-10">
-                  You are currently logged in with executive credentials. Please access the Management Command Center for order auditing.
+                  Please note that all activities on this account are monitored and stored.
               </p>
               <Button onClick={() => router.push("/dashboard")} className="h-16 px-10 bg-zinc-950 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-2xl">
-                  GO TO COMMAND CENTER
+                  GO TO DASHBOARD
               </Button>
           </div>
       )
