@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { SyncPosProductsService } from "@/modules/products/services/sync-pos-products.service";
 
 export const maxDuration = 300; // Allow up to 5 minutes execution time for full paginated catalog syncing
@@ -26,11 +26,26 @@ export async function GET(request: Request) {
   }
 
   try {
-    console.log("⏱️ Automated/Cron trigger received for POS Products synchronization...");
-    const result = await SyncPosProductsService.execute();
-    return NextResponse.json(result);
+    console.log("⏱️ Automated/Cron trigger received. Running POS synchronization in background...");
+    
+    // Utilize Next.js after to run the sync asynchronously in the background.
+    // This responds immediately (within milliseconds) to avoid Vercel and cron-job.org timeouts,
+    // while keeping the serverless instance alive until the sync completes.
+    after(async () => {
+      try {
+        const result = await SyncPosProductsService.execute();
+        console.log(`🎉 Background POS sync completed. Synced: ${result.totalSynced}, Created: ${result.totalCreated}, Updated: ${result.totalUpdated}.`);
+      } catch (error) {
+        console.error("❌ Background POS sync failed:", error);
+      }
+    });
+
+    return NextResponse.json({ 
+      success: true, 
+      message: "POS Synchronization triggered and running asynchronously in background." 
+    });
   } catch (error: any) {
-    console.error("❌ Cron sync failed:", error);
+    console.error("❌ Cron sync dispatch failed:", error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
