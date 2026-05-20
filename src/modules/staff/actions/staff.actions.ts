@@ -9,7 +9,7 @@ import { DeleteStaffService } from "../services/delete-staff.service";
 export async function getStaffAction() {
   try {
     const staff = await GetStaffService.execute();
-    return { success: true, data: staff };
+    return { success: true, data: JSON.parse(JSON.stringify(staff)) };
   } catch (error: any) {
     console.error("Fetch staff error:", error);
     return { success: false, error: error.message };

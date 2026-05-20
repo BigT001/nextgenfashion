@@ -3,6 +3,7 @@
 import { CreateProductService } from "@/modules/products/services/create-product.service";
 import { UpdateProductService } from "@/modules/products/services/update-product.service";
 import { DeleteProductService } from "@/modules/products/services/delete-product.service";
+import { SyncPosProductsService } from "@/modules/products/services/sync-pos-products.service";
 import { UpdateStockService } from "@/modules/inventory/services/update-stock.service";
 import { ProductQueries } from "@/modules/products/queries/product.queries";
 import { CloudinaryService } from "@/integrations/cloudinary/cloudinary.service";
@@ -71,10 +72,10 @@ export async function updateProductAction(id: string, data: any) {
 
 export async function deleteProductAction(id: string) {
   try {
-    await DeleteProductService.execute(id);
+    const res = await DeleteProductService.execute(id);
     revalidatePath("/inventory");
     revalidatePath("/");
-    return { success: true };
+    return res;
   } catch (error: any) {
     console.error("Delete error:", error);
     return { success: false, error: error.message };
@@ -83,6 +84,10 @@ export async function deleteProductAction(id: string) {
 
 export async function updateStockAction(variantId: string, quantityChange: number, reason: string) {
   try {
+    if (!variantId) {
+      return { success: false, error: "This product has no active variants. Please modify the product to add variants before adjusting stock." };
+    }
+
     const { auth } = await import("@/services/auth.service");
     const session = await auth();
     const actor = session?.user?.name || session?.user?.email || "System Admin";
@@ -210,3 +215,162 @@ export async function emergencyPurgeAction() {
     return { success: false, error: error.message };
   }
 }
+
+export async function importProductsAction(productsList: any[]) {
+  try {
+    const { prisma } = await import("@/services/prisma.service");
+    
+    let createdCount = 0;
+    
+    for (const prod of productsList) {
+      const { productName, description, categoryName, gender: rawGender, basePrice, costPrice, tax, imageUrls, variants: rawVariants } = prod;
+      
+      // Ensure we have at least one variant record to prevent "no variants" empty states
+      const variants = [...(rawVariants || [])];
+      if (variants.length === 0) {
+        variants.push({
+          sku: `NGN-${productName.slice(0, 3).toUpperCase()}-OS-DF-${Math.floor(1000 + Math.random() * 9000)}`.toUpperCase(),
+          barcode: null,
+          size: "OS",
+          color: "Default",
+          variantPrice: basePrice,
+          stockQuantity: 0,
+          lowStockThreshold: 5
+        });
+      }
+
+      // Normalize targetGender string to database enum constraints (BOYS, GIRLS, BOTH)
+      const g = (rawGender || "").trim().toUpperCase();
+      const gender = ["GIRLS", "FEMALE", "WOMEN", "WOMAN", "LADY", "LADIES"].includes(g) ? "GIRLS" :
+                     ["BOYS", "MALE", "MEN", "MAN", "GENTLEMEN"].includes(g) ? "BOYS" : "BOTH";
+      
+      // 1. Get or Create Category
+      let category = await prisma.category.findUnique({
+        where: { name: categoryName }
+      });
+      
+      if (!category) {
+        category = await prisma.category.create({
+          data: {
+            name: categoryName,
+            description: `Fashion items under the ${categoryName} collection.`
+          }
+        });
+      }
+      
+      // 2. Upsert Product
+      let product = await prisma.product.findFirst({
+        where: { name: productName }
+      });
+      
+      if (product) {
+        product = await prisma.product.update({
+          where: { id: product.id },
+          data: {
+            description: description || product.description,
+            basePrice: basePrice,
+            costPrice: costPrice,
+            tax: tax,
+            images: imageUrls && imageUrls.length > 0 ? imageUrls : product.images,
+            targetGender: gender,
+            categoryId: category.id
+          }
+        });
+      } else {
+        product = await prisma.product.create({
+          data: {
+            name: productName,
+            description: description,
+            basePrice: basePrice,
+            costPrice: costPrice,
+            tax: tax,
+            images: imageUrls && imageUrls.length > 0 ? imageUrls : ["https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=600"],
+            targetGender: gender,
+            categoryId: category.id
+          }
+        });
+      }
+      
+      // 3. Process variants and inventories
+      for (const v of variants) {
+        // Fallback for missing SKU to guarantee unique identity constraint
+        const variantSku = (v.sku || `NGN-${productName.slice(0, 3).toUpperCase()}-${v.size || "OS"}-${v.color || "DF"}-${Math.floor(1000 + Math.random() * 9000)}`).toUpperCase();
+
+        let variant = await prisma.productVariant.findUnique({
+          where: { sku: variantSku }
+        });
+        
+        if (variant) {
+          variant = await prisma.productVariant.update({
+            where: { sku: variantSku },
+            data: {
+              barcode: v.barcode,
+              size: v.size || "OS",
+              color: v.color || "Default",
+              price: v.variantPrice || basePrice
+            }
+          });
+        } else {
+          variant = await prisma.productVariant.create({
+            data: {
+              productId: product.id,
+              sku: variantSku,
+              barcode: v.barcode,
+              size: v.size || "OS",
+              color: v.color || "Default",
+              price: v.variantPrice || basePrice
+            }
+          });
+        }
+        
+        // Upsert Inventory
+        let inventory = await prisma.inventory.findUnique({
+          where: { variantId: variant.id }
+        });
+        
+        if (inventory) {
+          await prisma.inventory.update({
+            where: { variantId: variant.id },
+            data: {
+              quantity: v.stockQuantity,
+              lowStockThreshold: v.lowStockThreshold || 5
+            }
+          });
+        } else {
+          await prisma.inventory.create({
+            data: {
+              variantId: variant.id,
+              quantity: v.stockQuantity,
+              lowStockThreshold: v.lowStockThreshold || 5
+            }
+          });
+        }
+      }
+      
+      createdCount++;
+    }
+    
+    revalidatePath("/inventory");
+    revalidatePath("/dashboard/products");
+    revalidatePath("/");
+    
+    return { success: true, count: createdCount };
+  } catch (error: any) {
+    console.error("Bulk Import action error:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function syncPosProductsAction() {
+  try {
+    const res = await SyncPosProductsService.execute();
+    revalidatePath("/inventory");
+    revalidatePath("/dashboard/products");
+    revalidatePath("/");
+    return res;
+  } catch (error: any) {
+    console.error("POS sync action error:", error);
+    return { success: false, error: error.message };
+  }
+}
+

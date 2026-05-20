@@ -8,23 +8,38 @@ import { AnalyticsQueries } from "../queries/analytics.queries";
  */
 export async function getExecutiveDashboardAction() {
   try {
-    const [kpis, trend, topProducts, recentSales, lowStockItems] = await Promise.all([
+    const [
+      kpis, 
+      trend, 
+      topProducts, 
+      recentSales, 
+      lowStockItems, 
+      categoryPerformance, 
+      paymentMethods, 
+      recentSignups
+    ] = await Promise.all([
       AnalyticsQueries.getExecutiveKPIs(),
       AnalyticsQueries.getRevenueTrend(),
       AnalyticsQueries.getTopProducts(),
       AnalyticsQueries.getRecentSales(),
-      AnalyticsQueries.getLowStockItems()
+      AnalyticsQueries.getLowStockItems(),
+      AnalyticsQueries.getCategoryPerformance(),
+      AnalyticsQueries.getPaymentMethodBreakdown(),
+      AnalyticsQueries.getRecentSignups()
     ]);
 
     return {
       success: true,
-      data: {
+      data: JSON.parse(JSON.stringify({
         kpis,
         trend,
         topProducts,
         recentSales,
-        lowStockItems
-      }
+        lowStockItems,
+        categoryPerformance,
+        paymentMethods,
+        recentSignups
+      }))
     };
   } catch (error) {
     console.error("Error fetching executive dashboard data:", error);

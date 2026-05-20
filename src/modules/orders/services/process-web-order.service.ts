@@ -59,6 +59,7 @@ export class ProcessWebOrderService {
         orderNumber,
         totalAmount: data.totalAmount,
         paymentMethod: paymentMethod,
+        status: "PENDING",
         customer: customer?.id ? { connect: { id: customer.id } } : undefined,
         items: {
           create: data.items.map((item) => ({

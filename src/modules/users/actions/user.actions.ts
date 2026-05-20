@@ -26,10 +26,10 @@ export async function getStaffDashboardAction() {
 
     return {
       success: true,
-      data: {
+      data: JSON.parse(JSON.stringify({
         staff: processedStaff,
         kpis
-      }
+      }))
     };
   } catch (error) {
     console.error("Error fetching staff dashboard data:", error);

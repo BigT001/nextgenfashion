@@ -15,6 +15,7 @@ interface MetricCardProps {
   description?: string;
   className?: string;
   variant?: "pink" | "blue" | "slate" | "emerald";
+  compact?: boolean;
 }
 
 export function MetricCard({
@@ -24,7 +25,8 @@ export function MetricCard({
   trend,
   description,
   className,
-  variant = "pink"
+  variant = "pink",
+  compact = false
 }: MetricCardProps) {
   const variantStyles = {
     pink: "border-l-brand-navy text-brand-navy bg-brand-navy/5",
@@ -35,23 +37,23 @@ export function MetricCard({
 
   return (
     <Card className={cn("glass-card border-none border-l-4 shadow-sm group hover:scale-[1.02] transition-all duration-300", variantStyles[variant], className)}>
-      <CardContent className="p-6">
+      <CardContent className={compact ? "p-4" : "p-6"}>
         <div className="flex items-center justify-between">
-          <div className="space-y-1">
-            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground group-hover:text-inherit transition-colors">
+          <div className="space-y-0.5">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground group-hover:text-inherit transition-colors">
               {title}
             </p>
-            <h3 className="text-2xl font-bold tracking-tight text-foreground">
+            <h3 className={cn("font-bold tracking-tight text-foreground", compact ? "text-xl" : "text-2xl")}>
               {value}
             </h3>
           </div>
-          <div className={cn("p-3 rounded-2xl transition-all duration-500 group-hover:rotate-12", {
+          <div className={cn("rounded-2xl transition-all duration-500 group-hover:rotate-12", compact ? "p-2" : "p-3", {
             "bg-brand-navy/10": variant === "pink",
             "bg-brand-silver/10": variant === "blue",
             "bg-slate-400/10": variant === "slate",
             "bg-emerald-500/10": variant === "emerald",
           })}>
-            <Icon className="h-6 w-6" />
+            <Icon className={compact ? "h-5 w-5" : "h-6 w-6"} />
           </div>
         </div>
         

@@ -72,12 +72,31 @@ export const AnalyticsQueries = {
     // 6. Active Customers Count
     const activeCustomers = await prisma.customer.count();
 
+    // 7. Total Inventory Valuation
+    // Calculates the worth of goods left in stock based on product selling price
+    const inventories = await prisma.inventory.findMany({
+      include: {
+        variant: {
+          include: {
+            product: { select: { basePrice: true } }
+          }
+        }
+      }
+    });
+
+    const totalInventoryValue = inventories.reduce((sum, inv) => {
+      // Prioritize variant price, fallback to base product price
+      const price = inv.variant.price ? Number(inv.variant.price) : Number(inv.variant.product.basePrice);
+      return sum + (price * inv.quantity);
+    }, 0);
+
     return {
       lifetimeRevenue: Number(totalRevenue._sum.totalAmount || 0),
       todayRevenue: Number(todayRevenue._sum.totalAmount || 0),
       totalSales,
       lowStockCount,
       totalInventory: Number(totalInventory._sum.quantity || 0),
+      totalInventoryValue,
       activeCustomers
     };
   },
@@ -182,6 +201,85 @@ export const AnalyticsQueries = {
           include: {
             product: true
           }
+        }
+      }
+    });
+  },
+
+  /**
+   * Get category performance by aggregating product sales
+   */
+  async getCategoryPerformance() {
+    const categories = await prisma.category.findMany({
+      include: {
+        products: {
+          include: {
+            variants: {
+              include: {
+                saleItems: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    return categories.map(cat => {
+      let unitsSold = 0;
+      let revenue = 0;
+
+      cat.products.forEach(product => {
+        product.variants.forEach(variant => {
+          variant.saleItems.forEach(item => {
+            unitsSold += item.quantity;
+            revenue += (Number(item.price) * item.quantity);
+          });
+        });
+      });
+
+      return {
+        name: cat.name,
+        unitsSold,
+        revenue
+      };
+    }).sort((a, b) => b.revenue - a.revenue); // sort highest revenue first
+  },
+
+  /**
+   * Get sales breakdown by payment method
+   */
+  async getPaymentMethodBreakdown() {
+    const sales = await prisma.sale.groupBy({
+      by: ['paymentMethod'],
+      _sum: {
+        totalAmount: true
+      },
+      _count: {
+        id: true
+      }
+    });
+
+    return sales.map(s => ({
+      method: s.paymentMethod,
+      revenue: Number(s._sum.totalAmount || 0),
+      count: s._count.id
+    })).sort((a, b) => b.revenue - a.revenue);
+  },
+
+  /**
+   * Get recently signed-up customers
+   */
+  async getRecentSignups() {
+    return await prisma.customer.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 5,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        createdAt: true,
+        _count: {
+          select: { sales: true }
         }
       }
     });

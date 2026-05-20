@@ -174,6 +174,8 @@ export default function OrdersClient({ initialData }: { initialData: any[] }) {
               "font-black text-[10px] px-3 uppercase tracking-widest border-none shadow-sm",
               status === "COMPLETED" ? "bg-emerald-500/10 text-emerald-600" :
               status === "PENDING" ? "bg-amber-500/10 text-amber-600" :
+              status === "PROCESSING" ? "bg-blue-500/10 text-blue-600" :
+              status === "SHIPPED" ? "bg-violet-500/10 text-violet-600" :
               status === "CANCELLED" ? "bg-rose-500/10 text-rose-600" :
               "bg-zinc-500/10 text-zinc-600"
             )}
@@ -273,71 +275,80 @@ export default function OrdersClient({ initialData }: { initialData: any[] }) {
           variant="slate"
         />
         <MetricCard
-          title="Pending"
-          value={data.filter((o: any) => o.status === 'PENDING').length}
+          title="In Packing"
+          value={data.filter((o: any) => o.status === 'PENDING' || o.status === 'PROCESSING').length}
           icon={Clock}
-          description="Awaiting processing"
+          description="Awaiting package dispatch"
           variant="pink"
+        />
+        <MetricCard
+          title="Dispatched"
+          value={data.filter((o: any) => o.status === 'SHIPPED').length}
+          icon={Truck}
+          description="In transit to patrons"
+          variant="blue"
         />
         <MetricCard
           title="Completed"
           value={data.filter((o: any) => o.status === 'COMPLETED').length}
-          icon={Truck}
-          description="Successfully fulfilled"
-          variant="blue"
-        />
-        <MetricCard
-            title="Cancelled"
-            value={data.filter((o: any) => o.status === 'CANCELLED').length}
-            icon={CheckCircle2}
-            description="Refunded or cancelled"
-            variant="emerald"
+          icon={CheckCircle2}
+          description="Fulfillment complete"
+          variant="emerald"
         />
       </div>
 
       {/* Sales Channels Switcher Tabs */}
-      <div className="flex items-center gap-4 border-b border-border/50 pb-1 pt-4">
+      <div className="flex items-center gap-2 bg-zinc-100 dark:bg-zinc-900/50 p-1.5 rounded-2xl max-w-fit border border-border/40">
         <button
           onClick={() => setActiveTab("ALL")}
           className={cn(
-            "pb-4 px-2 font-black text-xs uppercase tracking-widest transition-all relative cursor-pointer focus:outline-none",
+            "h-10 px-6 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all duration-300 cursor-pointer focus:outline-none flex items-center gap-2",
             activeTab === "ALL" 
-              ? "text-brand-navy dark:text-white" 
-              : "text-muted-foreground hover:text-brand-navy dark:hover:text-white"
+              ? "bg-brand-navy text-white shadow-lg shadow-brand-navy/20" 
+              : "text-muted-foreground hover:text-brand-navy hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50"
           )}
         >
-          All Acquisitions ({data.length})
-          {activeTab === "ALL" && (
-            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-navy dark:bg-white rounded-full animate-fast-fade" />
-          )}
+          All Acquisitions
+          <span className={cn(
+            "px-2 py-0.5 rounded-full text-[9px] font-black transition-colors",
+            activeTab === "ALL" ? "bg-white/20 text-white" : "bg-zinc-200 dark:bg-zinc-800 text-muted-foreground"
+          )}>
+            {data.length}
+          </span>
         </button>
         <button
           onClick={() => setActiveTab("ONLINE")}
           className={cn(
-            "pb-4 px-2 font-black text-xs uppercase tracking-widest transition-all relative cursor-pointer focus:outline-none",
+            "h-10 px-6 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all duration-300 cursor-pointer focus:outline-none flex items-center gap-2",
             activeTab === "ONLINE" 
-              ? "text-brand-navy dark:text-white" 
-              : "text-muted-foreground hover:text-brand-navy dark:hover:text-white"
+              ? "bg-brand-navy text-white shadow-lg shadow-brand-navy/20" 
+              : "text-muted-foreground hover:text-brand-navy hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50"
           )}
         >
-          Online Storefront ({onlineOrders.length})
-          {activeTab === "ONLINE" && (
-            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-navy dark:bg-white rounded-full animate-fast-fade" />
-          )}
+          Online Storefront
+          <span className={cn(
+            "px-2 py-0.5 rounded-full text-[9px] font-black transition-colors",
+            activeTab === "ONLINE" ? "bg-white/20 text-white" : "bg-zinc-200 dark:bg-zinc-800 text-muted-foreground"
+          )}>
+            {onlineOrders.length}
+          </span>
         </button>
         <button
           onClick={() => setActiveTab("POS")}
           className={cn(
-            "pb-4 px-2 font-black text-xs uppercase tracking-widest transition-all relative cursor-pointer focus:outline-none",
+            "h-10 px-6 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all duration-300 cursor-pointer focus:outline-none flex items-center gap-2",
             activeTab === "POS" 
-              ? "text-brand-navy dark:text-white" 
-              : "text-muted-foreground hover:text-brand-navy dark:hover:text-white"
+              ? "bg-brand-navy text-white shadow-lg shadow-brand-navy/20" 
+              : "text-muted-foreground hover:text-brand-navy hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50"
           )}
         >
-          POS Terminal ({posOrders.length})
-          {activeTab === "POS" && (
-            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-navy dark:bg-white rounded-full animate-fast-fade" />
-          )}
+          POS Terminal
+          <span className={cn(
+            "px-2 py-0.5 rounded-full text-[9px] font-black transition-colors",
+            activeTab === "POS" ? "bg-white/20 text-white" : "bg-zinc-200 dark:bg-zinc-800 text-muted-foreground"
+          )}>
+            {posOrders.length}
+          </span>
         </button>
       </div>
 

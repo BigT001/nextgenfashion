@@ -19,25 +19,40 @@ export async function getInventoryDashboardAction() {
       orderBy: { updatedAt: "desc" }
     });
 
+    // Fetch latest movement log for all main variants in a single bulk query
+    const mainVariantIds = products
+      .map((p) => p.variants[0]?.id)
+      .filter((id): id is string => typeof id === "string");
+
+    const latestLogs = await prisma.auditLog.findMany({
+      where: {
+        entity: "ProductVariant",
+        entityId: { in: mainVariantIds }
+      },
+      orderBy: {
+        createdAt: "desc"
+      }
+    });
+
+    // Build a Map of latest log per variant ID (since ordered desc, first encountered is latest)
+    const logsMap = new Map<string, any>();
+    for (const log of latestLogs) {
+      if (log.entityId && !logsMap.has(log.entityId)) {
+        logsMap.set(log.entityId, log);
+      }
+    }
+
     // Process data for dashboard view
-    const processedProducts = await Promise.all(products.map(async p => {
+    const processedProducts = products.map(p => {
       const totalStock = p.variants.reduce((acc, v) => acc + (v.inventory?.quantity || 0), 0);
       const isLowStock = p.variants.some(v => (v.inventory?.quantity || 0) <= (v.inventory?.lowStockThreshold || 5));
       const status = totalStock === 0 ? "Out of Stock" : isLowStock ? "Low Stock" : "In Stock";
 
-      // Fetch latest movement log for the main variant
       const mainVariantId = p.variants[0]?.id;
       let lastMovement = "No movements logged";
+
       if (mainVariantId) {
-        const latestLog = await prisma.auditLog.findFirst({
-          where: {
-            entity: "ProductVariant",
-            entityId: mainVariantId
-          },
-          orderBy: {
-            createdAt: "desc"
-          }
-        });
+        const latestLog = logsMap.get(mainVariantId);
         if (latestLog) {
           const details = latestLog.details as any;
           const reason = (details?.reason || "").toLowerCase();
@@ -70,7 +85,7 @@ export async function getInventoryDashboardAction() {
         status,
         lastMovement
       };
-    }));
+    });
 
     // Calculate Executive KPIs
     const totalInventoryValue = processedProducts.reduce((acc, p) => acc + (p.price * p.stock), 0);
@@ -97,7 +112,7 @@ export async function getAuditLogsAction(variantId?: string) {
   try {
     const { InventoryQueries } = await import("../queries/inventory.queries");
     const logs = await InventoryQueries.findAuditLogs({ variantId });
-    
+
     // Hydrate logs with actual User names instead of userIds
     const userIds = Array.from(new Set(logs.map(l => l.userId).filter(Boolean)));
     const users = await prisma.user.findMany({

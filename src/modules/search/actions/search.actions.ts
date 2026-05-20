@@ -10,7 +10,7 @@ export async function universalSearchAction(query: string) {
     const results = await SearchQueries.universalSearch(query);
     return {
       success: true,
-      data: results
+      data: JSON.parse(JSON.stringify(results))
     };
   } catch (error) {
     console.error("Error during universal search:", error);

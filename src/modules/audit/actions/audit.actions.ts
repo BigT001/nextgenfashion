@@ -14,10 +14,10 @@ export async function getAuditDashboardAction() {
 
     return {
       success: true,
-      data: {
+      data: JSON.parse(JSON.stringify({
         logs,
         stats
-      }
+      }))
     };
   } catch (error) {
     console.error("Error fetching audit dashboard data:", error);

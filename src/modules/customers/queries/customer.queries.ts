@@ -7,6 +7,7 @@ export const CustomerQueries = {
    */
   async getAllCustomers() {
     return await prisma.customer.findMany({
+      where: { isArchived: false },
       orderBy: { createdAt: "desc" },
       include: {
         sales: {
@@ -46,7 +47,7 @@ export const CustomerQueries = {
    * Fetch CRM KPIs
    */
   async getCRMKPIs() {
-    const totalCustomers = await prisma.customer.count();
+    const totalCustomers = await prisma.customer.count({ where: { isArchived: false } });
     const allSales = await prisma.sale.aggregate({
       _sum: { totalAmount: true },
     });
@@ -140,15 +141,59 @@ export const CustomerQueries = {
    */
   async searchCustomers(query?: string) {
     return await prisma.customer.findMany({
-      where: query ? {
-        OR: [
-          { name: { contains: query, mode: 'insensitive' } },
-          { email: { contains: query, mode: 'insensitive' } },
-          { phone: { contains: query, mode: 'insensitive' } },
-        ]
-      } : undefined,
+      where: {
+        isArchived: false,
+        ...(query ? {
+          OR: [
+            { name: { contains: query, mode: 'insensitive' } },
+            { email: { contains: query, mode: 'insensitive' } },
+            { phone: { contains: query, mode: 'insensitive' } },
+          ]
+        } : {})
+      },
       take: 10,
       orderBy: { name: 'asc' }
+    });
+  },
+
+  /**
+   * Fetch all archived customers
+   */
+  async getArchivedCustomers() {
+    return await prisma.customer.findMany({
+      where: { isArchived: true },
+      orderBy: { updatedAt: "desc" },
+      include: {
+        sales: {
+          select: {
+            id: true,
+            orderNumber: true,
+            totalAmount: true,
+            status: true,
+            createdAt: true,
+          }
+        }
+      }
+    });
+  },
+
+  /**
+   * Archive a customer
+   */
+  async archiveCustomer(id: string) {
+    return await prisma.customer.update({
+      where: { id },
+      data: { isArchived: true },
+    });
+  },
+
+  /**
+   * Unarchive a customer
+   */
+  async unarchiveCustomer(id: string) {
+    return await prisma.customer.update({
+      where: { id },
+      data: { isArchived: false },
     });
   }
 };

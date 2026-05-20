@@ -16,7 +16,7 @@ export async function getProfileDashboardAction() {
 
     return {
       success: true,
-      data
+      data: JSON.parse(JSON.stringify(data))
     };
   } catch (error) {
     console.error("Error fetching profile dashboard data:", error);

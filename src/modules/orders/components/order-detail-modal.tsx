@@ -316,8 +316,8 @@ export function OrderDetailModal({ orderId, onClose }: OrderDetailModalProps) {
         ) : data ? (
           <div className="flex flex-col h-[85vh] md:h-[700px]">
             {/* Header: Identity & Global Status */}
-            <div className="p-8 md:p-10 bg-brand-mesh border-b border-white/10 flex flex-col md:flex-row items-center justify-between gap-8 relative overflow-hidden">
-                <div className="absolute inset-0 bg-zinc-950/20" />
+            <div className="p-8 md:p-10 bg-brand-navy bg-brand-mesh border-b border-white/5 flex flex-col md:flex-row items-center justify-between gap-8 relative overflow-hidden">
+                <div className="absolute inset-0 bg-linear-to-b from-white/5 to-transparent pointer-events-none" />
                 <div className="flex items-center gap-6 relative z-10">
                     <div className="size-16 bg-white shadow-2xl rounded-2xl flex items-center justify-center text-brand-navy group">
                         <ShoppingBag className="size-8 group-hover:scale-110 transition-transform" />
@@ -334,15 +334,17 @@ export function OrderDetailModal({ orderId, onClose }: OrderDetailModalProps) {
                 </div>
 
                 <div className="flex items-center gap-4 relative z-10">
-                    <Select defaultValue={data.status} onValueChange={handleStatusUpdate} disabled={isUpdating}>
+                    <Select value={data.status} onValueChange={handleStatusUpdate} disabled={isUpdating}>
                         <SelectTrigger className="w-[180px] h-14 rounded-2xl bg-white/10 border-white/20 text-white font-black text-[10px] uppercase tracking-widest outline-none focus:ring-0">
                             <SelectValue placeholder="STATUS" />
                         </SelectTrigger>
-                        <SelectContent className="glass-card border-none bg-zinc-900 text-white p-2 rounded-2xl">
-                            <SelectItem value="PENDING" className="rounded-xl h-10 font-black text-[10px] uppercase tracking-widest">PENDING</SelectItem>
-                            <SelectItem value="COMPLETED" className="rounded-xl h-10 font-black text-[10px] uppercase tracking-widest">COMPLETED</SelectItem>
-                            <SelectItem value="CANCELLED" className="rounded-xl h-10 font-black text-[10px] uppercase tracking-widest">CANCELLED</SelectItem>
-                            <SelectItem value="REFUNDED" className="rounded-xl h-10 font-black text-[10px] uppercase tracking-widest">REFUNDED</SelectItem>
+                        <SelectContent className="border border-border bg-popover text-popover-foreground p-2 rounded-2xl shadow-xl min-w-[180px]">
+                            <SelectItem value="PENDING" className="rounded-xl h-10 font-black text-[10px] uppercase tracking-widest cursor-pointer">PENDING</SelectItem>
+                            <SelectItem value="PROCESSING" className="rounded-xl h-10 font-black text-[10px] uppercase tracking-widest cursor-pointer">PROCESSING</SelectItem>
+                            <SelectItem value="SHIPPED" className="rounded-xl h-10 font-black text-[10px] uppercase tracking-widest cursor-pointer">SHIPPED</SelectItem>
+                            <SelectItem value="COMPLETED" className="rounded-xl h-10 font-black text-[10px] uppercase tracking-widest cursor-pointer">COMPLETED</SelectItem>
+                            <SelectItem value="CANCELLED" className="rounded-xl h-10 font-black text-[10px] uppercase tracking-widest cursor-pointer">CANCELLED</SelectItem>
+                            <SelectItem value="REFUNDED" className="rounded-xl h-10 font-black text-[10px] uppercase tracking-widest cursor-pointer">REFUNDED</SelectItem>
                         </SelectContent>
                     </Select>
                     <Button 

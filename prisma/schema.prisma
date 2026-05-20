@@ -123,16 +123,17 @@ model Warehouse {
 }
 
 model Customer {
-  id        String   @id @default(cuid())
-  name      String
-  email     String?  @unique
-  phone     String?  @unique
-  address   String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  image     String?
-  sales     Sale[]
-  user      User?
+  id         String   @id @default(cuid())
+  name       String
+  email      String?  @unique
+  phone      String?  @unique
+  address    String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  image      String?
+  isArchived Boolean  @default(false)
+  sales      Sale[]
+  user       User?
 }
 
 model Sale {
@@ -182,6 +183,8 @@ enum UserRole {
 
 enum SaleStatus {
   PENDING
+  PROCESSING
+  SHIPPED
   COMPLETED
   CANCELLED
   REFUNDED

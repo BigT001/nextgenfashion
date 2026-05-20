@@ -490,7 +490,7 @@ export default function InventoryClient({ initialData }: { initialData: any }) {
                   )
                 : `Are you sure you want to completely delete "${actionItem?.name}" and all its inventory records? This action cannot be undone.`}
             </p>
-            <div className="flex gap-3 mt-4">
+            <div className="grid grid-cols-2 gap-3 mt-4">
               <Button 
                 variant="outline" 
                 className="w-full h-12 font-black rounded-xl"
@@ -501,7 +501,7 @@ export default function InventoryClient({ initialData }: { initialData: any }) {
               </Button>
               <Button 
                 variant="destructive"
-                className="w-full h-12 font-black rounded-xl bg-rose-500 hover:bg-rose-600"
+                className="w-full h-12 font-black rounded-xl bg-rose-500 hover:bg-rose-600 text-white"
                 disabled={isActionLoading}
                 onClick={async () => {
                   setIsActionLoading(true);
@@ -514,9 +514,13 @@ export default function InventoryClient({ initialData }: { initialData: any }) {
                       toast.error(res.error);
                     }
                   } else if (actionType === "DELETE") {
-                    const res = await deleteProductAction(actionItem.id);
+                    const res: any = await deleteProductAction(actionItem.id);
                     if (res.success) {
-                      toast.success("Product deleted successfully");
+                      if (res.suspended) {
+                        toast.info(res.message, { duration: 8000 });
+                      } else {
+                        toast.success("Product deleted successfully");
+                      }
                       loadData();
                     } else {
                       toast.error(res.error);

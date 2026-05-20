@@ -156,7 +156,7 @@ export async function registerCustomerAction(data: {
 export async function searchCustomersAction(query?: string) {
   try {
     const customers = await CustomerQueries.searchCustomers(query);
-    return { success: true, data: customers };
+    return { success: true, data: JSON.parse(JSON.stringify(customers)) };
   } catch (error) {
     console.error("Error searching customers:", error);
     return { success: false, error: "Failed to locate patrons" };
@@ -250,26 +250,41 @@ export async function updatePatronDetailsAction(data: {
 }
 
 /**
- * Delete/Close patron account
+ * Archive patron account
  */
-export async function deletePatronAccountAction(customerId: string) {
+export async function archiveCustomerAction(customerId: string) {
   try {
-    await prisma.$transaction(async (tx) => {
-      // 1. Delete associated user accounts first (to satisfy constraints)
-      await tx.user.deleteMany({
-        where: { customerId },
-      });
-
-      // 2. Delete the customer record
-      await tx.customer.delete({
-        where: { id: customerId },
-      });
-    });
-
+    await CustomerQueries.archiveCustomer(customerId);
     return { success: true };
   } catch (error: any) {
-    console.error("Delete Account Error:", error);
-    return { success: false, error: error.message || "Failed to close account" };
+    console.error("Archive Account Error:", error);
+    return { success: false, error: error.message || "Failed to archive account" };
+  }
+}
+
+/**
+ * Unarchive patron account
+ */
+export async function unarchiveCustomerAction(customerId: string) {
+  try {
+    await CustomerQueries.unarchiveCustomer(customerId);
+    return { success: true };
+  } catch (error: any) {
+    console.error("Unarchive Account Error:", error);
+    return { success: false, error: error.message || "Failed to unarchive account" };
+  }
+}
+
+/**
+ * Fetch archived customers
+ */
+export async function getArchivedCustomersAction() {
+  try {
+    const customers = await CustomerQueries.getArchivedCustomers();
+    return { success: true, data: JSON.parse(JSON.stringify(customers)) };
+  } catch (error: any) {
+    console.error("Fetch Archived Error:", error);
+    return { success: false, error: "Failed to load archived customers" };
   }
 }
 /**

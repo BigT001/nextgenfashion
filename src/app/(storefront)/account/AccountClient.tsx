@@ -315,6 +315,8 @@ export default function AccountClient({ initialPatronData, initialOrders }: Acco
                                     "font-black text-[9px] px-2 py-0.5 uppercase tracking-widest border-none shadow-sm",
                                     order.status === "COMPLETED" ? "bg-emerald-500/10 text-emerald-600" :
                                     order.status === "PENDING" ? "bg-amber-500/10 text-amber-600" :
+                                    order.status === "PROCESSING" ? "bg-blue-500/10 text-blue-600" :
+                                    order.status === "SHIPPED" ? "bg-violet-500/10 text-violet-600" :
                                     "bg-rose-500/10 text-rose-600"
                                 )}>
                                     {order.status}
@@ -329,6 +331,103 @@ export default function AccountClient({ initialPatronData, initialOrders }: Acco
                             </div>
                         </div>
                       </div>
+
+                      {/* Visual Logistics Journey Progress Timeline */}
+                      {!order.userId && !order.orderNumber.includes("POS") && order.status !== "CANCELLED" && order.status !== "REFUNDED" && (
+                        <div className="px-6 md:px-8 pb-8 pt-4 border-t border-border/10 bg-zinc-50/20">
+                          <div className="space-y-6 max-w-2xl mx-auto">
+                            <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-[0.15em] text-muted-foreground">
+                              <span>LOGISTICS SIGNATURE PIPELINE</span>
+                              <span className="text-brand-navy dark:text-brand-silver">
+                                {order.status === "PENDING" && "Phase 1: Validating Fashion Signature"}
+                                {order.status === "PROCESSING" && "Phase 2: Handcrafting & Preparing"}
+                                {order.status === "SHIPPED" && "Phase 3: Package Dispatched / In Transit"}
+                                {order.status === "COMPLETED" && "Phase 4: Acquisition Delivered Successfully"}
+                              </span>
+                            </div>
+                            
+                            <div className="relative pt-2">
+                              {/* Background Bar */}
+                              <div className="absolute top-[17px] left-4 right-4 h-1 bg-zinc-200 rounded-full" />
+                              
+                              {/* Active Progress Sheen */}
+                              <div 
+                                className="absolute top-[17px] left-4 h-1 bg-brand-navy transition-all duration-1000 ease-out rounded-full" 
+                                style={{ 
+                                  width: 
+                                    order.status === "PENDING" ? "0%" : 
+                                    order.status === "PROCESSING" ? "33%" : 
+                                    order.status === "SHIPPED" ? "66%" : 
+                                    order.status === "COMPLETED" ? "100%" : "0%" 
+                                }}
+                              />
+                              
+                              {/* Milestones grid */}
+                              <div className="grid grid-cols-4 relative z-10">
+                                <div className="flex flex-col items-center gap-2">
+                                  <div className={cn(
+                                    "size-6 rounded-full flex items-center justify-center text-[10px] font-black border transition-all duration-500 shadow-sm",
+                                    ["PENDING", "PROCESSING", "SHIPPED", "COMPLETED"].includes(order.status)
+                                      ? "bg-brand-navy border-brand-navy text-white scale-110"
+                                      : "bg-white border-zinc-200 text-zinc-400"
+                                  )}>
+                                    1
+                                  </div>
+                                  <span className={cn(
+                                    "text-[9px] font-black uppercase tracking-wider transition-colors",
+                                    ["PENDING", "PROCESSING", "SHIPPED", "COMPLETED"].includes(order.status) ? "text-brand-navy" : "text-zinc-400"
+                                  )}>Placed</span>
+                                </div>
+
+                                <div className="flex flex-col items-center gap-2">
+                                  <div className={cn(
+                                    "size-6 rounded-full flex items-center justify-center text-[10px] font-black border transition-all duration-500 shadow-sm",
+                                    ["PROCESSING", "SHIPPED", "COMPLETED"].includes(order.status)
+                                      ? "bg-brand-navy border-brand-navy text-white scale-110"
+                                      : "bg-white border-zinc-200 text-zinc-400"
+                                  )}>
+                                    2
+                                  </div>
+                                  <span className={cn(
+                                    "text-[9px] font-black uppercase tracking-wider transition-colors",
+                                    ["PROCESSING", "SHIPPED", "COMPLETED"].includes(order.status) ? "text-brand-navy" : "text-zinc-400"
+                                  )}>Preparing</span>
+                                </div>
+
+                                <div className="flex flex-col items-center gap-2">
+                                  <div className={cn(
+                                    "size-6 rounded-full flex items-center justify-center text-[10px] font-black border transition-all duration-500 shadow-sm",
+                                    ["SHIPPED", "COMPLETED"].includes(order.status)
+                                      ? "bg-brand-navy border-brand-navy text-white scale-110"
+                                      : "bg-white border-zinc-200 text-zinc-400"
+                                  )}>
+                                    3
+                                  </div>
+                                  <span className={cn(
+                                    "text-[9px] font-black uppercase tracking-wider transition-colors",
+                                    ["SHIPPED", "COMPLETED"].includes(order.status) ? "text-brand-navy" : "text-zinc-400"
+                                  )}>Shipped</span>
+                                </div>
+
+                                <div className="flex flex-col items-center gap-2">
+                                  <div className={cn(
+                                    "size-6 rounded-full flex items-center justify-center text-[10px] font-black border transition-all duration-500 shadow-sm",
+                                    ["COMPLETED"].includes(order.status)
+                                      ? "bg-brand-navy border-brand-navy text-white scale-110"
+                                      : "bg-white border-zinc-200 text-zinc-400"
+                                  )}>
+                                    4
+                                  </div>
+                                  <span className={cn(
+                                    "text-[9px] font-black uppercase tracking-wider transition-colors",
+                                    ["COMPLETED"].includes(order.status) ? "text-brand-navy" : "text-zinc-400"
+                                  )}>Delivered</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                       
                       <div className="bg-zinc-50/50 p-3 px-6 border-t border-border/30 flex gap-3 overflow-x-auto scrollbar-hide">
                           {order.items.map((item: any, idx: number) => (

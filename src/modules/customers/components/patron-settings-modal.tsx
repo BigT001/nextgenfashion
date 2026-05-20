@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { User, Mail, Phone, MapPin, Trash2, ShieldAlert, Lock, ArrowLeft, KeyRound } from "lucide-react";
-import { updatePatronDetailsAction, deletePatronAccountAction, changePatronPasswordAction } from "../actions/customer.actions";
+import { updatePatronDetailsAction, archiveCustomerAction, changePatronPasswordAction } from "../actions/customer.actions";
 import { signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
 
@@ -92,12 +92,12 @@ export function PatronSettingsModal({ isOpen, onClose, patron, onUpdate }: Patro
 
     const handleDeleteAccount = async () => {
         setLoading(true);
-        const result = await deletePatronAccountAction(patron.id);
+        const result = await archiveCustomerAction(patron.id);
         if (result.success) {
-            toast.success("Account closed successfully.");
+            toast.success("Account archived successfully.");
             signOut({ callbackUrl: "/" });
         } else {
-            toast.error(result.error || "Failed to close account.");
+            toast.error(result.error || "Failed to archive account.");
         }
         setLoading(false);
     };
@@ -239,16 +239,16 @@ export function PatronSettingsModal({ isOpen, onClose, patron, onUpdate }: Patro
                                     <ShieldAlert className="size-10" />
                                 </div>
                                 <div className="space-y-2">
-                                    <h3 className="text-2xl font-black tracking-tight text-red-600">Close Account?</h3>
+                                    <h3 className="text-2xl font-black tracking-tight text-red-600">Archive Account?</h3>
                                     <p className="text-zinc-500 text-sm font-medium leading-relaxed">
-                                        This action will permanently delete your purchase history and personal data. This cannot be undone.
+                                        This action will archive your purchase history and personal data.
                                     </p>
                                 </div>
                             </div>
 
                             <div className="flex flex-col gap-3">
                                 <Button onClick={handleDeleteAccount} disabled={loading} className="h-14 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-red-200">
-                                    {loading ? <LoadingSpinner size="sm" variant="white" /> : "YES, CLOSE MY ACCOUNT"}
+                                    {loading ? <LoadingSpinner size="sm" variant="white" /> : "YES, ARCHIVE MY ACCOUNT"}
                                 </Button>
                                 <Button onClick={() => setView("profile")} variant="ghost" className="h-14 rounded-2xl font-black text-[10px] uppercase tracking-widest text-zinc-400 hover:text-zinc-900 transition-all">
                                     CANCEL
