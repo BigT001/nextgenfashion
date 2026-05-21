@@ -3,11 +3,11 @@
 import Image from "next/image";
 
 import { useEffect, useState } from "react";
-import { 
-  Plus, 
-  Download, 
-  Package, 
-  AlertTriangle, 
+import {
+  Plus,
+  Download,
+  Package,
+  AlertTriangle,
   TrendingUp,
   MoreHorizontal,
   Edit,
@@ -66,12 +66,15 @@ export default function InventoryClient({ initialData }: { initialData: any }) {
   const [adjustmentReason, setAdjustmentReason] = useState<string>("Restock");
   const [adjustmentMode, setAdjustmentMode] = useState<"ADD" | "SUB">("ADD");
   const [isScanning, setIsScanning] = useState(false);
-  
+
   const [actionItem, setActionItem] = useState<any>(null);
   const [actionType, setActionType] = useState<"SUSPEND" | "DELETE" | null>(null);
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [historyItem, setHistoryItem] = useState<any>(null);
+  const [showCriticalDialog, setShowCriticalDialog] = useState(false);
+
+  const criticalProducts = data?.products?.filter((p: any) => p.stock <= 5) || [];
 
   const handleExportLedger = () => {
     if (!data?.products) return;
@@ -126,8 +129,8 @@ export default function InventoryClient({ initialData }: { initialData: any }) {
       header: "PRODUCTS",
       cell: ({ row }) => (
         <div className="flex flex-col gap-0.5">
-            <span className="font-black text-sm tracking-tight group-hover:text-brand-navy transition-colors">{row.original.name}</span>
-            <span className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">{row.original.category}</span>
+          <span className="font-black text-sm tracking-tight group-hover:text-brand-navy transition-colors">{row.original.name}</span>
+          <span className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">{row.original.category}</span>
         </div>
       ),
     },
@@ -136,10 +139,10 @@ export default function InventoryClient({ initialData }: { initialData: any }) {
       header: "IDENTITY (SKU)",
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
-            <Badge variant="outline" className="font-black text-[10px] uppercase tracking-widest border-border/50 bg-muted/30">
-                {row.original.sku}
-            </Badge>
-            <BarcodeVisualizer variantId={row.original.variantId} sku={row.original.sku} />
+          <Badge variant="outline" className="font-black text-[10px] uppercase tracking-widest border-border/50 bg-muted/30">
+            {row.original.sku}
+          </Badge>
+          <BarcodeVisualizer variantId={row.original.variantId} sku={row.original.sku} />
         </div>
       ),
     },
@@ -148,10 +151,10 @@ export default function InventoryClient({ initialData }: { initialData: any }) {
       header: "QUANTITY",
       cell: ({ row }) => (
         <span className={cn(
-            "font-black text-sm tracking-tighter",
-            row.original.stock <= 5 ? "text-rose-500" : "text-foreground"
+          "font-black text-sm tracking-tighter",
+          row.original.stock <= 5 ? "text-rose-500" : "text-foreground"
         )}>
-            {row.original.stock} UNITS
+          {row.original.stock} UNITS
         </span>
       ),
     },
@@ -161,7 +164,7 @@ export default function InventoryClient({ initialData }: { initialData: any }) {
       cell: ({ row }) => {
         const status = row.original.status;
         return (
-          <Badge 
+          <Badge
             className={cn(
               "font-black text-[10px] px-3 uppercase tracking-widest border-none shadow-sm",
               status === "In Stock" && "bg-emerald-500/10 text-emerald-600",
@@ -179,7 +182,7 @@ export default function InventoryClient({ initialData }: { initialData: any }) {
       header: "LAST MOVEMENT",
       cell: ({ row }) => {
         const lastMovement = row.original.lastMovement || "No movements logged";
-        
+
         let colorClasses = "text-muted-foreground hover:text-foreground bg-muted/10 border-border/10";
         if (lastMovement === "STOCK INCREMENT") {
           colorClasses = "text-emerald-600 hover:text-emerald-700 bg-emerald-500/5 border-emerald-500/10 hover:bg-emerald-500/10";
@@ -229,20 +232,20 @@ export default function InventoryClient({ initialData }: { initialData: any }) {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-52 glass-card border-none shadow-2xl p-2 rounded-2xl">
               <DropdownMenuGroup>
-                <BarcodeVisualizer 
-                  variantId={row.original.variantId} 
-                  sku={row.original.sku} 
+                <BarcodeVisualizer
+                  variantId={row.original.variantId}
+                  sku={row.original.sku}
                   trigger={
-                    <DropdownMenuItem 
+                    <DropdownMenuItem
                       onSelect={(e) => e.preventDefault()}
                       className="rounded-xl h-10 font-bold gap-3 focus:bg-brand-navy/5 focus:text-brand-navy cursor-pointer"
                     >
                       <Barcode className="size-4" /> Print Tag
                     </DropdownMenuItem>
-                  } 
+                  }
                 />
                 <DropdownMenuSeparator className="bg-border/50" />
-                <DropdownMenuItem 
+                <DropdownMenuItem
                   className="rounded-xl h-10 font-bold gap-3 focus:bg-amber-500/10 focus:text-amber-600 text-amber-600 cursor-pointer"
                   onClick={() => {
                     setActionItem(row.original);
@@ -251,7 +254,7 @@ export default function InventoryClient({ initialData }: { initialData: any }) {
                 >
                   <Ban className="size-4" /> {row.original.isSuspended ? "Activate Product" : "Suspend Product"}
                 </DropdownMenuItem>
-                <DropdownMenuItem 
+                <DropdownMenuItem
                   className="rounded-xl h-10 font-bold gap-3 focus:bg-rose-500/10 focus:text-rose-600 text-rose-600 cursor-pointer"
                   onClick={() => {
                     setActionItem(row.original);
@@ -279,8 +282,8 @@ export default function InventoryClient({ initialData }: { initialData: any }) {
           <p className="text-muted-foreground font-medium">Real-time stock orchestration and SKU health monitoring.</p>
         </div>
         <div className="flex items-center gap-3">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className="glass-card border-none h-12 px-6 font-black text-xs uppercase tracking-widest hover:text-brand-navy transition-colors"
             onClick={() => setIsScanning(true)}
           >
@@ -288,15 +291,15 @@ export default function InventoryClient({ initialData }: { initialData: any }) {
             SCAN PRODUCT
           </Button>
 
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={handleExportLedger}
             className="glass-card border-none h-12 px-6 font-black text-xs uppercase tracking-widest hover:text-brand-navy transition-all"
           >
             <Download className="mr-2 h-4 w-4" />
             EXPORT LEDGER
           </Button>
-          
+
           <Dialog open={!!stockUpdateItem} onOpenChange={(open) => {
             if (!open) {
               setStockUpdateItem(null);
@@ -321,7 +324,7 @@ export default function InventoryClient({ initialData }: { initialData: any }) {
                     <span className="text-[9px] font-black uppercase tracking-[0.15em] text-muted-foreground">Current Stock</span>
                     <span className="text-xl font-black text-brand-navy dark:text-white mt-0.5">{stockUpdateItem?.stock || 0} UNITS</span>
                   </div>
-                  <Badge 
+                  <Badge
                     className={cn(
                       "font-black text-[9px] px-3 py-1 uppercase tracking-widest border-none shadow-sm",
                       stockUpdateItem?.status === "In Stock" && "bg-emerald-500/10 text-emerald-600",
@@ -337,29 +340,29 @@ export default function InventoryClient({ initialData }: { initialData: any }) {
                 <div className="space-y-2">
                   <label className="text-[9px] font-black uppercase tracking-[0.15em] text-muted-foreground">Adjustment Action</label>
                   <div className="grid grid-cols-2 gap-3">
-                     <button 
+                    <button
                       type="button"
                       onClick={() => {
                         setAdjustmentMode("ADD");
                       }}
                       className={cn(
                         "h-11 rounded-xl font-black text-xs uppercase tracking-widest border transition-all flex items-center justify-center gap-2 cursor-pointer",
-                        adjustmentMode === "ADD" 
-                          ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 shadow-sm" 
+                        adjustmentMode === "ADD"
+                          ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 shadow-sm"
                           : "bg-muted/30 text-muted-foreground border-transparent hover:bg-muted/50"
                       )}
                     >
                       <Plus className="size-4" /> Add Stock
                     </button>
-                    <button 
+                    <button
                       type="button"
                       onClick={() => {
                         setAdjustmentMode("SUB");
                       }}
                       className={cn(
                         "h-11 rounded-xl font-black text-xs uppercase tracking-widest border transition-all flex items-center justify-center gap-2 cursor-pointer",
-                        adjustmentMode === "SUB" 
-                          ? "bg-rose-500/10 text-rose-600 border-rose-500/20 shadow-sm" 
+                        adjustmentMode === "SUB"
+                          ? "bg-rose-500/10 text-rose-600 border-rose-500/20 shadow-sm"
                           : "bg-muted/30 text-muted-foreground border-transparent hover:bg-muted/50"
                       )}
                     >
@@ -370,26 +373,26 @@ export default function InventoryClient({ initialData }: { initialData: any }) {
 
                 <div className="space-y-2">
                   <label className="text-[9px] font-black uppercase tracking-[0.15em] text-muted-foreground">Quantity to Adjust</label>
-                  <Input 
-                    type="number" 
-                    value={adjustmentValue === 0 ? "" : adjustmentValue} 
+                  <Input
+                    type="number"
+                    value={adjustmentValue === 0 ? "" : adjustmentValue}
                     onChange={(e) => setAdjustmentValue(Math.max(0, parseInt(e.target.value) || 0))}
                     className="h-11 rounded-xl border border-border/50 bg-muted/20 font-black text-base focus:border-brand-navy"
                     placeholder="Enter quantity amount..."
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <label className="text-[9px] font-black uppercase tracking-[0.15em] text-muted-foreground">Reason</label>
-                  <Input 
-                    value={adjustmentReason} 
+                  <Input
+                    value={adjustmentReason}
                     onChange={(e) => setAdjustmentReason(e.target.value)}
                     placeholder={adjustmentMode === "SUB" ? "What is the reason for reduction?" : "What is the reason for addition?"}
                     className="h-11 rounded-xl border border-border/50 bg-muted/20 font-bold text-sm focus:border-brand-navy"
                   />
                 </div>
 
-                <Button 
+                <Button
                   className="w-full bg-brand-navy hover:bg-brand-navy/90 text-white h-12 font-black rounded-xl cursor-pointer mt-2"
                   onClick={async () => {
                     if (adjustmentValue <= 0) {
@@ -400,13 +403,13 @@ export default function InventoryClient({ initialData }: { initialData: any }) {
                     const reasonFallback = adjustmentReason.trim() || (adjustmentMode === "ADD" ? "Restock" : "Shrinkage/Damage");
                     const res = await updateStockAction(stockUpdateItem.variantId, change, reasonFallback);
                     if (res.success) {
-                        toast.success("Stock inventory updated successfully");
-                        setStockUpdateItem(null);
-                        setAdjustmentValue(0);
-                        setAdjustmentReason("");
-                        loadData();
+                      toast.success("Stock inventory updated successfully");
+                      setStockUpdateItem(null);
+                      setAdjustmentValue(0);
+                      setAdjustmentReason("");
+                      loadData();
                     } else {
-                        toast.error(res.error);
+                      toast.error(res.error);
                     }
                   }}
                 >
@@ -426,7 +429,7 @@ export default function InventoryClient({ initialData }: { initialData: any }) {
                   </DialogDescription>
                 </DialogHeader>
               </div>
-              <BarcodeScanner 
+              <BarcodeScanner
                 onScan={(sku) => {
                   const item = data.products.find((p: any) => p.sku === sku);
                   if (item) {
@@ -435,8 +438,8 @@ export default function InventoryClient({ initialData }: { initialData: any }) {
                     toast.error(`Product with SKU ${sku} not found in catalog`);
                   }
                   setIsScanning(false);
-                }} 
-                onClose={() => setIsScanning(false)} 
+                }}
+                onClose={() => setIsScanning(false)}
               />
             </DialogContent>
           </Dialog>
@@ -456,8 +459,9 @@ export default function InventoryClient({ initialData }: { initialData: any }) {
           title="Stock Critical"
           value={data?.kpis?.stockAlerts || 0}
           icon={AlertTriangle}
-          description="Items requiring restock"
+          description="Click to view items requiring restock"
           variant="pink"
+          onClick={() => setShowCriticalDialog(true)}
         />
         <MetricCard
           title="Inventory Value"
@@ -483,23 +487,23 @@ export default function InventoryClient({ initialData }: { initialData: any }) {
           </div>
           <div className="p-6 space-y-5">
             <p className="text-sm font-medium text-muted-foreground">
-              {actionType === "SUSPEND" 
-                ? (actionItem?.isSuspended 
-                    ? `Are you sure you want to activate "${actionItem?.name}"? It will become visible to customers on the storefront again.`
-                    : `Are you sure you want to suspend "${actionItem?.name}"? It will no longer be visible to customers on the storefront.`
-                  )
+              {actionType === "SUSPEND"
+                ? (actionItem?.isSuspended
+                  ? `Are you sure you want to activate "${actionItem?.name}"? It will become visible to customers on the storefront again.`
+                  : `Are you sure you want to suspend "${actionItem?.name}"? It will no longer be visible to customers on the storefront.`
+                )
                 : `Are you sure you want to completely delete "${actionItem?.name}" and all its inventory records? This action cannot be undone.`}
             </p>
             <div className="grid grid-cols-2 gap-3 mt-4">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="w-full h-12 font-black rounded-xl"
                 onClick={() => setActionItem(null)}
                 disabled={isActionLoading}
               >
                 CANCEL
               </Button>
-              <Button 
+              <Button
                 variant="destructive"
                 className="w-full h-12 font-black rounded-xl bg-rose-500 hover:bg-rose-600 text-white"
                 disabled={isActionLoading}
@@ -552,11 +556,64 @@ export default function InventoryClient({ initialData }: { initialData: any }) {
         </DialogContent>
       </Dialog>
 
+      {/* Critical Stock Dialog */}
+      <Dialog open={showCriticalDialog} onOpenChange={setShowCriticalDialog}>
+        <DialogContent className="max-w-4xl glass-card border-none p-0 overflow-hidden rounded-[2rem] shadow-2xl">
+          <div className="p-8 bg-rose-500/10 border-b border-rose-500/20">
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-black text-rose-600 flex items-center gap-2">
+                <AlertTriangle className="size-6" />
+                Critical Stock Ledger
+              </DialogTitle>
+              <DialogDescription className="font-bold text-xs uppercase tracking-widest text-rose-600/70">
+                Products requiring immediate restock (5 units or less)
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+          <div className="p-6 max-h-[70vh] overflow-y-auto custom-scrollbar bg-zinc-50/50">
+            {criticalProducts.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                <Package className="size-12 mb-4 opacity-20" />
+                <p className="font-bold tracking-widest uppercase text-xs">No critical items found</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {criticalProducts.map((product: any) => (
+                  <div key={product.id} className="flex items-center gap-4 p-4 rounded-2xl glass-card border-none bg-white">
+                    <div className="relative h-12 w-12 rounded-full overflow-hidden border-2 border-rose-500/20">
+                      {product.image ? (
+                        <Image src={product.image} alt={product.name} fill className="object-cover" />
+                      ) : (
+                        <div className="flex items-center justify-center w-full h-full bg-rose-500/5 text-rose-500/50">
+                          <ImageIcon className="h-4 w-4" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-black text-sm">{product.name}</h4>
+                      <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">{product.category}</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Badge variant="outline" className="font-black text-[10px] uppercase tracking-widest border-border/50 bg-muted/30">
+                        {product.sku}
+                      </Badge>
+                      <div className="px-4 py-2 rounded-xl bg-rose-500/10 text-rose-600 font-black text-xs">
+                        {product.stock} UNITS
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Main Table Layer */}
       <div className="overflow-hidden">
-        <DataTable 
-          columns={columns} 
-          data={data?.products || []} 
+        <DataTable
+          columns={columns}
+          data={data?.products || []}
           searchKey="name"
         />
       </div>

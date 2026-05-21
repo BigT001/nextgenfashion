@@ -1,0 +1,9 @@
+Product Name,Description,Category Name,Gender,Base Price,Cost Price,Tax,Image Filename,SKU,Barcode,Size,Color,Variant Price,Stock Quantity,Low Stock Threshold
+Premium Vintage Denim Jacket,Heavyweight raw indigo vintage denim jacket with custom brass hardware,Vintage,BOTH,45000,30000,7.5,vintage_denim_jacket.jpg,NG-VD-JK-M-BLU,880192837401,M,Indigo,45000,15,5
+Premium Vintage Denim Jacket,Heavyweight raw indigo vintage denim jacket with custom brass hardware,Vintage,BOTH,45000,30000,7.5,vintage_denim_jacket.jpg,NG-VD-JK-L-BLU,880192837402,L,Indigo,45000,20,5
+Premium Vintage Denim Jacket,Heavyweight raw indigo vintage denim jacket with custom brass hardware,Vintage,BOTH,45000,30000,7.5,vintage_denim_jacket.jpg,NG-VD-JK-XL-BLU,880192837403,XL,Indigo,48000,10,5
+Retro Urban Cargo Pants,Relaxed fit tactical urban cargo pants with multi-pocket utilities,Urban,BOTH,38000,24000,7.5,urban_cargo_pants.jpg,NG-UR-CP-S-BLK,880192837501,S,Midnight Black,,30,5
+Retro Urban Cargo Pants,Relaxed fit tactical urban cargo pants with multi-pocket utilities,Urban,BOTH,38000,24000,7.5,urban_cargo_pants.jpg,NG-UR-CP-M-BLK,880192837502,M,Midnight Black,,40,5
+Retro Urban Cargo Pants,Relaxed fit tactical urban cargo pants with multi-pocket utilities,Urban,BOTH,38000,24000,7.5,urban_cargo_pants.jpg,NG-UR-CP-L-BLK,880192837503,L,Midnight Black,,25,5
+Classic Girls Summer Dress,Lightweight floral pattern summer dress with adjustable sash,Dress,GIRLS,28000,18000,7.5,girls_summer_dress.jpg,NG-DR-SD-S-FLR,880192837601,S,Floral Pink,,12,3
+Classic Girls Summer Dress,Lightweight floral pattern summer dress with adjustable sash,Dress,GIRLS,28000,18000,7.5,girls_summer_dress.jpg,NG-DR-SD-M-FLR,880192837602,M,Floral Pink,,15,3

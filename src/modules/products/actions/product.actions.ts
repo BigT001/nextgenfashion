@@ -7,6 +7,8 @@ import { SyncPosProductsService } from "@/modules/products/services/sync-pos-pro
 import { UpdateStockService } from "@/modules/inventory/services/update-stock.service";
 import { ProductQueries } from "@/modules/products/queries/product.queries";
 import { CloudinaryService } from "@/integrations/cloudinary/cloudinary.service";
+import { MatchImageFilenamesService } from "@/modules/products/services/match-image-filenames.service";
+import { LinkProductImageService } from "@/modules/products/services/link-product-image.service";
 import { revalidatePath } from "next/cache";
 
 /**
@@ -381,6 +383,29 @@ export async function syncPosProductsAction() {
     return res;
   } catch (error: any) {
     console.error("POS sync action error:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function matchImageFilenamesAction(filenames: string[]) {
+  try {
+    const result = await MatchImageFilenamesService.execute(filenames);
+    return { success: true, ...result };
+  } catch (error: any) {
+    console.error("Match filenames action error:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function linkProductImageAction(productId: string, imageUrl: string) {
+  try {
+    const result = await LinkProductImageService.execute(productId, imageUrl);
+    revalidatePath("/dashboard/products");
+    revalidatePath("/inventory");
+    revalidatePath("/");
+    return { success: true, data: JSON.parse(JSON.stringify(result)) };
+  } catch (error: any) {
+    console.error("Link product image action error:", error);
     return { success: false, error: error.message };
   }
 }

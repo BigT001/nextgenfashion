@@ -16,6 +16,7 @@ interface MetricCardProps {
   className?: string;
   variant?: "pink" | "blue" | "slate" | "emerald";
   compact?: boolean;
+  onClick?: () => void;
 }
 
 export function MetricCard({
@@ -26,7 +27,8 @@ export function MetricCard({
   description,
   className,
   variant = "pink",
-  compact = false
+  compact = false,
+  onClick
 }: MetricCardProps) {
   const variantStyles = {
     pink: "border-l-brand-navy text-brand-navy bg-brand-navy/5",
@@ -36,7 +38,14 @@ export function MetricCard({
   };
 
   return (
-    <Card className={cn("glass-card border-none border-l-4 shadow-sm group hover:scale-[1.02] transition-all duration-300", variantStyles[variant], className)}>
+    <Card 
+      onClick={onClick}
+      className={cn("glass-card border-none border-l-4 shadow-sm group hover:scale-[1.02] transition-all duration-300", 
+        variantStyles[variant], 
+        onClick && "cursor-pointer",
+        className
+      )}
+    >
       <CardContent className={compact ? "p-4" : "p-6"}>
         <div className="flex items-center justify-between">
           <div className="space-y-0.5">

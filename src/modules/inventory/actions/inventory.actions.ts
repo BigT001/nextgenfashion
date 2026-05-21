@@ -79,6 +79,8 @@ export async function getInventoryDashboardAction() {
         stock: totalStock,
         price: Number(p.basePrice),
         costPrice: Number(p.costPrice || 0),
+        wholesalePrice: Number(p.costPrice || 0),
+        retailPrice: Number(p.basePrice || 0),
         images: p.images,
         image: p.images?.[0] || null,
         isSuspended: p.isSuspended,

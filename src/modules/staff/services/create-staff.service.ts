@@ -25,7 +25,12 @@ export class CreateStaffService {
       throw new Error("User with this email already exists");
     }
 
-    const hashedPassword = password ? await bcrypt.hash(password, 10) : undefined;
+    // Ensure a password is set; generate a temporary one if not provided
+    const generatedPassword = password || Math.random().toString(36).slice(-8);
+    const hashedPassword = await bcrypt.hash(generatedPassword, 10);
+
+    // Optionally, you could send the generated password via email in the invitation.
+
 
     const staff = await prisma.user.create({
       data: {

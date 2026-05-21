@@ -136,4 +136,21 @@ export class ProductQueries {
       where: { id },
     });
   }
+
+  static async findVariantsByIdentifiers(identifiers: string[]) {
+    const uppercaseIds = identifiers.map(id => id.toUpperCase().trim());
+    const trimmedIds = identifiers.map(id => id.trim());
+    return await prisma.productVariant.findMany({
+      where: {
+        OR: [
+          { sku: { in: uppercaseIds } },
+          { barcode: { in: trimmedIds } },
+          { sku: { in: trimmedIds } }
+        ]
+      },
+      include: {
+        product: true
+      }
+    });
+  }
 }

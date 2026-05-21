@@ -19,7 +19,12 @@ import {
   Upload,
   Loader2,
   FileText,
-  CheckCircle2
+  CheckCircle2,
+  AlertTriangle,
+  Check,
+  X as XIcon,
+  Clock,
+  ChevronDown
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
@@ -31,7 +36,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   DropdownMenu,
@@ -44,7 +48,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ProductForm } from "@/modules/products/components/product-form";
 import { getInventoryDashboardAction } from "@/modules/inventory/actions/inventory.actions";
-import { deleteProductAction, importProductsAction, uploadImageAction, syncPosProductsAction, getProductByIdAction } from "@/modules/products/actions/product.actions";
+import { deleteProductAction, importProductsAction, uploadImageAction, syncPosProductsAction, getProductByIdAction, matchImageFilenamesAction, linkProductImageAction } from "@/modules/products/actions/product.actions";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -95,6 +99,126 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
   // POS Sync States
   const [isSyncingPos, setIsSyncingPos] = useState(false);
 
+  // Mass Image Upload States
+  const [isMassUploadOpen, setIsMassUploadOpen] = useState(false);
+  const [selectedUploadFiles, setSelectedUploadFiles] = useState<FileList | null>(null);
+  const [isMatchingImages, setIsMatchingImages] = useState(false);
+  const [matchResults, setMatchResults] = useState<{
+    matched: Array<{ filename: string; productId: string; productName: string; sku: string; barcode: string | null }>;
+    unmatched: Array<{ filename: string }>;
+  } | null>(null);
+  const [uploadStep, setUploadStep] = useState<"select" | "preview" | "progress" | "complete">("select");
+  const [uploadStatusList, setUploadStatusList] = useState<Array<{ filename: string; status: "pending" | "uploading" | "linking" | "success" | "failed"; error?: string }>>([]);
+  const [massUploadProgress, setMassUploadProgress] = useState(0);
+
+  const handleMassFilesChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    
+    setSelectedUploadFiles(files);
+    setIsMatchingImages(true);
+    setUploadStep("preview");
+
+    const filenames = Array.from(files).map(f => f.name);
+    try {
+      const res = await matchImageFilenamesAction(filenames) as any;
+      if (res.success && res.matched) {
+        setMatchResults({
+          matched: res.matched,
+          unmatched: res.unmatched || []
+        });
+        
+        // Initialize status list
+        const initialStatus = Array.from(files).map(file => {
+          const isMatched = res.matched.some((m: any) => m.filename === file.name);
+          return {
+            filename: file.name,
+            status: isMatched ? "pending" as const : "failed" as const,
+            error: isMatched ? undefined : "No matching SKU/Barcode product variant found."
+          };
+        });
+        setUploadStatusList(initialStatus);
+      } else {
+        toast.error(res.error || "Failed to analyze filenames");
+        setUploadStep("select");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to analyze filenames");
+      setUploadStep("select");
+    } finally {
+      setIsMatchingImages(false);
+    }
+  };
+
+  const handleStartMassUpload = async () => {
+    if (!selectedUploadFiles || !matchResults || matchResults.matched.length === 0) return;
+
+    setUploadStep("progress");
+    setMassUploadProgress(0);
+
+    const matchedFilesMap = new Map<string, File>();
+    Array.from(selectedUploadFiles).forEach(file => {
+      matchedFilesMap.set(file.name, file);
+    });
+
+    let completedCount = 0;
+    const totalToUpload = matchResults.matched.length;
+
+    for (let i = 0; i < matchResults.matched.length; i++) {
+      const match = matchResults.matched[i];
+      const file = matchedFilesMap.get(match.filename);
+      
+      if (!file) continue;
+
+      setUploadStatusList(prev => prev.map(item => 
+        item.filename === match.filename ? { ...item, status: "uploading" } : item
+      ));
+
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+        
+        const uploadRes = await uploadImageAction(formData) as any;
+        if (!uploadRes.success || !uploadRes.url) {
+          throw new Error(uploadRes.error || "Failed to upload to Cloudinary");
+        }
+
+        setUploadStatusList(prev => prev.map(item => 
+          item.filename === match.filename ? { ...item, status: "linking" } : item
+        ));
+
+        const linkRes = await linkProductImageAction(match.productId, uploadRes.url);
+        if (!linkRes.success) {
+          throw new Error(linkRes.error || "Failed to link image to product");
+        }
+
+        setUploadStatusList(prev => prev.map(item => 
+          item.filename === match.filename ? { ...item, status: "success" } : item
+        ));
+      } catch (err: any) {
+        console.error(`Error uploading ${match.filename}:`, err);
+        setUploadStatusList(prev => prev.map(item => 
+          item.filename === match.filename ? { ...item, status: "failed", error: err.message || "Unknown error" } : item
+        ));
+      }
+
+      completedCount++;
+      setMassUploadProgress(Math.round((completedCount / totalToUpload) * 100));
+    }
+
+    setUploadStep("complete");
+    loadData();
+    toast.success("Mass upload flow finished!");
+  };
+
+  const handleResetMassUpload = () => {
+    setSelectedUploadFiles(null);
+    setMatchResults(null);
+    setUploadStatusList([]);
+    setMassUploadProgress(0);
+    setUploadStep("select");
+  };
+
   const handleSyncPos = async () => {
     if (isSyncingPos) return;
     setIsSyncingPos(true);
@@ -125,11 +249,11 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
 
   const handleDownloadTemplate = () => {
     const csvContent = 
-      "Product Name,Description,Category Name,Gender,Base Price,Cost Price,Tax,Image Filename,SKU,Barcode,Size,Color,Variant Price,Stock Quantity,Low Stock Threshold\n" +
-      "Premium Vintage Denim Jacket,Heavyweight raw indigo vintage denim jacket with custom brass hardware,Vintage,BOTH,45000,30000,7.5,vintage_denim_jacket.jpg,NG-VD-JK-M-BLU,880192837401,M,Indigo,45000,15,5\n" +
-      "Premium Vintage Denim Jacket,Heavyweight raw indigo vintage denim jacket with custom brass hardware,Vintage,BOTH,45000,30000,7.5,vintage_denim_jacket.jpg,NG-VD-JK-L-BLU,880192837402,L,Indigo,45000,20,5\n" +
-      "Retro Urban Cargo Pants,Relaxed fit tactical urban cargo pants with multi-pocket utilities,Urban,BOTH,38000,24000,7.5,urban_cargo_pants.jpg,NG-UR-CP-S-BLK,880192837501,S,Midnight Black,,30,5\n" +
-      "Retro Urban Cargo Pants,Relaxed fit tactical urban cargo pants with multi-pocket utilities,Urban,BOTH,38000,24000,7.5,urban_cargo_pants.jpg,NG-UR-CP-M-BLK,880192837502,M,Midnight Black,,40,5\n";
+      "Product Name,Description,Category Name,Gender,Wholesale Price,Retail Price,Cost Price,Tax,Image Filename,SKU,Barcode,Size,Color,Variant Wholesale Price,Variant Retail Price,Stock Quantity,Low Stock Threshold\n" +
+      "Premium Vintage Denim Jacket,Heavyweight raw indigo vintage denim jacket with custom brass hardware,Vintage,BOTH,45000,52000,30000,7.5,vintage_denim_jacket.jpg,NG-VD-JK-M-BLU,880192837401,M,Indigo,45000,52000,15,5\n" +
+      "Premium Vintage Denim Jacket,Heavyweight raw indigo vintage denim jacket with custom brass hardware,Vintage,BOTH,45000,52000,30000,7.5,vintage_denim_jacket.jpg,NG-VD-JK-L-BLU,880192837402,L,Indigo,45000,52000,20,5\n" +
+      "Retro Urban Cargo Pants,Relaxed fit tactical urban cargo pants with multi-pocket utilities,Urban,BOTH,38000,44000,24000,7.5,urban_cargo_pants.jpg,NG-UR-CP-S-BLK,880192837501,S,Midnight Black,,,30,5\n" +
+      "Retro Urban Cargo Pants,Relaxed fit tactical urban cargo pants with multi-pocket utilities,Urban,BOTH,38000,44000,24000,7.5,urban_cargo_pants.jpg,NG-UR-CP-M-BLK,880192837502,M,Midnight Black,,,40,5\n";
     
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
@@ -368,9 +492,9 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
     },
     {
       accessorKey: "name",
-      header: "PRODUCT NAME",
+      header: "PRODUCT",
       cell: ({ row }) => (
-        <div className="flex flex-col gap-0.5 min-w-[200px]">
+        <div className="flex flex-col gap-0.5 min-w-[150px]">
             <span className="font-black text-sm tracking-tight group-hover:text-brand-navy transition-colors">{row.original.name}</span>
             <span className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">{row.original.category}</span>
         </div>
@@ -378,7 +502,7 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
     },
     {
       accessorKey: "sku",
-      header: "IDENTITY (SKU)",
+      header: "SKU",
       cell: ({ row }) => (
         <Badge variant="outline" className="font-black text-[10px] uppercase tracking-widest border-border/50 bg-muted/10 px-3 py-1">
             {row.original.sku}
@@ -387,7 +511,7 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
     },
     {
       accessorKey: "price",
-      header: "SELLING PRICE",
+      header: "WHOLESALE",
       cell: ({ row }) => (
         <div className="font-black text-brand-navy tracking-tighter text-sm">
             ₦{Number(row.original.price).toLocaleString()}
@@ -395,8 +519,17 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
       ),
     },
     {
+      accessorKey: "retailPrice",
+      header: "RETAIL",
+      cell: ({ row }) => (
+        <div className="font-black text-brand-navy tracking-tighter text-sm">
+            ₦{Number(row.original.retailPrice || 0).toLocaleString()}
+        </div>
+      ),
+    },
+    {
       accessorKey: "costPrice",
-      header: "COST PRICE",
+      header: "COST",
       cell: ({ row }) => (
         <div className="font-black text-muted-foreground/40 tracking-tighter text-sm italic">
             ₦{Number(row.original.costPrice || 0).toLocaleString()}
@@ -405,7 +538,7 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
     },
     {
       accessorKey: "variants",
-      header: "ACTIVE VARIANT",
+      header: "VARS",
       cell: ({ row }) => (
         <Badge variant="secondary" className="font-black text-[10px] rounded-lg px-2">
             {row.original.variants?.length || 1} VARS
@@ -478,36 +611,300 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
             variant="outline" 
             onClick={handleSyncPos}
             disabled={isSyncingPos}
-            className="group glass-card border-none h-12 px-6 font-black text-xs uppercase tracking-widest text-black bg-amber-400 hover:bg-brand-navy hover:text-white transition-all flex items-center shadow-lg shadow-brand-navy/30"
+            className="group glass-card border-none h-10 px-4 font-black text-xs uppercase tracking-wider text-black bg-amber-400 hover:bg-brand-navy hover:text-white transition-all flex items-center shadow-md shadow-brand-navy/10 cursor-pointer"
           >
             {isSyncingPos ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin text-black group-hover:text-white" />
+              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin text-black group-hover:text-white" />
             ) : (
-              <Zap className="mr-2 h-4 w-4 text-black fill-black group-hover:text-white group-hover:fill-white transition-colors" />
+              <Zap className="mr-1.5 h-3.5 w-3.5 text-black fill-black group-hover:text-white group-hover:fill-white transition-colors" />
             )}
             {isSyncingPos ? "SYNCING..." : "SYNC FROM POS"}
           </Button>
 
+          <DropdownMenu>
+            <DropdownMenuTrigger className="glass-card border border-border/35 bg-white hover:bg-brand-navy/5 hover:text-brand-navy text-muted-foreground h-10 px-4 font-black text-xs uppercase tracking-wider rounded-xl flex items-center gap-1.5 transition-all outline-none cursor-pointer">
+              <span>More Actions</span>
+              <ChevronDown className="h-3.5 w-3.5" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52 glass-card border-none shadow-2xl p-2 rounded-2xl">
+              <DropdownMenuGroup>
+                <DropdownMenuItem 
+                  className="rounded-xl h-10 font-bold gap-3 focus:bg-brand-navy/5 focus:text-brand-navy cursor-pointer text-xs uppercase tracking-wider px-3"
+                  onClick={() => setIsImportOpen(true)}
+                >
+                  <Upload className="size-4" /> Import CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  className="rounded-xl h-10 font-bold gap-3 focus:bg-brand-navy/5 focus:text-brand-navy cursor-pointer text-xs uppercase tracking-wider px-3"
+                  onClick={() => setIsMassUploadOpen(true)}
+                >
+                  <ImageIcon className="size-4" /> Mass Upload Images
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className="bg-border/50" />
+                <DropdownMenuItem 
+                  className="rounded-xl h-10 font-bold gap-3 focus:bg-brand-navy/5 focus:text-brand-navy cursor-pointer text-xs uppercase tracking-wider px-3"
+                  onClick={handleExport}
+                >
+                  <Download className="size-4" /> Export Catalog
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           <Button 
-            variant="outline" 
-            onClick={handleExport}
-            className="glass-card border-none h-12 px-6 font-black text-xs uppercase tracking-widest hover:bg-brand-navy/5 hover:text-brand-navy transition-all"
+            onClick={() => setIsAddProductOpen(true)}
+            className="bg-brand-navy hover:bg-brand-navy/90 text-white h-10 px-5 font-black text-xs uppercase tracking-wider rounded-xl shadow-xl shadow-brand-navy/15 active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer"
           >
-            <Download className="mr-2 h-4 w-4" />
-            EXPORT CATALOG
+            <Plus className="h-4 w-4" />
+            ADD PRODUCT
           </Button>
+
+          {/* Mass Image Upload Dialog */}
+          <Dialog open={isMassUploadOpen} onOpenChange={(open) => {
+            setIsMassUploadOpen(open);
+            if (!open) handleResetMassUpload();
+          }}>
+            <DialogContent className="max-w-2xl glass-card border-none p-0 overflow-hidden rounded-[2.5rem] shadow-2xl">
+              <div className="px-10 py-6 bg-brand-mesh border-b border-border/10 relative overflow-hidden">
+                <div className="absolute inset-0 bg-brand-navy/5" />
+                <DialogHeader className="relative z-10">
+                  <DialogTitle className="text-xl font-black text-brand-navy uppercase tracking-[0.2em]">Mass Image Upload</DialogTitle>
+                  <DialogDescription className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mt-1">
+                    Auto-associate image assets with matching catalog SKUs or barcodes
+                  </DialogDescription>
+                </DialogHeader>
+              </div>
+
+              <div className="p-8 space-y-6">
+                {uploadStep === "select" && (
+                  <div className="space-y-6">
+                    <div className="space-y-1.5">
+                      <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Select Product Images (Multiple Allowed)</label>
+                      <div className="relative border-2 border-dashed border-zinc-200 hover:border-brand-navy/50 transition-colors rounded-2xl p-10 flex flex-col items-center justify-center gap-3 bg-zinc-50/50">
+                        <input 
+                          type="file" 
+                          multiple
+                          accept="image/*"
+                          onChange={handleMassFilesChange}
+                          className="absolute inset-0 opacity-0 cursor-pointer"
+                        />
+                        <Upload className="size-10 text-muted-foreground/60 animate-pulse" />
+                        <span className="text-sm font-black text-brand-navy uppercase tracking-wider">
+                          Choose images or drag them here
+                        </span>
+                        <span className="text-[10px] text-muted-foreground font-medium text-center max-w-sm">
+                          Filenames must match the Product SKU (e.g. <code>NGN-DENIM-M.jpg</code>) or Barcode (e.g. <code>880192837401.png</code>) exactly.
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {uploadStep === "preview" && (
+                  <div className="space-y-6">
+                    {isMatchingImages ? (
+                      <div className="py-12 flex flex-col items-center justify-center gap-4">
+                        <Loader2 className="size-10 text-brand-navy animate-spin" />
+                        <span className="text-xs font-black uppercase tracking-widest text-brand-navy">Analyzing matching variants...</span>
+                      </div>
+                    ) : (
+                      <>
+                        {/* Summary Badges */}
+                        <div className="flex gap-4 p-4 bg-zinc-50 rounded-2xl border border-border/40 justify-around">
+                          <div className="text-center">
+                            <span className="block text-2xl font-black text-brand-navy">
+                              {(matchResults?.matched.length || 0) + (matchResults?.unmatched.length || 0)}
+                            </span>
+                            <span className="text-[9px] text-muted-foreground font-black uppercase tracking-widest">Total Selected</span>
+                          </div>
+                          <div className="border-r border-zinc-200 my-1" />
+                          <div className="text-center">
+                            <span className="block text-2xl font-black text-emerald-600">
+                              {matchResults?.matched.length || 0}
+                            </span>
+                            <span className="text-[9px] text-emerald-600 font-black uppercase tracking-widest">Matched Products</span>
+                          </div>
+                          <div className="border-r border-zinc-200 my-1" />
+                          <div className="text-center">
+                            <span className="block text-2xl font-black text-amber-500">
+                              {matchResults?.unmatched.length || 0}
+                            </span>
+                            <span className="text-[9px] text-amber-500 font-black uppercase tracking-widest">Unresolved</span>
+                          </div>
+                        </div>
+
+                        {/* List of files */}
+                        <div className="space-y-2">
+                          <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Mapping Specifications</label>
+                          <div className="max-h-60 overflow-y-auto border border-zinc-100 rounded-2xl p-2 divide-y divide-zinc-50 space-y-1">
+                            {uploadStatusList.map((item, index) => {
+                              const match = matchResults?.matched.find(m => m.filename === item.filename);
+                              return (
+                                <div key={index} className="py-2.5 px-3 flex items-center justify-between text-xs hover:bg-zinc-50/50 rounded-xl transition-colors">
+                                  <div className="flex items-center gap-2.5 min-w-0">
+                                    <ImageIcon className="size-4 shrink-0 text-muted-foreground" />
+                                    <span className="font-bold truncate max-w-[200px]" title={item.filename}>{item.filename}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2 max-w-[60%] text-right">
+                                    {match ? (
+                                      <span className="text-[10px] text-emerald-600 font-black uppercase tracking-wider bg-emerald-50 border border-emerald-100 px-2.5 py-0.5 rounded-full truncate">
+                                        Matches: {match.productName}
+                                      </span>
+                                    ) : (
+                                      <span className="text-[10px] text-amber-600 font-black uppercase tracking-wider bg-amber-50 border border-amber-100 px-2.5 py-0.5 rounded-full truncate">
+                                        Skipped (No Match)
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* Footer buttons */}
+                        <div className="flex gap-3 justify-end pt-4 border-t border-border/30">
+                          <Button 
+                            type="button"
+                            variant="outline"
+                            onClick={handleResetMassUpload}
+                            className="h-11 px-6 font-black text-[10px] uppercase tracking-widest rounded-xl"
+                          >
+                            Reset
+                          </Button>
+                          <Button 
+                            type="button"
+                            onClick={handleStartMassUpload}
+                            disabled={!matchResults || matchResults.matched.length === 0}
+                            className="bg-brand-navy hover:bg-brand-navy/90 text-white h-11 px-8 font-black rounded-xl shadow-xl shadow-brand-navy/20 disabled:opacity-40"
+                          >
+                            Upload {matchResults?.matched.length} matched {matchResults?.matched.length === 1 ? "image" : "images"}
+                          </Button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {uploadStep === "progress" && (
+                  <div className="py-8 flex flex-col items-center justify-center gap-6">
+                    <Loader2 className="size-10 text-brand-navy animate-spin" />
+                    <div className="text-center space-y-1.5 w-full px-8">
+                      <h3 className="text-sm font-black uppercase tracking-widest text-brand-navy">
+                        Uploading and linking assets... ({massUploadProgress}%)
+                      </h3>
+                      <p className="text-[9px] text-muted-foreground font-medium uppercase tracking-wider">
+                        Please keep this browser window open. Do not refresh.
+                      </p>
+                    </div>
+
+                    <div className="w-full max-w-md bg-zinc-100 h-2 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-brand-navy transition-all duration-500 ease-out" 
+                        style={{ width: `${massUploadProgress}%` }}
+                      />
+                    </div>
+
+                    {/* Progress details */}
+                    <div className="w-full max-w-md max-h-48 overflow-y-auto border border-zinc-100 rounded-xl p-2 space-y-1">
+                      {uploadStatusList
+                        .filter(item => item.status !== "failed" || item.error !== "No matching SKU/Barcode product variant found.")
+                        .map((item, idx) => {
+                          return (
+                            <div key={idx} className="flex items-center justify-between text-[11px] py-1.5 px-2.5 rounded-lg hover:bg-zinc-50 transition-colors">
+                              <span className="font-bold truncate max-w-[220px]">{item.filename}</span>
+                              <div className="flex items-center gap-1.5 font-black uppercase tracking-widest text-[9px]">
+                                {item.status === "pending" && (
+                                  <span className="text-muted-foreground flex items-center gap-1">
+                                    <Clock className="size-3" /> Queued
+                                  </span>
+                                )}
+                                {item.status === "uploading" && (
+                                  <span className="text-blue-500 flex items-center gap-1">
+                                    <Loader2 className="size-3 animate-spin" /> Cloudinary...
+                                  </span>
+                                )}
+                                {item.status === "linking" && (
+                                  <span className="text-indigo-500 flex items-center gap-1">
+                                    <Loader2 className="size-3 animate-spin" /> Linking...
+                                  </span>
+                                )}
+                                {item.status === "success" && (
+                                  <span className="text-emerald-600 flex items-center gap-1">
+                                    <Check className="size-3" /> Done
+                                  </span>
+                                )}
+                                {item.status === "failed" && (
+                                  <span className="text-rose-500 flex items-center gap-1" title={item.error}>
+                                    <AlertTriangle className="size-3" /> Failed
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </div>
+                )}
+
+                {uploadStep === "complete" && (
+                  <div className="space-y-6">
+                    <div className="py-10 flex flex-col items-center justify-center gap-4">
+                      <CheckCircle2 className="size-12 text-emerald-500 animate-bounce" />
+                      <div className="text-center space-y-1">
+                        <h3 className="text-base font-black uppercase tracking-widest text-brand-navy">
+                          Mass Upload Sync Completed
+                        </h3>
+                        <p className="text-[10px] text-muted-foreground font-black uppercase tracking-wider">
+                          Successfully updated {uploadStatusList.filter(i => i.status === "success").length} product image profiles
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Show failures if any */}
+                    {uploadStatusList.some(i => i.status === "failed") && (
+                      <div className="space-y-2">
+                        <label className="text-[9px] font-black uppercase tracking-widest text-rose-500 flex items-center gap-1">
+                          <AlertTriangle className="size-3.5" /> Failures / Warnings
+                        </label>
+                        <div className="max-h-40 overflow-y-auto border border-rose-100 bg-rose-50/20 rounded-2xl p-2 space-y-1">
+                          {uploadStatusList.filter(i => i.status === "failed").map((item, idx) => (
+                            <div key={idx} className="flex items-center justify-between text-[11px] py-1.5 px-3 rounded-xl bg-white border border-rose-100/50">
+                              <span className="font-bold truncate max-w-[200px]" title={item.filename}>{item.filename}</span>
+                              <span className="text-[9px] text-rose-500 font-bold truncate max-w-[60%]">{item.error}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex gap-3 justify-end pt-4 border-t border-border/30">
+                      <Button 
+                        type="button"
+                        onClick={handleResetMassUpload}
+                        className="border border-border h-11 px-6 font-black text-[10px] uppercase tracking-widest rounded-xl"
+                      >
+                        Upload More
+                      </Button>
+                      <Button 
+                        type="button"
+                        onClick={() => {
+                          setIsMassUploadOpen(false);
+                          handleResetMassUpload();
+                        }}
+                        className="bg-brand-navy hover:bg-brand-navy/90 text-white h-11 px-8 font-black rounded-xl shadow-xl shadow-brand-navy/20"
+                      >
+                        Finish & Close
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
 
           {/* Import CSV dialog */}
           <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
-            <DialogTrigger render={
-              <Button 
-                variant="outline" 
-                className="glass-card border-none h-12 px-6 font-black text-xs uppercase tracking-widest hover:bg-brand-navy/5 hover:text-brand-navy transition-all"
-              >
-                <Upload className="mr-2 h-4 w-4" />
-                IMPORT CSV
-              </Button>
-            } />
             <DialogContent className="max-w-2xl glass-card border-none p-0 overflow-hidden rounded-[2.5rem] shadow-2xl">
               <div className="px-10 py-6 bg-brand-mesh border-b border-border/10 relative overflow-hidden">
                 <div className="absolute inset-0 bg-brand-navy/5" />
@@ -622,10 +1019,6 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
           </Dialog>
           
           <Dialog open={isAddProductOpen} onOpenChange={setIsAddProductOpen}>
-            <DialogTrigger render={<Button className="bg-brand-navy hover:bg-brand-navy/90 text-white h-12 px-8 font-black rounded-xl shadow-xl shadow-brand-navy/20 active:scale-95 transition-all" />}>
-              <Plus className="mr-2 h-5 w-5" />
-              ADD PRODUCT
-            </DialogTrigger>
             <DialogContent className="max-w-5xl glass-card border-none p-0 overflow-hidden rounded-[2.5rem] shadow-2xl">
               <div className="px-10 py-6 bg-brand-mesh border-b border-border/10 relative overflow-hidden">
                 <div className="absolute inset-0 bg-brand-navy/5" />

@@ -71,6 +71,8 @@ export async function createOrderAction(data: {
     city: string;
   };
   paymentMethod: "CASH" | "CARD" | "TRANSFER" | "POS";
+  paymentRef?: string;
+  status?: import("@prisma/client").SaleStatus;
 }) {
   try {
     const result = await prisma.$transaction(async (tx) => {
@@ -97,8 +99,9 @@ export async function createOrderAction(data: {
       const sale = await OrderQueries.createSale({
         orderNumber: `NG-${Date.now().toString(36).toUpperCase()}`,
         totalAmount: data.totalAmount,
-        status: "PENDING",
+        status: data.status || "PENDING",
         paymentMethod: data.paymentMethod,
+        paymentRef: data.paymentRef,
         customer: { connect: { id: customer.id } },
         items: {
           create: data.items.map(item => ({

@@ -29,6 +29,7 @@ import { createOrderAction } from "@/modules/orders/actions/order.actions";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { useFlutterwave, closePaymentModal } from "flutterwave-react-v3";
 
 type CheckoutStep = "IDENTITY" | "LOGISTICS" | "PAYMENT";
 
@@ -40,12 +41,30 @@ export default function CheckoutPage() {
   const [mounted, setMounted] = useState(false);
   const [step, setStep] = useState<CheckoutStep>("IDENTITY");
   const [paymentMethod, setPaymentMethod] = useState<"CARD" | "TRANSFER" | "CASH">("CARD");
+  const [shippingInfo, setShippingInfo] = useState({
+    fullName: "",
+    email: "",
+    phone: "",
+    address: "",
+    city: "",
+    zip: "",
+  });
 
   // Financial Orchestration
   const subtotal = getTotal();
   const taxRate = 0.075; // 7.5% VAT
   const taxAmount = subtotal * taxRate;
   const grandTotal = subtotal + taxAmount;
+
+  useEffect(() => {
+    if (session?.user && !shippingInfo.fullName) {
+      setShippingInfo(prev => ({
+        ...prev,
+        fullName: session?.user?.name || "",
+        email: session?.user?.email || ""
+      }));
+    }
+  }, [session, shippingInfo.fullName]);
 
   useEffect(() => {
     setMounted(true);
@@ -63,6 +82,26 @@ export default function CheckoutPage() {
       </div>
   );
 
+  const fwConfig = {
+    public_key: process.env.NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY || "",
+    tx_ref: `NG-${Date.now().toString(36).toUpperCase()}`,
+    amount: grandTotal,
+    currency: 'NGN',
+    payment_options: 'card,banktransfer,ussd',
+    customer: {
+      email: shippingInfo.email,
+      phone_number: shippingInfo.phone,
+      name: shippingInfo.fullName,
+    },
+    customizations: {
+      title: 'NextGen Fashion',
+      description: 'Payment for luxury collection',
+      logo: 'https://nextgenfashion.vercel.app/logo.png',
+    },
+  };
+
+  const handleFlutterPayment = useFlutterwave(fwConfig);
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (step !== "PAYMENT") {
@@ -73,14 +112,44 @@ export default function CheckoutPage() {
     }
 
     setLoading(true);
-    const formData = new FormData(e.currentTarget);
-    const shippingInfo = {
-      fullName: formData.get("fullName") as string,
-      email: formData.get("email") as string,
-      phone: formData.get("phone") as string,
-      address: formData.get("address") as string,
-      city: formData.get("city") as string,
-    };
+
+    if (paymentMethod === "CARD" || paymentMethod === "TRANSFER") {
+      handleFlutterPayment({
+        callback: async (response) => {
+          if (response.status === "successful") {
+            const result = await createOrderAction({
+              items: items.map(item => ({
+                variantId: item.variantId,
+                quantity: item.quantity,
+                price: item.price,
+              })),
+              totalAmount: grandTotal,
+              shippingInfo,
+              paymentMethod,
+              paymentRef: response.transaction_id ? response.transaction_id.toString() : response.tx_ref,
+              status: "COMPLETED"
+            });
+
+            if (result.success) {
+              toast.success("Payment verified. Order received successfully.");
+              clearCart();
+              router.push("/checkout/success");
+            } else {
+              toast.error(result.error || "Payment received but order creation failed.");
+            }
+          } else {
+            toast.error("Payment was not successful.");
+          }
+          closePaymentModal();
+          setLoading(false);
+        },
+        onClose: () => {
+          setLoading(false);
+          toast.error("Payment cancelled. You can try again.");
+        },
+      });
+      return;
+    }
 
     const result = await createOrderAction({
       items: items.map(item => ({
@@ -91,6 +160,7 @@ export default function CheckoutPage() {
       totalAmount: grandTotal,
       shippingInfo,
       paymentMethod,
+      status: "PENDING"
     });
 
     if (result.success) {
@@ -173,7 +243,8 @@ export default function CheckoutPage() {
                             <Input 
                                 id="fullName" 
                                 name="fullName" 
-                                defaultValue={session?.user?.name || ""}
+                                value={shippingInfo.fullName}
+                                onChange={(e) => setShippingInfo({ ...shippingInfo, fullName: e.target.value })}
                                 placeholder="ENTER FULL NAME" 
                                 required 
                                 className="h-20 rounded-3xl glass-card border-none bg-zinc-50/50 focus-visible:ring-brand-navy font-bold text-lg px-8" 
@@ -185,7 +256,8 @@ export default function CheckoutPage() {
                                 id="email" 
                                 name="email" 
                                 type="email" 
-                                defaultValue={session?.user?.email || ""}
+                                value={shippingInfo.email}
+                                onChange={(e) => setShippingInfo({ ...shippingInfo, email: e.target.value })}
                                 readOnly
                                 placeholder="NAME@DOMAIN.COM" 
                                 required 
@@ -194,7 +266,7 @@ export default function CheckoutPage() {
                         </div>
                         <div className="space-y-3">
                             <Label htmlFor="phone" className="text-[10px] font-black uppercase tracking-[0.2em] ml-2 opacity-60">Secure Communications (Phone)</Label>
-                            <Input id="phone" name="phone" type="tel" placeholder="+234 ..." required className="h-20 rounded-3xl glass-card border-none bg-zinc-50/50 focus-visible:ring-brand-navy font-bold text-lg px-8" />
+                            <Input id="phone" name="phone" type="tel" value={shippingInfo.phone} onChange={(e) => setShippingInfo({ ...shippingInfo, phone: e.target.value })} placeholder="+234 ..." required className="h-20 rounded-3xl glass-card border-none bg-zinc-50/50 focus-visible:ring-brand-navy font-bold text-lg px-8" />
                         </div>
                     </div>
 
@@ -221,15 +293,15 @@ export default function CheckoutPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div className="space-y-3 md:col-span-2">
                             <Label htmlFor="address" className="text-[10px] font-black uppercase tracking-[0.2em] ml-2 opacity-60">Fulfillment Address (Physical)</Label>
-                            <Input id="address" name="address" placeholder="DESTINATION STREET & HOUSE" required className="h-20 rounded-3xl glass-card border-none bg-zinc-50/50 focus-visible:ring-brand-navy font-bold text-lg px-8" />
+                            <Input id="address" name="address" value={shippingInfo.address} onChange={(e) => setShippingInfo({ ...shippingInfo, address: e.target.value })} placeholder="DESTINATION STREET & HOUSE" required className="h-20 rounded-3xl glass-card border-none bg-zinc-50/50 focus-visible:ring-brand-navy font-bold text-lg px-8" />
                         </div>
                         <div className="space-y-3">
                             <Label htmlFor="city" className="text-[10px] font-black uppercase tracking-[0.2em] ml-2 opacity-60">Logistics Hub (City)</Label>
-                            <Input id="city" name="city" placeholder="LAGOS, ABUJA, ETC." required className="h-20 rounded-3xl glass-card border-none bg-zinc-50/50 focus-visible:ring-brand-navy font-bold text-lg px-8" />
+                            <Input id="city" name="city" value={shippingInfo.city} onChange={(e) => setShippingInfo({ ...shippingInfo, city: e.target.value })} placeholder="LAGOS, ABUJA, ETC." required className="h-20 rounded-3xl glass-card border-none bg-zinc-50/50 focus-visible:ring-brand-navy font-bold text-lg px-8" />
                         </div>
                         <div className="space-y-3">
                             <Label htmlFor="zip" className="text-[10px] font-black uppercase tracking-[0.2em] ml-2 opacity-60">Postcode (Optional)</Label>
-                            <Input id="zip" name="zip" placeholder="000000" className="h-20 rounded-3xl glass-card border-none bg-zinc-50/50 focus-visible:ring-brand-navy font-bold text-lg px-8" />
+                            <Input id="zip" name="zip" value={shippingInfo.zip} onChange={(e) => setShippingInfo({ ...shippingInfo, zip: e.target.value })} placeholder="000000" className="h-20 rounded-3xl glass-card border-none bg-zinc-50/50 focus-visible:ring-brand-navy font-bold text-lg px-8" />
                         </div>
                     </div>
 
