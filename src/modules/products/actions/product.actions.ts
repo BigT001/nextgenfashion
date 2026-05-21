@@ -152,6 +152,17 @@ export async function getProductBySkuAction(sku: string) {
   }
 }
 
+export async function getProductByIdAction(id: string) {
+  try {
+    const product = await ProductQueries.findById(id);
+    if (!product) return { success: false, error: "Product not found" };
+    return { success: true, data: JSON.parse(JSON.stringify(product)) };
+  } catch (error: any) {
+    console.error("Fetch by ID error:", error);
+    return { success: false, error: error.message };
+  }
+}
+
 export async function toggleSuspendProductAction(productId: string) {
   try {
     const { prisma } = await import("@/services/prisma.service");

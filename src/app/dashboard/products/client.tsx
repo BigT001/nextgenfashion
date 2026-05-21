@@ -44,7 +44,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ProductForm } from "@/modules/products/components/product-form";
 import { getInventoryDashboardAction } from "@/modules/inventory/actions/inventory.actions";
-import { deleteProductAction, importProductsAction, uploadImageAction, syncPosProductsAction } from "@/modules/products/actions/product.actions";
+import { deleteProductAction, importProductsAction, uploadImageAction, syncPosProductsAction, getProductByIdAction } from "@/modules/products/actions/product.actions";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -54,6 +54,35 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
   const [data, setData] = useState<any>(initialData);
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
+  const [isLoadingProduct, setIsLoadingProduct] = useState(false);
+
+  const handleEditProduct = async (productId: string) => {
+    if (isLoadingProduct) return;
+    setIsLoadingProduct(true);
+    
+    const promise = getProductByIdAction(productId);
+    
+    toast.promise(promise, {
+      loading: "Fetching complete catalog specifications...",
+      success: (res) => {
+        if (res.success && res.data) {
+          setEditingProduct(res.data);
+          return "Catalog loaded!";
+        } else {
+          throw new Error(res.error || "Could not fetch details");
+        }
+      },
+      error: (err) => `Failed to load details: ${err.message}`
+    });
+
+    try {
+      await promise;
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoadingProduct(false);
+    }
+  };
 
   // Bulk CSV Import States
   const [isImportOpen, setIsImportOpen] = useState(false);
@@ -381,6 +410,56 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
         <Badge variant="secondary" className="font-black text-[10px] rounded-lg px-2">
             {row.original.variants?.length || 1} VARS
         </Badge>
+      ),
+    },
+    {
+      id: "actions",
+      header: () => <div className="text-right pr-4">CONTROL</div>,
+      cell: ({ row }) => (
+        <div className="flex items-center justify-end gap-2 pr-2">
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 px-3.5 font-black text-[10px] uppercase tracking-widest bg-brand-navy/5 text-brand-navy hover:bg-brand-navy hover:text-white border-none rounded-xl active:scale-95 transition-all flex items-center gap-1.5"
+            onClick={() => handleEditProduct(row.original.id)}
+            disabled={isLoadingProduct}
+          >
+            <Edit className="h-3.5 w-3.5" /> Edit
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger className="h-8 w-8 inline-flex items-center justify-center hover:bg-brand-navy/5 hover:text-brand-navy rounded-xl transition-colors text-muted-foreground focus:outline-none">
+              <MoreHorizontal className="h-4 w-4" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52 glass-card border-none shadow-2xl p-2 rounded-2xl">
+              <DropdownMenuGroup>
+                <DropdownMenuItem 
+                  className="rounded-xl h-10 font-bold gap-3 focus:bg-brand-navy/5 focus:text-brand-navy cursor-pointer"
+                  onClick={() => handleEditProduct(row.original.id)}
+                  disabled={isLoadingProduct}
+                >
+                  <Edit className="size-4" /> Modify Catalog
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className="bg-border/50" />
+                <DropdownMenuItem 
+                  className="rounded-xl h-10 font-bold gap-3 focus:bg-rose-500/10 focus:text-rose-600 text-rose-600 cursor-pointer"
+                  onClick={async () => {
+                    if (confirm("Are you sure you want to delete this product?")) {
+                      const res = (await deleteProductAction(row.original.id)) as any;
+                      if (res.success) {
+                        toast.success(res.message || "Product deleted successfully");
+                        loadData();
+                      } else {
+                        toast.error(res.error || "Failed to delete product");
+                      }
+                    }
+                  }}
+                >
+                  <Trash2 className="size-4" /> Delete Product
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       ),
     }
   ];
