@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { ShoppingCart, Share2, Minus, Plus, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useCartStore } from "@/modules/cart/store/cart.store";
+import { useCartStore, type CartItem } from "@/modules/cart/store/cart.store";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -74,7 +74,7 @@ export function ProductActions({ product }: ProductActionsProps) {
       return;
     }
 
-    addItem({
+    const cartItem: CartItem = {
       id: product.id,
       variantId: variant?.id || product.id,
       name: product.name,
@@ -83,7 +83,9 @@ export function ProductActions({ product }: ProductActionsProps) {
       image: product.images?.[0],
       size: selectedSize || undefined,
       availableStock: stockAvailable,
-    });
+    };
+
+    addItem(cartItem);
 
     toast.success(`${product.name} added to your bag.`);
   };
