@@ -46,10 +46,15 @@ import {
   DropdownMenuTrigger,
   DropdownMenuGroup,
 } from "@/components/ui/dropdown-menu";
-import { ProductForm } from "@/modules/products/components/product-form";
+import dynamic from "next/dynamic";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+
+const ProductForm = dynamic(
+  () => import("@/modules/products/components/product-form").then((mod) => mod.ProductForm),
+  { ssr: false, loading: () => <LoadingSpinner size="sm" /> }
+);
 import { getInventoryDashboardAction } from "@/modules/inventory/actions/inventory.actions";
 import { deleteProductAction, importProductsAction, uploadImageAction, syncPosProductsAction, getProductByIdAction, matchImageFilenamesAction, linkProductImageAction } from "@/modules/products/actions/product.actions";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { ColumnDef } from "@tanstack/react-table";
@@ -475,7 +480,7 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
       accessorKey: "images",
       header: "IMAGE",
       cell: ({ row }) => (
-        <div className="size-14 rounded-2xl bg-muted/30 flex items-center justify-center shrink-0 border border-border/20 overflow-hidden shadow-sm">
+        <div className="size-12 md:size-14 rounded-2xl bg-muted/30 flex items-center justify-center shrink-0 border border-border/20 overflow-hidden shadow-sm">
             {row.original.images?.[0] ? (
                 <Image 
                     src={row.original.images[0]} 
@@ -485,7 +490,7 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
                     className="object-cover w-full h-full"
                 />
             ) : (
-                <ImageIcon className="size-6 text-muted-foreground/30" />
+                <ImageIcon className="size-5 md:size-6 text-muted-foreground/30" />
             )}
         </div>
       ),
@@ -494,87 +499,65 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
       accessorKey: "name",
       header: "PRODUCT",
       cell: ({ row }) => (
-        <div className="flex flex-col gap-0.5 min-w-[150px]">
-            <span className="font-black text-sm tracking-tight group-hover:text-brand-navy transition-colors">{row.original.name}</span>
-            <span className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">{row.original.category}</span>
+        <div className="flex flex-col gap-0.5 min-w-[120px]">
+            <span className="font-black text-sm tracking-tight group-hover:text-brand-navy transition-colors line-clamp-1">{row.original.name}</span>
+            <span className="text-[10px] text-muted-foreground font-black uppercase tracking-widest line-clamp-1">{row.original.category}</span>
         </div>
       ),
     },
+
     {
-      accessorKey: "sku",
-      header: "SKU",
+      accessorKey: "stock",
+      header: "STOCK",
       cell: ({ row }) => (
-        <Badge variant="outline" className="font-black text-[10px] uppercase tracking-widest border-border/50 bg-muted/10 px-3 py-1">
-            {row.original.sku}
-        </Badge>
-      ),
-    },
-    {
-      accessorKey: "price",
-      header: "WHOLESALE",
-      cell: ({ row }) => (
-        <div className="font-black text-brand-navy tracking-tighter text-sm">
-            ₦{Number(row.original.price).toLocaleString()}
+        <div className={`font-black text-sm tracking-tighter ${row.original.status === "Out of Stock" ? "text-rose-600" : row.original.status === "Low Stock" ? "text-amber-500" : "text-emerald-600"}`}>
+            {row.original.stock}
         </div>
-      ),
-    },
-    {
-      accessorKey: "retailPrice",
-      header: "RETAIL",
-      cell: ({ row }) => (
-        <div className="font-black text-brand-navy tracking-tighter text-sm">
-            ₦{Number(row.original.retailPrice || 0).toLocaleString()}
-        </div>
-      ),
-    },
-    {
-      accessorKey: "costPrice",
-      header: "COST",
-      cell: ({ row }) => (
-        <div className="font-black text-muted-foreground/40 tracking-tighter text-sm italic">
-            ₦{Number(row.original.costPrice || 0).toLocaleString()}
-        </div>
-      ),
-    },
-    {
-      accessorKey: "variants",
-      header: "VARS",
-      cell: ({ row }) => (
-        <Badge variant="secondary" className="font-black text-[10px] rounded-lg px-2">
-            {row.original.variants?.length || 1} VARS
-        </Badge>
       ),
     },
     {
       id: "actions",
-      header: () => <div className="text-right pr-4">CONTROL</div>,
+      header: () => <div className="text-right pr-2 md:pr-4">CONTROL</div>,
       cell: ({ row }) => (
-        <div className="flex items-center justify-end gap-2 pr-2">
+        <div className="flex items-center justify-end gap-1 pr-1 md:pr-2">
+          {/* Mobile: compact icon-only edit button */}
           <Button
             size="sm"
             variant="outline"
-            className="h-8 px-3.5 font-black text-[10px] uppercase tracking-widest bg-brand-navy/5 text-brand-navy hover:bg-brand-navy hover:text-white border-none rounded-xl active:scale-95 transition-all flex items-center gap-1.5"
+            className="h-8 w-8 md:hidden bg-brand-navy/5 text-brand-navy hover:bg-brand-navy hover:text-white border-none rounded-xl active:scale-95 transition-all flex items-center justify-center p-0"
             onClick={() => handleEditProduct(row.original.id)}
             disabled={isLoadingProduct}
           >
-            <Edit className="h-3.5 w-3.5" /> Edit
+            <Edit className="h-3.5 w-3.5" />
+          </Button>
+
+          {/* Desktop: labeled edit button + dropdown */}
+          <Button
+            size="sm"
+            variant="outline"
+            className="hidden md:flex h-8 px-3.5 font-black text-[10px] uppercase tracking-widest bg-brand-navy/5 text-brand-navy hover:bg-brand-navy hover:text-white border-none rounded-xl active:scale-95 transition-all items-center gap-1.5"
+            onClick={() => handleEditProduct(row.original.id)}
+            disabled={isLoadingProduct}
+          >
+            <Edit className="h-3.5 w-3.5" />
+            Edit
           </Button>
           <DropdownMenu>
-            <DropdownMenuTrigger className="h-8 w-8 inline-flex items-center justify-center hover:bg-brand-navy/5 hover:text-brand-navy rounded-xl transition-colors text-muted-foreground focus:outline-none">
+            <DropdownMenuTrigger className="hidden md:inline-flex h-8 w-8 items-center justify-center hover:bg-brand-navy/5 hover:text-brand-navy rounded-xl transition-colors text-muted-foreground focus:outline-none">
               <MoreHorizontal className="h-4 w-4" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-52 glass-card border-none shadow-2xl p-2 rounded-2xl">
               <DropdownMenuGroup>
-                <DropdownMenuItem 
-                  className="rounded-xl h-10 font-bold gap-3 focus:bg-brand-navy/5 focus:text-brand-navy cursor-pointer"
+                <DropdownMenuItem
+                  className="rounded-xl h-10 font-bold gap-3 focus:bg-brand-navy/5 focus:text-brand-navy cursor-pointer text-xs"
                   onClick={() => handleEditProduct(row.original.id)}
                   disabled={isLoadingProduct}
                 >
                   <Edit className="size-4" /> Modify Catalog
                 </DropdownMenuItem>
                 <DropdownMenuSeparator className="bg-border/50" />
-                <DropdownMenuItem 
-                  className="rounded-xl h-10 font-bold gap-3 focus:bg-rose-500/10 focus:text-rose-600 text-rose-600 cursor-pointer"
+                <DropdownMenuItem
+                  className="rounded-xl h-10 font-bold gap-3 focus:bg-rose-500/10 focus:text-rose-600 text-rose-600 cursor-pointer text-xs"
                   onClick={async () => {
                     if (confirm("Are you sure you want to delete this product?")) {
                       const res = (await deleteProductAction(row.original.id)) as any;
@@ -602,29 +585,42 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
   return (
     <div className="space-y-10 animate-slow-fade">
       {/* Header Section */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div className="space-y-1">
-          <h2 className="text-4xl font-black tracking-tight text-gradient">Product Catalog</h2>
+      <div className="space-y-6">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="space-y-1">
+            <h2 className="text-4xl font-black tracking-tight text-gradient">Product Catalog</h2>
+          </div>
+          <Button
+            onClick={() => setIsAddProductOpen(true)}
+            className="bg-brand-navy hover:bg-brand-navy/90 text-white h-12 min-w-[11rem] px-6 font-black text-sm uppercase tracking-[0.18em] rounded-[1rem] shadow-xl shadow-brand-navy/15 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer w-full md:w-auto"
+          >
+            <Plus className="h-4 w-4" />
+            <span className="hidden sm:inline">ADD PRODUCT</span>
+            <span className="sm:hidden">ADD</span>
+          </Button>
         </div>
-        <div className="flex items-center gap-3">
+
+        <div className="grid w-full grid-cols-2 gap-3 max-w-2xl">
           <Button 
             variant="outline" 
             onClick={handleSyncPos}
             disabled={isSyncingPos}
-            className="group glass-card border-none h-10 px-4 font-black text-xs uppercase tracking-wider text-black bg-amber-400 hover:bg-brand-navy hover:text-white transition-all flex items-center shadow-md shadow-brand-navy/10 cursor-pointer"
+            className="group glass-card border-none h-12 px-5 font-black text-sm uppercase tracking-[0.18em] text-black bg-amber-400 hover:bg-brand-navy hover:text-white transition-all flex items-center justify-center shadow-md shadow-brand-navy/10 cursor-pointer w-full"
           >
             {isSyncingPos ? (
-              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin text-black group-hover:text-white" />
+              <Loader2 className="mr-2 h-4 w-4 animate-spin text-black group-hover:text-white" />
             ) : (
-              <Zap className="mr-1.5 h-3.5 w-3.5 text-black fill-black group-hover:text-white group-hover:fill-white transition-colors" />
+              <Zap className="mr-2 h-4 w-4 text-black fill-black group-hover:text-white group-hover:fill-white transition-colors" />
             )}
-            {isSyncingPos ? "SYNCING..." : "SYNC FROM POS"}
+            <span className="hidden sm:inline">{isSyncingPos ? "SYNCING..." : "SYNC FROM POS"}</span>
+            <span className="sm:hidden">{isSyncingPos ? "..." : "SYNC"}</span>
           </Button>
 
           <DropdownMenu>
-            <DropdownMenuTrigger className="glass-card border border-border/35 bg-white hover:bg-brand-navy/5 hover:text-brand-navy text-muted-foreground h-10 px-4 font-black text-xs uppercase tracking-wider rounded-xl flex items-center gap-1.5 transition-all outline-none cursor-pointer">
-              <span>More Actions</span>
-              <ChevronDown className="h-3.5 w-3.5" />
+            <DropdownMenuTrigger className="glass-card border border-border/35 bg-white hover:bg-brand-navy/5 hover:text-brand-navy text-muted-foreground h-12 px-5 font-black text-sm uppercase tracking-[0.18em] rounded-[1rem] flex items-center justify-center gap-2 transition-all outline-none cursor-pointer w-full">
+              <span className="hidden sm:inline">More Actions</span>
+              <span className="sm:hidden">More</span>
+              <ChevronDown className="h-4 w-4" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-52 glass-card border-none shadow-2xl p-2 rounded-2xl">
               <DropdownMenuGroup>
@@ -650,14 +646,7 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
               </DropdownMenuGroup>
             </DropdownMenuContent>
           </DropdownMenu>
-
-          <Button 
-            onClick={() => setIsAddProductOpen(true)}
-            className="bg-brand-navy hover:bg-brand-navy/90 text-white h-10 px-5 font-black text-xs uppercase tracking-wider rounded-xl shadow-xl shadow-brand-navy/15 active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer"
-          >
-            <Plus className="h-4 w-4" />
-            ADD PRODUCT
-          </Button>
+        </div>
 
           {/* Mass Image Upload Dialog */}
           <Dialog open={isMassUploadOpen} onOpenChange={(open) => {
@@ -710,22 +699,22 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
                     ) : (
                       <>
                         {/* Summary Badges */}
-                        <div className="flex gap-4 p-4 bg-zinc-50 rounded-2xl border border-border/40 justify-around">
-                          <div className="text-center">
+                        <div className="flex flex-col sm:flex-row gap-4 p-4 bg-zinc-50 rounded-2xl border border-border/40">
+                          <div className="text-center flex-1">
                             <span className="block text-2xl font-black text-brand-navy">
                               {(matchResults?.matched.length || 0) + (matchResults?.unmatched.length || 0)}
                             </span>
                             <span className="text-[9px] text-muted-foreground font-black uppercase tracking-widest">Total Selected</span>
                           </div>
-                          <div className="border-r border-zinc-200 my-1" />
-                          <div className="text-center">
+                          <div className="border-r border-zinc-200 hidden sm:block my-1" />
+                          <div className="text-center flex-1">
                             <span className="block text-2xl font-black text-emerald-600">
                               {matchResults?.matched.length || 0}
                             </span>
                             <span className="text-[9px] text-emerald-600 font-black uppercase tracking-widest">Matched Products</span>
                           </div>
-                          <div className="border-r border-zinc-200 my-1" />
-                          <div className="text-center">
+                          <div className="border-r border-zinc-200 hidden sm:block my-1" />
+                          <div className="text-center flex-1">
                             <span className="block text-2xl font-black text-amber-500">
                               {matchResults?.unmatched.length || 0}
                             </span>
@@ -740,7 +729,7 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
                             {uploadStatusList.map((item, index) => {
                               const match = matchResults?.matched.find(m => m.filename === item.filename);
                               return (
-                                <div key={index} className="py-2.5 px-3 flex items-center justify-between text-xs hover:bg-zinc-50/50 rounded-xl transition-colors">
+                                <div key={index} className="py-2.5 px-3 flex flex-col sm:flex-row items-start sm:items-center justify-between text-xs hover:bg-zinc-50/50 rounded-xl transition-colors gap-2">
                                   <div className="flex items-center gap-2.5 min-w-0">
                                     <ImageIcon className="size-4 shrink-0 text-muted-foreground" />
                                     <span className="font-bold truncate max-w-[200px]" title={item.filename}>{item.filename}</span>
@@ -1018,7 +1007,7 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
             </DialogContent>
           </Dialog>
           
-          <Dialog open={isAddProductOpen} onOpenChange={setIsAddProductOpen}>
+          <Dialog open={isAddProductOpen} onOpenChange={setIsAddProductOpen} disablePointerDismissal>
             <DialogContent className="max-w-5xl glass-card border-none p-0 overflow-hidden rounded-[2.5rem] shadow-2xl">
               <div className="px-10 py-6 bg-brand-mesh border-b border-border/10 relative overflow-hidden">
                 <div className="absolute inset-0 bg-brand-navy/5" />
@@ -1035,7 +1024,7 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
             </DialogContent>
           </Dialog>
 
-          <Dialog open={!!editingProduct} onOpenChange={(open) => !open && setEditingProduct(null)}>
+          <Dialog open={!!editingProduct} onOpenChange={(open) => !open && setEditingProduct(null)} disablePointerDismissal>
             <DialogContent className="max-w-5xl glass-card border-none p-0 overflow-hidden rounded-[2.5rem] shadow-2xl">
               <div className="px-10 py-6 bg-brand-mesh border-b border-border/10 relative overflow-hidden">
                 <div className="absolute inset-0 bg-brand-navy/5" />
@@ -1054,18 +1043,17 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
               </div>
             </DialogContent>
           </Dialog>
-        </div>
       </div>
 
-      {/* Catalog KPIs */}
-      <div className="flex flex-col sm:flex-row gap-4 max-w-xl">
+      {/* Catalog KPIs - Responsive Grid */}
+      <div className="grid grid-cols-2 gap-4 max-w-full">
         <MetricCard
           title="Total Products"
           value={data?.kpis?.totalProducts || 0}
           icon={PackagePlus}
           variant="slate"
           compact={true}
-          className="flex-1"
+          className="w-full"
         />
         <MetricCard
           title="Global Valuation"
@@ -1073,7 +1061,7 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
           icon={Zap}
           variant="pink"
           compact={true}
-          className="flex-1"
+          className="w-full"
         />
       </div>
 
@@ -1081,8 +1069,81 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
       <div className="overflow-hidden">
         <DataTable 
           columns={columns} 
-          data={data?.products || []} 
+          data={data?.products || []}
           searchKey="name"
+          renderSubComponent={({ row }) => (
+            <div className="px-5 py-6 bg-zinc-50/60 space-y-5 border-t border-border/20">
+
+              {/* SKU Badge */}
+              <div className="flex items-center gap-2">
+                <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">SKU</span>
+                <Badge variant="outline" className="font-black text-[10px] uppercase tracking-widest border-brand-navy/20 bg-brand-navy/5 text-brand-navy px-3 py-1">
+                  {row.original.sku || "—"}
+                </Badge>
+              </div>
+
+              {/* Pricing + Stock Grid */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-white rounded-2xl p-4 border border-border/30 space-y-0.5">
+                  <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Wholesale</p>
+                  <p className="text-base font-black text-brand-navy">₦{Number(row.original.price).toLocaleString()}</p>
+                </div>
+                <div className="bg-white rounded-2xl p-4 border border-border/30 space-y-0.5">
+                  <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Retail</p>
+                  <p className="text-base font-black text-brand-navy">₦{Number(row.original.retailPrice || 0).toLocaleString()}</p>
+                </div>
+                <div className="bg-white rounded-2xl p-4 border border-border/30 space-y-0.5">
+                  <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Cost</p>
+                  <p className="text-base font-black text-muted-foreground/50">₦{Number(row.original.costPrice || 0).toLocaleString()}</p>
+                </div>
+                <div className="bg-white rounded-2xl p-4 border border-border/30 space-y-0.5">
+                  <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Stock</p>
+                  <p className={`text-base font-black ${
+                    row.original.status === "Out of Stock" ? "text-rose-600"
+                    : row.original.status === "Low Stock" ? "text-amber-500"
+                    : "text-emerald-600"
+                  }`}>
+                    {row.original.stock}{row.original.status === "Out of Stock" ? " · OOS" : row.original.status === "Low Stock" ? " · LOW" : ""}
+                  </p>
+                </div>
+              </div>
+
+              {/* Description */}
+              <div className="bg-white rounded-2xl p-4 border border-border/30">
+                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-2">Description</p>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {row.original.description || "No description available."}
+                </p>
+              </div>
+
+              {/* Actions — always side by side */}
+              <div className="flex gap-3 pt-1">
+                <Button
+                  className="flex-1 h-12 font-black text-[11px] uppercase tracking-widest bg-brand-navy text-white hover:bg-brand-navy/90 rounded-2xl shadow-lg shadow-brand-navy/20 active:scale-95 transition-all flex items-center justify-center gap-2"
+                  onClick={() => handleEditProduct(row.original.id)}
+                  disabled={isLoadingProduct}
+                >
+                  <Edit className="h-4 w-4" /> Edit
+                </Button>
+                <Button
+                  className="flex-1 h-12 font-black text-[11px] uppercase tracking-widest bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white border border-rose-200 rounded-2xl active:scale-95 transition-all flex items-center justify-center gap-2"
+                  onClick={async () => {
+                    if (confirm("Are you sure you want to delete this product?")) {
+                      const res = (await deleteProductAction(row.original.id)) as any;
+                      if (res.success) {
+                        toast.success(res.message || "Product deleted successfully");
+                        loadData();
+                      } else {
+                        toast.error(res.error || "Failed to delete product");
+                      }
+                    }
+                  }}
+                >
+                  <Trash2 className="h-4 w-4" /> Delete
+                </Button>
+              </div>
+            </div>
+          )}
         />
       </div>
     </div>

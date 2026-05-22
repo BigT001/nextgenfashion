@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useId } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, Resolver } from "react-hook-form";
 import * as z from "zod";
@@ -92,7 +92,7 @@ export function ProductForm({
   const isEditing = !!initialData;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
-  const [images, setImages] = useState<{ url: string; publicId: string }[]>([]);
+  const [images, setImages] = useState<{ id: string; url: string; publicId: string; status?: "idle" | "uploading" | "uploaded" | "failed" }[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [activeTab, setActiveTab] = useState("product");
   const [isScanMode, setIsScanMode] = useState(false);
@@ -100,13 +100,19 @@ export function ProductForm({
 
   useEffect(() => {
     async function fetchData() {
-      const catResult = await getCategoriesAction();
-      if (catResult.success) {
-        setCategories(catResult.data || []);
-      }
-      const whResult = await getWarehousesAction();
-      if (whResult.success) {
-        setWarehouses(whResult.data || []);
+      try {
+        const { getCachedCategories, getCachedWarehouses } = await import("@/lib/client-cache");
+        const catResult = await getCachedCategories(getCategoriesAction);
+        if (catResult.success) setCategories(catResult.data || []);
+
+        const whResult = await getCachedWarehouses(getWarehousesAction);
+        if (whResult.success) setWarehouses(whResult.data || []);
+      } catch (e) {
+        // fallback
+        const catResult = await getCategoriesAction();
+        if (catResult.success) setCategories(catResult.data || []);
+        const whResult = await getWarehousesAction();
+        if (whResult.success) setWarehouses(whResult.data || []);
       }
     }
     fetchData();
@@ -117,10 +123,11 @@ export function ProductForm({
   const [newWhName, setNewWhName] = useState("");
   const [newWhLoc, setNewWhLoc] = useState("");
   const [isAddingWarehouse, setIsAddingWarehouse] = useState(false);
+  const fileInputId = useId();
 
   useEffect(() => {
     if (initialData?.images) {
-        setImages(initialData.images.map((url: string) => ({ url, publicId: "" })));
+        setImages(initialData.images.map((url: string) => ({ id: `init-${Math.random().toString(36).slice(2,9)}`, url, publicId: "", status: "uploaded" })));
     }
   }, [initialData]);
 
@@ -226,7 +233,7 @@ export function ProductForm({
             return false;
         }
     }
-    if (tab === "media" && images.length === 0) {
+    if (tab === "media" && !isEditing && images.length === 0) {
         toast.error("At least one product image is required");
         return false;
     }
@@ -245,6 +252,7 @@ export function ProductForm({
             if (!isValid) return;
         }
     }
+    // Explicitly prevent any form submission during tab navigation
     setActiveTab(value);
   };
 
@@ -288,22 +296,38 @@ export function ProductForm({
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setIsUploading(true);
+    // Non-blocking upload: create local preview and start background upload
+    const id = `img-${Date.now()}-${Math.random().toString(36).slice(2,6)}`;
+    const previewUrl = URL.createObjectURL(file);
+    setImages((prev) => [...prev, { id, url: previewUrl, publicId: "", status: "uploading" }]);
+
     try {
       const compressedBlob = await compressImage(file);
       const formData = new FormData();
       formData.append("file", compressedBlob, "compressed_image.jpg");
-      const result = await uploadImageAction(formData);
-      if (result.success && (result as any).url) {
-        setImages((prev) => [...prev, { url: (result as any).url, publicId: (result as any).publicId }]);
-        toast.success("Optimized image uploaded");
-      } else {
-        toast.error(result.error || "Upload failed");
-      }
+
+      // Start upload but keep UI interactive
+      (async () => {
+        try {
+          const result = await uploadImageAction(formData);
+          if (result.success && (result as any).url) {
+            setImages((prev) => prev.map(img => img.id === id ? { ...img, url: (result as any).url, publicId: (result as any).publicId, status: "uploaded" } : img));
+            toast.success("Image uploaded");
+          } else {
+            setImages((prev) => prev.map(img => img.id === id ? { ...img, status: "failed" } : img));
+            toast.error(result.error || "Upload failed");
+          }
+        } catch (err) {
+          setImages((prev) => prev.map(img => img.id === id ? { ...img, status: "failed" } : img));
+          toast.error("Upload error");
+        } finally {
+          // revoke preview URL after some time
+          setTimeout(() => URL.revokeObjectURL(previewUrl), 2000);
+        }
+      })();
     } catch (error) {
-      toast.error("Upload error");
-    } finally {
-      setIsUploading(false);
+      setImages((prev) => prev.map(img => img.id === id ? { ...img, status: "failed" } : img));
+      toast.error("Compression error");
     }
   };
 
@@ -343,7 +367,7 @@ export function ProductForm({
   async function onSubmit(values: ProductFormValues) {
     setIsSubmitting(true);
     try {
-      if (images.length === 0) {
+      if (!isEditing && images.length === 0) {
         toast.error("At least one product image is required to commit to catalog");
         setIsSubmitting(false);
         return;
@@ -364,6 +388,8 @@ export function ProductForm({
         images,
       };
 
+      console.log(`[ProductForm] Submitting ${isEditing ? "UPDATE" : "CREATE"} with ${images.length} image(s):`, images.map(i => i.url));
+
       const result = isEditing 
         ? await updateProductAction(initialData.id, payload)
         : await createProductAction(payload);
@@ -383,7 +409,14 @@ export function ProductForm({
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={(e) => {
+        // Only allow form submission if explicitly triggered by save button
+        if (e.nativeEvent?.submitter?.getAttribute('data-action') !== 'save') {
+          e.preventDefault();
+          return;
+        }
+        form.handleSubmit(onSubmit)(e);
+      }} className="space-y-6">
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
           <TabsList className="flex w-full bg-brand-navy/[0.04] p-1.5 rounded-2xl h-12 border border-brand-navy/10 mb-6 overflow-x-auto scrollbar-hide">
             <TabsTrigger value="product" className="flex-1 rounded-xl font-black text-[11px] uppercase tracking-widest gap-2 data-[state=active]:bg-brand-navy data-[state=active]:text-white transition-all shadow-sm">
@@ -409,76 +442,59 @@ export function ProductForm({
                 )} />
 
                 <div className="space-y-2">
-                    <FormLabel className="text-[11px] font-black uppercase tracking-widest text-brand-navy">Category Architecture</FormLabel>
-                    <div className="flex gap-3">
-                        <FormField control={form.control} name="categoryId" render={({ field }) => (
-                          <FormItem className="flex-1">
-                            <Select onValueChange={field.onChange} value={field.value}>
-                              <FormControl>
-                                <SelectTrigger className="h-10 bg-white border-2 border-brand-navy/5 rounded-xl font-bold text-brand-navy">
-                                  <SelectValue placeholder="Select Category">
-                                    {categories.find(c => c.id === field.value)?.name}
-                                  </SelectValue>
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent className="glass-card border-none rounded-2xl p-1 shadow-2xl">
-                                {categories.length === 0 ? (
-                                    <div className="p-4 text-center text-xs font-bold text-brand-navy/30">Loading Intelligence...</div>
-                                ) : (
-                                    categories.map((cat) => (
-                                      <SelectItem key={cat.id} value={cat.id} className="rounded-xl h-11 font-bold focus:bg-brand-navy/5">{cat.name}</SelectItem>
-                                    ))
-                                )}
-                              </SelectContent>
-                            </Select>
-                          </FormItem>
-                        )} />
-                        <Dialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen}>
-                            <DialogTrigger render={<Button type="button" variant="outline" className="size-10 shrink-0 rounded-xl border-2 border-brand-navy/10 hover:bg-brand-navy hover:text-white" />}>
-                                <Plus className="size-5" />
-                            </DialogTrigger>
-                            <DialogContent className="max-w-xs glass-card border-none p-10 rounded-[3rem] shadow-2xl">
-                                <h4 className="text-sm font-black uppercase tracking-widest mb-6 text-brand-navy">New Category</h4>
-                                <Input placeholder="Category Name" value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} className="h-12 bg-muted/30 border-none rounded-xl mb-6 font-bold" />
-                                <Button onClick={handleAddCategory} disabled={isAddingCategory} className="w-full bg-brand-navy text-white h-12 font-black text-[10px] uppercase tracking-widest rounded-xl shadow-xl">{isAddingCategory ? "Syncing..." : "Confirm"}</Button>
-                            </DialogContent>
-                        </Dialog>
-                    </div>
+                  <FormLabel className="text-[11px] font-black uppercase tracking-widest text-brand-navy">Category Architecture</FormLabel>
+                  <div className="flex flex-col gap-4 lg:flex-row">
+                    <FormField control={form.control} name="categoryId" render={({ field }) => (
+                      <FormItem className="flex-1 space-y-2">
+                        <FormLabel className="text-[11px] font-black uppercase tracking-widest text-brand-navy">Product Category</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="h-10 bg-white border-2 border-brand-navy/5 rounded-xl font-bold text-brand-navy">
+                              <SelectValue placeholder="Select Category">
+                                {categories.find(c => c.id === field.value)?.name}
+                              </SelectValue>
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {categories.map((category) => (
+                              <SelectItem key={category.id} value={category.id}>
+                                {category.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+
+                    <FormField control={form.control} name="targetGender" render={({ field }) => (
+                      <FormItem className="flex-1 space-y-3">
+                        <FormLabel className="text-[11px] font-black uppercase tracking-widest text-brand-navy">Target Audience</FormLabel>
+                        <div className="flex bg-brand-navy/5 p-1 rounded-2xl border border-brand-navy/10">
+                          {["BOYS", "GIRLS", "BOTH"].map((option) => (
+                            <button
+                              key={option}
+                              type="button"
+                              onClick={() => field.onChange(option)}
+                              className={cn(
+                                "flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                                field.value === option
+                                  ? "bg-brand-navy text-white shadow-md scale-[1.02]"
+                                  : "text-brand-navy/40 hover:text-brand-navy hover:bg-brand-navy/5"
+                              )}
+                            >
+                              {option}
+                            </button>
+                          ))}
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                  </div>
                 </div>
-
-                <FormField control={form.control} name="description" render={({ field }) => (
-                  <FormItem className="space-y-2">
-                    <FormLabel className="text-[11px] font-black uppercase tracking-widest text-brand-navy">Product Description</FormLabel>
-                    <FormControl><Textarea placeholder="Material, fit, and seasonal inspiration..." className="resize-none h-20 bg-white border-2 border-brand-navy/5 rounded-xl font-medium p-3 text-sm leading-relaxed text-brand-navy" {...field} /></FormControl>
-                  </FormItem>
-                )} />
-
-                <FormField control={form.control} name="targetGender" render={({ field }) => (
-                  <FormItem className="space-y-3">
-                    <FormLabel className="text-[11px] font-black uppercase tracking-widest text-brand-navy">Target Audience</FormLabel>
-                    <div className="flex bg-brand-navy/5 p-1 rounded-2xl border border-brand-navy/10">
-                      {["BOYS", "GIRLS", "BOTH"].map((option) => (
-                        <button
-                          key={option}
-                          type="button"
-                          onClick={() => field.onChange(option)}
-                          className={cn(
-                            "flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                            field.value === option 
-                              ? "bg-brand-navy text-white shadow-md scale-[1.02]" 
-                              : "text-brand-navy/40 hover:text-brand-navy hover:bg-brand-navy/5"
-                          )}
-                        >
-                          {option}
-                        </button>
-                      ))}
-                    </div>
-                    <FormMessage />
-                  </FormItem>
-                )} />
               </div>
 
-              <div className="space-y-4 p-5 bg-brand-navy/[0.02] border border-brand-navy/10 rounded-3xl shadow-inner">
+                <div className="space-y-4 p-5 bg-brand-navy/[0.02] border border-brand-navy/10 rounded-3xl shadow-inner">
                 <FormField control={form.control} name="sku" render={({ field }) => (
                   <FormItem className="space-y-2">
                     <div className="flex justify-between items-center px-1">
@@ -716,7 +732,12 @@ export function ProductForm({
                       </div>
                     ))}
                     {images.length < 4 && (
-                      <label className="aspect-[3/4] border-2 border-dashed border-brand-navy/10 rounded-[2rem] flex flex-col items-center justify-center gap-6 text-brand-navy/20 hover:bg-brand-navy/[0.02] hover:border-brand-navy/30 transition-all cursor-pointer group shadow-inner">
+                      <label
+                        htmlFor={fileInputId}
+                        className="relative aspect-[3/4] border-2 border-dashed border-brand-navy/10 rounded-[2rem] flex flex-col items-center justify-center gap-6 text-brand-navy/20 hover:bg-brand-navy/[0.02] hover:border-brand-navy/30 transition-all cursor-pointer group shadow-inner"
+                        onClick={(event) => event.stopPropagation()}
+                        onPointerDown={(event) => event.stopPropagation()}
+                      >
                         {isUploading ? ( <div className="animate-spin rounded-full h-10 w-10 border-4 border-brand-navy border-t-transparent" /> ) : (
                           <>
                             <div className="size-20 rounded-[1.5rem] bg-brand-navy/[0.03] flex items-center justify-center group-hover:bg-brand-navy/5 transition-all">
@@ -728,7 +749,16 @@ export function ProductForm({
                             </div>
                           </>
                         )}
-                        <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} disabled={isUploading} />
+                        <input
+                          id={fileInputId}
+                          type="file"
+                          className="absolute inset-0 h-full w-full opacity-0 cursor-pointer"
+                          accept="image/*"
+                          onChange={handleImageUpload}
+                          disabled={isUploading}
+                          onClick={(event) => event.stopPropagation()}
+                          onPointerDown={(event) => event.stopPropagation()}
+                        />
                       </label>
                     )}
                 </div>
@@ -748,12 +778,30 @@ export function ProductForm({
           <div className="flex gap-4">
             <Button variant="ghost" onClick={onClose} type="button" className="text-xs font-black uppercase tracking-[0.3em] h-12 px-8 rounded-xl hover:bg-rose-500/5 text-rose-600 transition-all">CANCEL</Button>
             {activeTab !== "pricing" ? (
-                <Button onClick={() => {
-                    const order = ["product", "media", "pricing"];
-                    handleTabChange(order[order.indexOf(activeTab) + 1]);
-                }} type="button" className="bg-brand-navy text-white font-black text-xs uppercase tracking-[0.3em] h-12 px-10 rounded-xl shadow-lg shadow-brand-navy/20 active:scale-95 transition-all">CONTINUE</Button>
+                <Button
+                  type="button"
+                  onClick={() => {
+                    if (isEditing) {
+                      // For edit mode: submit the form with save action
+                      form.handleSubmit(onSubmit)();
+                    } else {
+                      // For create mode: navigate to next tab
+                      const order = ["product", "media", "pricing"];
+                      handleTabChange(order[order.indexOf(activeTab) + 1]);
+                    }
+                  }}
+                  className="bg-brand-navy text-white font-black text-xs uppercase tracking-[0.3em] h-12 px-10 rounded-xl shadow-lg shadow-brand-navy/20 active:scale-95 transition-all"
+                >
+                  {isEditing ? "SAVE" : "CONTINUE"}
+                </Button>
             ) : (
-                <Button type="submit" disabled={isSubmitting} className="bg-brand-navy text-white font-black text-xs uppercase tracking-[0.4em] h-12 px-12 rounded-xl shadow-[0_0_20px_rgba(var(--brand-navy-rgb),0.5)] active:scale-95 transition-all">
+                <Button 
+                  type="button" 
+                  disabled={isSubmitting}
+                  onClick={() => form.handleSubmit(onSubmit)()}
+                  data-action="save"
+                  className="bg-brand-navy text-white font-black text-xs uppercase tracking-[0.4em] h-12 px-12 rounded-xl shadow-[0_0_20px_rgba(var(--brand-navy-rgb),0.5)] active:scale-95 transition-all"
+                >
                   {isSubmitting ? "SAVING..." : "SAVE"}
                   <Save className="ml-5 h-6 w-6" />
                 </Button>

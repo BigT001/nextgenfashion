@@ -6,26 +6,27 @@ import "@/lib/listeners"; // Initialize system event listeners
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 const prismaClientSingleton = () => {
-  const pool = new Pool({ 
-    connectionString: process.env.DATABASE_URL,
+  const connectionString = process.env.DATABASE_URL ?? process.env.DIRECT_URL;
+
+  if (!connectionString) {
+    throw new Error("DATABASE_URL or DIRECT_URL is not defined. Check your .env configuration.");
+  }
+
+  const pool = new Pool({
+    connectionString,
     max: 10,
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 10000,
-    ssl: process.env.NODE_ENV === "production" 
-      ? { rejectUnauthorized: false } 
-      : { rejectUnauthorized: false } // Supabase usually requires SSL
+    connectionTimeoutMillis: 30000,
+    ssl: {
+      rejectUnauthorized: false
+    }
   });
-  const adapter = new PrismaPg(pool);
-  const client = new PrismaClient({ adapter });
-  
-  // Diagnostic: Check if costPrice is in the model
-  const models = (client as any)._dmmf?.modelMap;
-  if (models && models.Product) {
-    const hasCostPrice = models.Product.fields.some((f: any) => f.name === "costPrice");
-    const hasTargetGender = models.Product.fields.some((f: any) => f.name === "targetGender");
-    console.log(`[PRISMA_SERVICE] Product model has costPrice: ${hasCostPrice}, targetGender: ${hasTargetGender}`);
-  }
-  
+
+  const client = new PrismaClient({
+    adapter: new PrismaPg(pool),
+    log: process.env.NODE_ENV !== "production" ? ["error", "warn"] : ["error"]
+  });
+
   return client;
 };
 

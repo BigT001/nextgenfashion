@@ -91,8 +91,8 @@ export function DataTable<TData, TValue>({
           </button>
         </div>
       )}
-      <div className="rounded-2xl border bg-white/40 dark:bg-zinc-900/40 backdrop-blur-sm overflow-hidden shadow-sm">
-        <Table>
+      <div className="rounded-2xl border bg-white/40 dark:bg-zinc-900/40 backdrop-blur-sm overflow-x-auto shadow-sm">
+        <Table className="min-w-full">
           <TableHeader className="bg-muted/30">
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
@@ -117,15 +117,24 @@ export function DataTable<TData, TValue>({
                 <React.Fragment key={row.id}>
                   <TableRow
                     data-state={row.getIsSelected() && "selected"}
+                    aria-expanded={row.getIsExpanded()}
                     className={cn(
-                      "hover:bg-brand-navy/5 transition-colors border-border/50",
-                      onRowClick && "cursor-pointer",
+                      "group hover:bg-brand-navy/5 transition-colors border-border/50",
+                      (onRowClick || renderSubComponent) && "cursor-pointer",
                       row.getIsExpanded() && "bg-brand-navy/5 border-b-transparent"
                     )}
                     onClick={(e) => {
-                      // Don't trigger row click if clicking interactive elements (buttons, inputs, dropdowns)
                       const target = e.target as HTMLElement;
-                      if (target.closest("button") || target.closest("a") || target.closest("[role='menuitem']") || target.closest("[data-state]")) {
+                      if (
+                        target.closest("button") ||
+                        target.closest("a") ||
+                        target.closest("[role='menuitem']") ||
+                        target.closest("[data-menuitem]")
+                      ) {
+                        return;
+                      }
+                      if (renderSubComponent) {
+                        row.toggleExpanded();
                         return;
                       }
                       onRowClick?.(row.original);

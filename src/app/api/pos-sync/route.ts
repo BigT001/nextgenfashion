@@ -3,31 +3,36 @@ import { SyncPosProductsService } from "@/modules/products/services/sync-pos-pro
 
 export const maxDuration = 300; // Allow up to 5 minutes execution time for full paginated catalog syncing
 
+const getPosSyncAuth = (request: Request) => {
+  const authHeader = request.headers.get("authorization");
+  const { searchParams } = new URL(request.url);
+  const secret = searchParams.get("secret");
+
+  const expectedSecret = process.env.POS_SYNC_SECRET || process.env.NEXTAUTH_SECRET || "pos-sync-secret";
+  const cronSecret = process.env.CRON_SECRET;
+
+  return (
+    secret === expectedSecret ||
+    (cronSecret && authHeader === `Bearer ${cronSecret}`) ||
+    process.env.NODE_ENV !== "production"
+  );
+};
+
+const unauthorizedResponse = () =>
+  NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+
 /**
  * GET /api/pos-sync
  * Safe trigger endpoint for automated 5-minute cron schedulers
  */
 export async function GET(request: Request) {
-  // Simple Authorization header check or secret param check for security
-  const authHeader = request.headers.get("authorization");
-  const { searchParams } = new URL(request.url);
-  const secret = searchParams.get("secret");
-  
-  const expectedSecret = process.env.NEXTAUTH_SECRET || "pos-sync-secret";
-  const cronSecret = process.env.CRON_SECRET;
-
-  const isAuthorized = 
-    (secret === expectedSecret) || 
-    (cronSecret && authHeader === `Bearer ${cronSecret}`) ||
-    (process.env.NODE_ENV !== "production");
-
-  if (!isAuthorized) {
-    return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+  if (!getPosSyncAuth(request)) {
+    return unauthorizedResponse();
   }
 
   try {
     console.log("⏱️ Automated/Cron trigger received. Running POS synchronization in background...");
-    
+
     // Utilize Next.js after to run the sync asynchronously in the background.
     // This responds immediately (within milliseconds) to avoid Vercel and cron-job.org timeouts,
     // while keeping the serverless instance alive until the sync completes.
@@ -40,9 +45,9 @@ export async function GET(request: Request) {
       }
     });
 
-    return NextResponse.json({ 
-      success: true, 
-      message: "POS Synchronization triggered and running asynchronously in background." 
+    return NextResponse.json({
+      success: true,
+      message: "POS Synchronization triggered and running asynchronously in background."
     });
   } catch (error: any) {
     console.error("❌ Cron sync dispatch failed:", error);
@@ -54,7 +59,11 @@ export async function GET(request: Request) {
  * POST /api/pos-sync
  * Trigger sync via client action posts
  */
-export async function POST() {
+export async function POST(request: Request) {
+  if (!getPosSyncAuth(request)) {
+    return unauthorizedResponse();
+  }
+
   try {
     const result = await SyncPosProductsService.execute();
     return NextResponse.json(result);

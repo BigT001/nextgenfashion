@@ -37,6 +37,7 @@ import { useSession, signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import { UserRole } from "@/modules/auth/constants";
 import Image from "next/image";
+import { useSidebar } from "@/components/ui/sidebar";
 
 const data = {
   navMain: [
@@ -109,6 +110,7 @@ const data = {
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
   const { data: session } = useSession();
+  const { isMobile, openMobile, setOpen, setOpenMobile } = useSidebar();
   const userRole = (session?.user as any)?.role as UserRole || UserRole.STAFF;
 
   const [expandedGroups, setExpandedGroups] = React.useState<Record<string, boolean>>({
@@ -119,6 +121,20 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   const toggleGroup = (title: string) => {
     setExpandedGroups(prev => ({ ...prev, [title]: !prev[title] }));
+  };
+
+  const handleMenuItemClick = () => {
+    // Close sidebar on mobile when a menu item is clicked
+    if (isMobile) {
+      setOpenMobile(false);
+      return;
+    }
+
+    if (openMobile) {
+      setOpenMobile(false);
+    } else {
+      setOpen(false);
+    }
   };
 
   return (
@@ -188,7 +204,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         <SidebarMenuButton
                           isActive={isActive}
                           tooltip={item.title}
-                          render={<Link href={item.url} />}
+                          render={<Link href={item.url} onClick={handleMenuItemClick} />}
                           className={cn(
                             "h-10 px-5 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:w-12 group-data-[collapsible=icon]:mx-auto rounded-xl transition-all duration-300 group/item relative overflow-hidden flex items-center gap-3 w-full",
                             isActive 

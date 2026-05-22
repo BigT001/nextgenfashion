@@ -8,6 +8,20 @@ export class UpdateProductService {
   static async execute(id: string, payload: any) {
     const { name, description, categoryId, targetGender, sellingPrice, costPrice, tax, images, variants } = payload;
 
+    // Robustly extract image URLs from payload
+    // Images can arrive as string[] or { url: string; publicId: string }[]
+    const resolvedImages: string[] = Array.isArray(images)
+      ? images
+          .map((img: any) => {
+            if (typeof img === "string") return img;
+            if (img && typeof img === "object" && typeof img.url === "string") return img.url;
+            return null;
+          })
+          .filter((url: string | null): url is string => !!url && url.length > 0)
+      : [];
+
+    console.log(`[UpdateProduct] id=${id}, images received: ${images?.length ?? 0}, resolved URLs: ${resolvedImages.length}`);
+
     // 1. Update the parent Product record
     const updatedProduct = await prisma.product.update({
       where: { id },
@@ -19,12 +33,14 @@ export class UpdateProductService {
         tax,
         targetGender,
         categoryId,
-        images: images?.map((img: any) => typeof img === "string" ? img : img.url) || [],
+        images: resolvedImages,
       },
       include: {
         variants: true
       }
     });
+
+    console.log(`[UpdateProduct] Persisted images: ${updatedProduct.images.length} URL(s) saved for product ${updatedProduct.name}`);
 
     // 2. Update the variant and inventory if provided
     if (variants && variants.length > 0) {
