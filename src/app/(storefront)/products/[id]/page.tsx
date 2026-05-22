@@ -23,6 +23,9 @@ export default async function ProductDetailPage({
     notFound();
   }
 
+  const totalStock = product.variants?.reduce((acc: number, v: any) => acc + (v.inventory?.quantity || 0), 0) ?? 0;
+  const isNew = product.createdAt && new Date(product.createdAt) > new Date(Date.now() - 1000 * 60 * 60 * 24 * 30);
+
   return (
     <div className="relative min-h-screen bg-background selection:bg-brand-navy/30">
       {/* Decorative Accents */}
@@ -40,6 +43,7 @@ export default async function ProductDetailPage({
                   src={product.images[0]}
                   alt={product.name}
                   fill
+                  sizes="(max-width: 768px) 100vw, (max-width: 1280px) 60vw, 40vw"
                   className="object-cover relative z-10 group-hover:scale-110 transition-transform duration-1000"
                   priority
                 />
@@ -48,18 +52,26 @@ export default async function ProductDetailPage({
                   <Zap className="size-32 opacity-10" />
                 </div>
               )}
-              <div className="absolute top-10 right-10 z-20">
-                <Badge className="bg-white/90 backdrop-blur-xl text-black border-none font-black text-xs px-5 py-2 uppercase tracking-widest rounded-2xl shadow-xl">
-                  NEW ARRIVAL
-                </Badge>
-              </div>
+              {isNew && (
+                <div className="absolute top-10 right-10 z-20">
+                  <Badge className="bg-white/90 backdrop-blur-xl text-black border-none font-black text-xs px-5 py-2 uppercase tracking-widest rounded-2xl shadow-xl">
+                    NEW ARRIVAL
+                  </Badge>
+                </div>
+              )}
             </div>
             
             {product.images && product.images.length > 1 && (
               <div className="grid grid-cols-4 gap-4 px-4 max-w-md mx-auto">
                 {product.images.map((img, i) => (
                   <div key={i} className="aspect-square relative rounded-2xl overflow-hidden glass-card border-none cursor-pointer hover:scale-105 transition-all shadow-sm">
-                    <Image src={img} alt={`${product.name} ${i}`} fill className="object-cover" />
+                    <Image
+                      src={img}
+                      alt={`${product.name} ${i}`}
+                      fill
+                      sizes="80px"
+                      className="object-cover"
+                    />
                   </div>
                 ))}
               </div>
@@ -78,15 +90,23 @@ export default async function ProductDetailPage({
                 <span className="text-3xl md:text-4xl font-black tracking-tighter text-gradient">
                   ₦{Number(product.basePrice).toLocaleString()}
                 </span>
-                <Badge className="bg-emerald-500/10 text-emerald-600 border-none px-4 py-1 font-black text-[10px] md:text-xs uppercase tracking-widest">
-                  Ready to ship
-                </Badge>
+                {totalStock > 0 ? (
+                  <Badge className="bg-emerald-500/10 text-emerald-600 border-none px-4 py-1 font-black text-[10px] md:text-xs uppercase tracking-widest">
+                    Ready to ship
+                  </Badge>
+                ) : (
+                  <Badge className="bg-rose-500/10 text-rose-600 border-none px-4 py-1 font-black text-[10px] md:text-xs uppercase tracking-widest">
+                    Out of stock
+                  </Badge>
+                )}
               </div>
             </div>
 
-            <p className="text-sm md:text-base text-muted-foreground leading-relaxed font-medium">
-              {product.description || "An exquisite piece of fashion tech architecture, designed for the next generation of style icons. Engineered with premium fabrics and sustainable methodology."}
-            </p>
+            {product.description && product.description.trim() !== "Imported from PHP Point of Sale" ? (
+              <p className="text-sm md:text-base text-muted-foreground leading-relaxed font-medium">
+                {product.description}
+              </p>
+            ) : null}
 
             <div className="glass-card p-6 md:p-8 rounded-3xl space-y-6">
               <ProductActions product={product} />
@@ -96,4 +116,24 @@ export default async function ProductDetailPage({
       </div>
     </div>
   );
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await params;
+    const product = await GetProductsService.byId(id);
+    if (!product) return { title: "Product not found" };
+
+    return {
+      title: `${product.name} — NextGen Fashion`,
+      description: product.description || `Buy ${product.name} for ₦${Number(product.basePrice).toLocaleString()}`,
+      openGraph: {
+        title: product.name,
+        description: product.description || undefined,
+        images: product.images && product.images.length > 0 ? [{ url: product.images[0], alt: product.name }] : undefined,
+      },
+    };
+  } catch (err) {
+    return { title: "Product" };
+  }
 }

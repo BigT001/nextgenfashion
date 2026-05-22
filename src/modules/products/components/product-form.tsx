@@ -380,15 +380,39 @@ export function ProductForm({
         stock: values.quantity,
       };
 
+      const uploadingImages = images.filter(img => img.status === "uploading");
+      const failedImages = images.filter(img => img.status === "failed");
+      const validImages = images
+        .filter(img => img.status === "uploaded" && typeof img.url === "string" && img.url.length > 0)
+        .map(img => img.url);
+
+      if (uploadingImages.length > 0) {
+        toast.error("Please wait for all image uploads to finish before saving.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (failedImages.length > 0) {
+        toast.error("Please remove or retry failed image uploads before saving.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (!isEditing && validImages.length === 0) {
+        toast.error("At least one uploaded product image is required.");
+        setIsSubmitting(false);
+        return;
+      }
+
       const payload = {
         ...values,
         tax: values.hasTax ? values.tax : 0,
         baseSku: values.sku.split("-")[0] || values.sku,
         variants: [variant],
-        images,
+        images: validImages,
       };
 
-      console.log(`[ProductForm] Submitting ${isEditing ? "UPDATE" : "CREATE"} with ${images.length} image(s):`, images.map(i => i.url));
+      console.log(`[ProductForm] Submitting ${isEditing ? "UPDATE" : "CREATE"} with ${validImages.length} image(s):`, validImages);
 
       const result = isEditing 
         ? await updateProductAction(initialData.id, payload)

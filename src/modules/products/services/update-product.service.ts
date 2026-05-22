@@ -5,20 +5,26 @@ import { prisma } from "@/services/prisma.service";
  * Layer 3: Business Logic
  */
 export class UpdateProductService {
+  private static normalizeImageUrls(images: any): string[] {
+    if (!Array.isArray(images)) return [];
+
+    return images
+      .map((img: any) => {
+        if (typeof img === "string") return img;
+        if (img && typeof img === "object" && typeof img.url === "string") return img.url;
+        return null;
+      })
+      .filter((url: string | null): url is string => {
+        if (!url || typeof url !== "string") return false;
+        if (url.startsWith("blob:") || url.startsWith("data:")) return false;
+        return /^(https?:\/\/|\/)/.test(url);
+      });
+  }
+
   static async execute(id: string, payload: any) {
     const { name, description, categoryId, targetGender, sellingPrice, costPrice, tax, images, variants } = payload;
 
-    // Robustly extract image URLs from payload
-    // Images can arrive as string[] or { url: string; publicId: string }[]
-    const resolvedImages: string[] = Array.isArray(images)
-      ? images
-          .map((img: any) => {
-            if (typeof img === "string") return img;
-            if (img && typeof img === "object" && typeof img.url === "string") return img.url;
-            return null;
-          })
-          .filter((url: string | null): url is string => !!url && url.length > 0)
-      : [];
+    const resolvedImages = this.normalizeImageUrls(images);
 
     console.log(`[UpdateProduct] id=${id}, images received: ${images?.length ?? 0}, resolved URLs: ${resolvedImages.length}`);
 
