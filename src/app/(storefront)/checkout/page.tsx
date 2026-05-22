@@ -197,27 +197,7 @@ export default function CheckoutPage() {
                 </div>
             </div>
 
-            <div className="flex items-center gap-4 bg-white/50 backdrop-blur-xl p-2 rounded-3xl border border-white/50 shadow-sm">
-                {steps.map((s, i) => (
-                    <div key={s.id} className="flex items-center gap-4">
-                        <button 
-                            onClick={() => {
-                                const currentIndex = steps.findIndex(st => st.id === step);
-                                if (i < currentIndex) setStep(s.id);
-                            }}
-                            disabled={steps.findIndex(st => st.id === step) < i}
-                            className={cn(
-                                "flex items-center gap-3 px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all",
-                                step === s.id ? "bg-brand-navy text-white shadow-xl shadow-brand-navy/20" : "text-muted-foreground/40"
-                            )}
-                        >
-                            <s.icon className="size-4" />
-                            <span className="hidden sm:inline">{s.label}</span>
-                        </button>
-                        {i < steps.length - 1 && <ChevronRight className="size-4 text-muted-foreground/20" />}
-                    </div>
-                ))}
-            </div>
+            {/* Top progress removed - moved into Patron Account card for easier navigation */}
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 items-start">
@@ -236,6 +216,24 @@ export default function CheckoutPage() {
                             <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">PERSONAL INTEL FOR FULFILLMENT</p>
                         </div>
                     </div>
+
+                        {/* Step tabs inside Patron Account card for easier navigation */}
+                        <div className="mt-6 flex items-center gap-3 bg-white/5 p-2 rounded-xl inline-flex">
+                          {steps.map((s, i) => (
+                            <button
+                              key={s.id}
+                              type="button"
+                              onClick={() => setStep(s.id)}
+                              className={cn(
+                                "flex items-center gap-2 px-3 py-2 rounded-lg font-black text-[10px] uppercase tracking-widest transition-all",
+                                step === s.id ? "bg-brand-navy text-white shadow-md" : "text-muted-foreground/60 hover:bg-zinc-50/10"
+                              )}
+                            >
+                              <s.icon className="size-4" />
+                              <span className="hidden sm:inline">{s.label}</span>
+                            </button>
+                          ))}
+                        </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div className="space-y-3 md:col-span-2">
