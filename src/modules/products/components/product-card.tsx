@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ShoppingCart, Heart, Eye, Zap, Star } from "lucide-react";
+import { ShoppingCart, Zap } from "lucide-react";
+import { useCartStore } from "@/modules/cart/store/cart.store";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { QuickViewModal } from "./quick-view-modal";
 import { cn } from "@/lib/utils";
 
 interface ProductCardProps {
@@ -15,7 +15,41 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product, className }: ProductCardProps) {
-  const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
+
+  const addItem = useCartStore((state) => state.addItem);
+  const setOpenCart = useCartStore((state) => state.setOpenCart);
+  const items = useCartStore((state) => state.items);
+
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const variant = product.variants?.[0];
+    const variantId = variant?.id || product.id;
+    const price = variant?.price ? Number(variant.price) : Number(product.basePrice || 0);
+    const stock = variant?.inventory?.quantity ?? 0;
+
+    if (stock <= 0) {
+      toast.error(`${product.name} is out of stock.`);
+      return;
+    }
+    const exists = items.find((it: any) => it.variantId === variantId);
+    if (exists) {
+      toast.error(`${product.name} is already in your cart.`);
+      return;
+    }
+
+    const item = {
+      id: product.id,
+      variantId,
+      name: product.name,
+      price,
+      quantity: 1,
+      image: product.images?.[0],
+      availableStock: stock,
+    };
+    addItem(item);
+    setOpenCart(true);
+  };
 
   return (
     <>
@@ -41,18 +75,8 @@ export function ProductCard({ product, className }: ProductCardProps) {
             )}
           </Link>
 
-          <div className="absolute top-6 right-6 flex flex-col gap-3 z-10">
-            <Button size="icon" className="size-12 rounded-2xl bg-white/10 backdrop-blur-xl border border-white/20 text-white opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-500">
-              <Heart className="size-5" />
-            </Button>
-            <Button
-              onClick={() => setIsQuickViewOpen(true)}
-              size="icon"
-              className="size-12 rounded-2xl bg-white text-black opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-500 delay-75 shadow-xl"
-            >
-              <Eye className="size-5" />
-            </Button>
-            <Button size="icon" className="size-12 rounded-2xl bg-brand-navy text-white opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-500 delay-150 shadow-xl shadow-brand-navy/30">
+          <div className="absolute top-6 right-6 z-10">
+            <Button size="icon" onClick={handleAddToCart} className="size-12 rounded-2xl bg-brand-navy text-white shadow-xl shadow-brand-navy/30">
               <ShoppingCart className="size-5" />
             </Button>
           </div>
@@ -67,18 +91,11 @@ export function ProductCard({ product, className }: ProductCardProps) {
           <h3 className="font-black text-xl tracking-tight line-clamp-1 group-hover:text-brand-navy transition-colors">{product.name}</h3>
           <div className="flex items-center justify-between">
             <span className="text-2xl font-black tracking-tighter">₦{Number(product.basePrice).toLocaleString()}</span>
-            <div className="flex gap-1">
-              {[1, 2, 3, 4, 5].map(i => <Star key={i} className="size-3 fill-amber-400 stroke-amber-400" />)}
-            </div>
           </div>
         </Link>
       </div>
 
-      <QuickViewModal
-        product={product}
-        isOpen={isQuickViewOpen}
-        onClose={() => setIsQuickViewOpen(false)}
-      />
+      {/* Quick view removed from hover actions to simplify UX */}
     </>
   );
 }

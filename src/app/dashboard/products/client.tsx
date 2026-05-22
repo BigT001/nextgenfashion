@@ -64,6 +64,7 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [isLoadingProduct, setIsLoadingProduct] = useState(false);
+  const [showOnlyWithImages, setShowOnlyWithImages] = useState(false);
 
   const handleEditProduct = async (productId: string) => {
     if (isLoadingProduct) return;
@@ -479,7 +480,7 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
     {
       accessorKey: "images",
       header: "IMAGE",
-      size: 64, // Explicit size for image column
+      size: 64,
       cell: ({ row }) => (
         <div className="size-12 md:size-14 rounded-2xl bg-muted/30 flex items-center justify-center shrink-0 border border-border/20 overflow-hidden shadow-sm">
             {row.original.images?.[0] ? (
@@ -506,13 +507,67 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
         </div>
       ),
     },
-
+    // ── Desktop-only columns ──────────────────────────────────
+    {
+      accessorKey: "sku",
+      header: "SKU",
+      meta: { className: "hidden md:table-cell" },
+      cell: ({ row }) => (
+        <span className="font-mono text-[11px] font-bold text-muted-foreground tracking-tight">
+          {row.original.sku || "—"}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "price",
+      header: "WHOLESALE",
+      meta: { className: "hidden md:table-cell" },
+      cell: ({ row }) => (
+        <span className="font-black text-sm text-brand-navy">
+          ₦{Number(row.original.price || 0).toLocaleString()}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "retailPrice",
+      header: "RETAIL",
+      meta: { className: "hidden md:table-cell" },
+      cell: ({ row }) => (
+        <span className="font-black text-sm text-foreground">
+          ₦{Number(row.original.retailPrice || 0).toLocaleString()}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "status",
+      header: "STATUS",
+      meta: { className: "hidden md:table-cell" },
+      cell: ({ row }) => {
+        const s = row.original.status as string;
+        return (
+          <Badge className={cn(
+            "font-black text-[9px] px-2.5 py-1 uppercase tracking-widest border-none",
+            s === "Out of Stock" ? "bg-rose-100 text-rose-700" :
+            s === "Low Stock"   ? "bg-amber-100 text-amber-700" :
+                                  "bg-emerald-100 text-emerald-700"
+          )}>
+            {s}
+          </Badge>
+        );
+      },
+    },
+    // ── Stock (mobile only) ──────────────────────────────────
     {
       accessorKey: "stock",
       header: "STOCK",
-      size: 60, // Fixed size for stock
+      size: 60,
+      meta: { className: "md:hidden" },
       cell: ({ row }) => (
-        <div className={`font-black text-sm tracking-tighter ${row.original.status === "Out of Stock" ? "text-rose-600" : row.original.status === "Low Stock" ? "text-amber-500" : "text-emerald-600"}`}>
+        <div className={`font-black text-sm tracking-tighter ${
+          row.original.status === "Out of Stock" ? "text-rose-600" :
+          row.original.status === "Low Stock"   ? "text-amber-500" :
+                                                  "text-emerald-600"
+        }`}>
             {row.original.stock}
         </div>
       ),
@@ -520,7 +575,7 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
     {
       id: "actions",
       header: () => <div className="text-right pr-2 md:pr-4">CONTROL</div>,
-      size: 60, // Fixed size for control
+      size: 60,
       cell: ({ row }) => (
         <div className="flex items-center justify-end gap-1 pr-1 md:pr-2">
           {/* Mobile: compact icon-only edit button */}
@@ -1049,7 +1104,7 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
       </div>
 
       {/* Catalog KPIs - Responsive Grid */}
-      <div className="grid grid-cols-2 gap-4 max-w-full">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-w-full">
         <MetricCard
           title="Total Products"
           value={data?.kpis?.totalProducts || 0}
@@ -1066,14 +1121,64 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
           compact={true}
           className="w-full"
         />
+        {/* With Images filter card */}
+        <div
+          onClick={() => setShowOnlyWithImages(v => !v)}
+          className={cn(
+            "col-span-2 md:col-span-1 w-full relative flex items-center gap-4 p-4 rounded-2xl border cursor-pointer transition-all duration-200 select-none group overflow-hidden shadow-sm",
+            showOnlyWithImages
+              ? "bg-brand-navy border-brand-navy text-white shadow-lg shadow-brand-navy/20"
+              : "bg-white/60 border-border/30 hover:border-brand-navy/30 hover:bg-brand-navy/5"
+          )}
+        >
+          {/* Background shimmer when active */}
+          {showOnlyWithImages && (
+            <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent pointer-events-none" />
+          )}
+          <div className={cn(
+            "size-10 rounded-xl flex items-center justify-center shrink-0 transition-colors",
+            showOnlyWithImages ? "bg-white/20" : "bg-brand-navy/10 group-hover:bg-brand-navy/15"
+          )}>
+            <ImageIcon className={cn("size-5", showOnlyWithImages ? "text-white" : "text-brand-navy")} />
+          </div>
+          <div className="flex flex-col min-w-0 flex-1">
+            <span className={cn(
+              "text-[9px] font-black uppercase tracking-[0.3em] truncate",
+              showOnlyWithImages ? "text-white/70" : "text-muted-foreground"
+            )}>
+              {showOnlyWithImages ? "● Filtering Active" : "With Images"}
+            </span>
+            <span className={cn(
+              "text-2xl font-black tracking-tight leading-tight",
+              showOnlyWithImages ? "text-white" : "text-foreground"
+            )}>
+              {data?.kpis?.productsWithImages ?? 0}
+            </span>
+            <span className={cn(
+              "text-[9px] font-medium truncate",
+              showOnlyWithImages ? "text-white/60" : "text-muted-foreground/60"
+            )}>
+              {showOnlyWithImages ? "Click to show all" : "Click to filter table"}
+            </span>
+          </div>
+          {showOnlyWithImages && (
+            <div className="shrink-0 size-6 rounded-full bg-white/20 flex items-center justify-center">
+              <XIcon className="size-3.5 text-white" />
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Catalog Table */}
       <div className="overflow-hidden">
         <DataTable 
           columns={columns} 
-          data={data?.products || []}
+          data={(showOnlyWithImages
+            ? (data?.products || []).filter((p: any) => p.images && p.images.length > 0)
+            : (data?.products || [])
+          )}
           searchKey="name"
+          expandOnMobileOnly
           renderSubComponent={({ row }) => (
             <div className="px-5 py-6 bg-zinc-50/60 space-y-5 border-t border-border/20">
 

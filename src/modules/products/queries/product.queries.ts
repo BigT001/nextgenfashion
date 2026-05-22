@@ -14,7 +14,8 @@ export class ProductQueries {
     maxPrice?: number;
     includeVariants?: boolean;
   }) {
-    return await prisma.product.findMany({
+    // Over-fetch then sort: products with images surface first
+    const products = await prisma.product.findMany({
       where: {
         isSuspended: false,
         ...(params.targetGender && {
@@ -45,21 +46,33 @@ export class ProductQueries {
       },
       orderBy: { createdAt: "desc" },
     });
+
+    // Sort: products WITH images come first
+    const withImages = products.filter(p => p.images && p.images.length > 0);
+    const withoutImages = products.filter(p => !p.images || p.images.length === 0);
+    return [...withImages, ...withoutImages];
   }
 
   /**
-   * Fetch high-visibility featured products for the storefront
+   * Fetch high-visibility featured products for the storefront.
+   * Products WITH images are always shown first.
    */
   static async findFeatured(limit = 8) {
-    return await prisma.product.findMany({
+    // Fetch more than needed so we can surface image-bearing products first
+    const products = await prisma.product.findMany({
       where: { isSuspended: false },
-      take: limit,
+      take: limit * 4, // over-fetch so sorting is meaningful
       include: {
         category: true,
         variants: true,
       },
       orderBy: { createdAt: "desc" },
     });
+
+    // Sort: products with at least one image come first
+    const withImages = products.filter(p => p.images && p.images.length > 0);
+    const withoutImages = products.filter(p => !p.images || p.images.length === 0);
+    return [...withImages, ...withoutImages].slice(0, limit);
   }
 
   static async findById(id: string) {

@@ -50,7 +50,7 @@ export function ShopFilters({ categories, category, targetGender }: { categories
   const clearHref = targetGender ? `/${targetGender.toLowerCase()}` : "/shop";
 
   return (
-    <div className="space-y-8 pb-8">
+    <div className="space-y-4 pb-6">
       {/* Header aligned properly, CLEAR is styled like a button instead of raw text */}
       <div className="flex items-center justify-between pb-4 border-b border-border/30 pr-8 lg:pr-0">
         <h3 className="text-sm font-black uppercase tracking-widest flex items-center gap-2">
@@ -66,13 +66,13 @@ export function ShopFilters({ categories, category, targetGender }: { categories
       </div>
 
       {/* Categories */}
-      <div className="space-y-4">
+      <div className="space-y-3">
         <h4 className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">Categories</h4>
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-1">
           <Link
             href={clearHref}
             className={cn(
-              "whitespace-nowrap text-left py-3 px-5 rounded-2xl text-sm font-bold transition-all shrink-0 block",
+              "whitespace-nowrap text-left py-2 px-4 rounded-2xl text-sm font-bold transition-all shrink-0 block",
               !category ? "bg-brand-navy/5 text-brand-navy glass-card shadow-none border-none" : "bg-transparent text-zinc-600 hover:bg-accent hover:translate-x-1"
             )}
           >
@@ -86,7 +86,7 @@ export function ShopFilters({ categories, category, targetGender }: { categories
                 key={cat.id}
                 href={catHref}
                 className={cn(
-                  "whitespace-nowrap text-left py-3 px-5 rounded-2xl text-sm font-bold transition-all flex items-center justify-between group shrink-0 gap-2 block",
+                  "whitespace-nowrap text-left py-2 px-4 rounded-2xl text-sm font-bold transition-all flex items-center justify-between group shrink-0 gap-2 block",
                   isActive ? "bg-brand-navy/5 text-brand-navy glass-card shadow-none border-none" : "bg-transparent text-zinc-600 hover:bg-accent hover:translate-x-1"
                 )}
               >

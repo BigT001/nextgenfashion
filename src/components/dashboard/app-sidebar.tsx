@@ -124,16 +124,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   };
 
   const handleMenuItemClick = () => {
-    // Close sidebar on mobile when a menu item is clicked
+    // Only close the sidebar when on mobile
     if (isMobile) {
       setOpenMobile(false);
-      return;
-    }
-
-    if (openMobile) {
-      setOpenMobile(false);
-    } else {
-      setOpen(false);
     }
   };
 
@@ -204,7 +197,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         <SidebarMenuButton
                           isActive={isActive}
                           tooltip={item.title}
-                          render={<Link href={item.url} onClick={handleMenuItemClick} />}
+                          render={<Link href={item.url} />}
+                          onClick={handleMenuItemClick}
                           className={cn(
                             "h-10 px-5 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:w-12 group-data-[collapsible=icon]:mx-auto rounded-xl transition-all duration-300 group/item relative overflow-hidden flex items-center gap-3 w-full",
                             isActive 

@@ -26,8 +26,7 @@ const navLinks = [
 ];
 
 export default function StoreLayout({ children }: { children: React.ReactNode }) {
-  const [isCartOpen, setIsCartOpen] = useState(false);
-  const { getItemCount } = useCartStore();
+  const { getItemCount, openCart, setOpenCart } = useCartStore();
   const { data: session, status } = useSession();
   const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
@@ -46,7 +45,7 @@ export default function StoreLayout({ children }: { children: React.ReactNode })
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <CartDrawer open={isCartOpen} onOpenChange={setIsCartOpen} />
+      <CartDrawer open={openCart} onOpenChange={setOpenCart} />
       <StoreSearch open={isSearchOpen} setOpen={setIsSearchOpen} />
 
       {/* ── TOP BAR ─────────────────────────────────────────────────────────── */}
@@ -155,7 +154,7 @@ export default function StoreLayout({ children }: { children: React.ReactNode })
             </nav>
 
             <button
-              onClick={() => setIsCartOpen(true)}
+              onClick={() => setOpenCart(true)}
               className="relative flex items-center justify-center bg-brand-navy text-white rounded-full p-2.5 shadow-md hover:scale-110 transition-all flex-shrink-0 active:scale-95"
             >
               <ShoppingCart className="size-5" strokeWidth={2.5} />

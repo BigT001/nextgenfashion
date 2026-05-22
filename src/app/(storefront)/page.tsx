@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import {
   ArrowRight, Star, Truck, ShieldCheck, Gift, Award,
-  RefreshCw, Headphones,
+  RefreshCw, Headphones, ShoppingCart, ShoppingBag, Package, Smartphone, Heart, Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GetProductsService } from "@/modules/products/services/get-products.service";
@@ -29,56 +29,92 @@ export default async function LandingPage() {
     dbCategories = [];
   }
 
-  const fallbackCategories = [
-    {
-      name: "Tops",
-      image: "https://images.unsplash.com/photo-1622290291468-a28f7a7dc6a8?auto=format&fit=crop&q=80&w=300",
-      href: "/shop?category=tops"
-    },
-    {
-      name: "Bottoms",
-      image: "https://images.unsplash.com/photo-1503919545889-aef636e10ad4?auto=format&fit=crop&q=80&w=300",
-      href: "/shop?category=bottoms"
-    },
-    {
-      name: "Dresses",
-      image: "https://images.unsplash.com/photo-1518831959646-742c3a14ebf7?auto=format&fit=crop&q=80&w=300",
-      href: "/shop?category=dresses"
-    },
-    {
-      name: "Footwear",
-      image: "https://images.unsplash.com/photo-1529604278261-8bfcb381165f?auto=format&fit=crop&q=80&w=300",
-      href: "/shop?category=footwear"
-    },
-    {
-      name: "Accessories",
-      image: "https://images.unsplash.com/photo-1513373190622-214cc9291083?auto=format&fit=crop&q=80&w=300",
-      href: "/shop?category=accessories"
-    },
-    {
-      name: "Boys",
-      image: "https://images.unsplash.com/photo-1519241047957-be31d7379a5d?auto=format&fit=crop&q=80&w=300",
-      href: "/shop?category=boys"
-    },
-    {
-      name: "Girls",
-      image: "https://images.unsplash.com/photo-1518831959646-742c3a14ebf7?auto=format&fit=crop&q=80&w=300",
-      href: "/shop?category=girls"
-    }
+  const categories = dbCategories.map(cat => {
+    const productImage = cat.products?.[0]?.images?.[0];
+    const displayImage = productImage || cat.image;
+
+    return {
+      name: cat.name,
+      image: displayImage,
+      href: `/shop?category=${cat.id}`
+    };
+  });
+
+  // Map category names to icons
+  const getCategoryIcon = (name?: string) => {
+    const n = (name || "").toLowerCase();
+    if (n.includes("bag") || n.includes("bags") || n.includes("backpack")) return ShoppingBag;
+    if (n.includes("shoe") || n.includes("foot") || n.includes("sneak")) return ShoppingCart;
+    if (n.includes("perfume") || n.includes("scent")) return Heart;
+    if (n.includes("tablet") || n.includes("tablet") || n.includes("ipad") || n.includes("phone") || n.includes("tech")) return Smartphone;
+    if (n.includes("toy") || n.includes("wooden") || n.includes("game")) return Package;
+    if (n.includes("jean") || n.includes("pants") || n.includes("bottom")) return ShoppingBag;
+    if (n.includes("accessor") || n.includes("accessory")) return Gift;
+    return Zap;
+  };
+
+  // Friendly emoji mapping for kids-first avatars
+  const getCategoryEmoji = (name?: string) => {
+    const n = (name || "").toLowerCase();
+    if (n.includes("bag") || n.includes("backpack")) return "👜";
+    if (n.includes("shoe") || n.includes("foot") || n.includes("sneak")) return "👟";
+    if (n.includes("perfume") || n.includes("scent")) return "🧴";
+    if (n.includes("tablet") || n.includes("tech") || n.includes("phone")) return "📱";
+    if (n.includes("toy") || n.includes("wooden") || n.includes("game")) return "🧸";
+    if (n.includes("jean") || n.includes("pants") || n.includes("bottom")) return "👖";
+    if (n.includes("accessor") || n.includes("accessory")) return "🎀";
+    if (n.includes("boys")) return "🧢";
+    if (n.includes("girls")) return "👗";
+    if (n.includes("baby")) return "👶";
+    return "✨";
+  };
+
+  const pastelPalette = [
+    ["#FFD6E0", "#FFB6C1"],
+    ["#E0F7FF", "#BEE7FF"],
+    ["#FFF4D6", "#FFE6A7"],
+    ["#E8FFE6", "#BFFFC4"],
+    ["#F0E6FF", "#D6C8FF"],
   ];
 
-  const categories = dbCategories.length > 0
-    ? dbCategories.map(cat => {
-        const premiumMatch = fallbackCategories.find(f => f.name.toLowerCase() === cat.name.toLowerCase());
-        const displayImage = cat.image || premiumMatch?.image || (cat.products?.[0]?.images?.[0]) || "https://images.unsplash.com/photo-1513373190622-214cc9291083?auto=format&fit=crop&q=80&w=300";
+  const pickColors = (name?: string) => {
+    if (!name) return pastelPalette[0];
+    let sum = 0;
+    for (let i = 0; i < name.length; i++) sum += name.charCodeAt(i);
+    return pastelPalette[sum % pastelPalette.length];
+  };
 
-        return {
-          name: cat.name,
-          image: displayImage,
-          href: `/shop?category=${cat.id}`
-        };
-      })
-    : fallbackCategories;
+  let visibleFeaturedProducts = featuredProducts.filter((product: any) => product.images && product.images.length > 0);
+
+  // If there are no featured products with images, fall back to recent products
+  // that have uploaded images so the trending section is never empty in production.
+  if (visibleFeaturedProducts.length === 0) {
+    try {
+      const recent = await GetProductsService.execute({ includeVariants: true });
+      visibleFeaturedProducts = (recent || []).filter((p: any) => p.images && p.images.length > 0).slice(0, 8);
+    } catch (err) {
+      console.error("[LANDING_PAGE] fallback products fetch failed:", err);
+      visibleFeaturedProducts = [];
+    }
+  }
+
+  let discoverProducts: any[] = [];
+  try {
+    const recent = await GetProductsService.execute({ includeVariants: true });
+    discoverProducts = (recent || []).filter((product: any) => product.images && product.images.length > 0);
+    if (discoverProducts.length > 4) {
+      discoverProducts = discoverProducts.sort(() => Math.random() - 0.5).slice(0, 4);
+    }
+  } catch (err) {
+    console.error("[LANDING_PAGE] discover products fetch failed:", err);
+    discoverProducts = [];
+  }
+
+  const discoverCards = discoverProducts.slice(0, 4).map((product: any) => ({
+    name: product.category?.name || product.name,
+    img: product.images?.[0],
+    link: product.categoryId ? `/shop?category=${product.categoryId}` : "/shop"
+  }));
 
   return (
     <div className="flex flex-col bg-white overflow-x-hidden">
@@ -225,30 +261,50 @@ export default async function LandingPage() {
             </h2>
           </AnimatedSection>
 
-          <div className="flex flex-wrap items-center justify-center gap-5 md:gap-8 pt-4 pb-2 md:pb-8 px-6">
-            {categories.map((cat, i) => (
-              <AnimatedSection key={i} animation="zoom-in" delay={i * 60} className="flex-shrink-0">
-                <Link href={cat.href}>
-                  <div className="group flex flex-col items-center gap-3 cursor-pointer">
-                    <div className="w-14 h-14 md:w-18 md:h-18 rounded-full overflow-hidden bg-zinc-100 flex items-center justify-center shadow-md group-hover:scale-110 group-hover:shadow-brand-navy/30 transition-all duration-500 relative border-2 border-transparent group-hover:border-brand-navy">
-                      {cat.image ? (
-                        <Image 
-                          src={cat.image} 
-                          alt={cat.name} 
-                          fill 
-                          className="object-cover transition-transform duration-700 group-hover:scale-110" 
-                        />
-                      ) : (
-                        <div className="flex flex-col items-center justify-center text-zinc-300">
-                          <Gift className="size-6 opacity-40" />
-                        </div>
-                      )}
+          <div className="grid grid-cols-4 gap-4 sm:gap-6 md:gap-8 lg:grid-cols-8 pt-4 pb-2 md:pb-8 px-6 justify-items-center">
+            {categories.map((cat, i) => {
+              const shortName = (cat.name || "").length > 12 ? (cat.name || "").slice(0, 12).trim() + "…" : cat.name;
+              return (
+                <AnimatedSection key={i} animation="zoom-in" delay={i * 60}>
+                  <Link href={cat.href}>
+                    <div className="group flex flex-col items-center gap-2 cursor-pointer">
+                      <div className="w-14 h-14 md:w-16 md:h-16 rounded-full overflow-hidden bg-zinc-100 flex items-center justify-center shadow-md group-hover:scale-110 group-hover:shadow-brand-navy/30 transition-all duration-500 relative border-2 border-transparent group-hover:border-brand-navy">
+                        {cat.image ? (
+                          <>
+                            <Image 
+                              src={cat.image} 
+                              alt={cat.name} 
+                              fill 
+                              className="object-cover transition-transform duration-700 group-hover:scale-110" 
+                            />
+                            {(() => {
+                              const [c1, c2] = pickColors(cat.name);
+                              const Icon = getCategoryIcon(cat.name);
+                              return (
+                                <div className="absolute right-1 bottom-1 rounded-full p-1 shadow-md" style={{ background: `linear-gradient(135deg, ${c1}, ${c2})` }}>
+                                  <Icon className="w-3 h-3 text-white" />
+                                </div>
+                              );
+                            })()}
+                          </>
+                        ) : (
+                          (() => {
+                            const [c1, c2] = pickColors(cat.name);
+                            const emoji = getCategoryEmoji(cat.name);
+                            return (
+                              <div className="w-full h-full flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${c1}, ${c2})` }}>
+                                <span className="text-xl md:text-2xl">{emoji}</span>
+                              </div>
+                            );
+                          })()
+                        )}
+                      </div>
+                      <p className="font-black text-[9px] md:text-[10px] text-zinc-500 group-hover:text-brand-navy transition-colors uppercase tracking-[0.2em] w-20 md:w-24 text-center truncate">{shortName}</p>
                     </div>
-                    <p className="font-black text-[9px] md:text-[10px] text-zinc-500 group-hover:text-brand-navy transition-colors uppercase tracking-[0.2em]">{cat.name}</p>
-                  </div>
-                </Link>
-              </AnimatedSection>
-            ))}
+                  </Link>
+                </AnimatedSection>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -263,26 +319,19 @@ export default async function LandingPage() {
             </h2>
           </AnimatedSection>
 
-          {featuredProducts.length > 0 ? (
+          {visibleFeaturedProducts.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 max-w-5xl mx-auto">
-              {featuredProducts.slice(0, 8).map((product, i) => (
+              {visibleFeaturedProducts.slice(0, 8).map((product, i) => (
                 <AnimatedSection key={product.id} animation="fade-up" delay={i * 70}>
                   <ProductCard product={product} />
                 </AnimatedSection>
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 max-w-5xl mx-auto">
-              {[
-                { id: "mock1", name: "Premium Kids Set", basePrice: 15000, category: { name: "Boys" }, images: ["https://images.unsplash.com/photo-1519241047957-be31d7379a5d?auto=format&fit=crop&q=80&w=600"] },
-                { id: "mock2", name: "Summer Dress", basePrice: 12500, category: { name: "Girls" }, images: ["https://images.unsplash.com/photo-1518831959646-742c3a14ebf7?auto=format&fit=crop&q=80&w=600"] },
-                { id: "mock3", name: "Baby Sneakers", basePrice: 8000, category: { name: "Footwear" }, images: ["https://images.unsplash.com/photo-1529604278261-8bfcb381165f?auto=format&fit=crop&q=80&w=600"] },
-                { id: "mock4", name: "Cozy Jacket", basePrice: 21000, category: { name: "Winter" }, images: ["https://images.unsplash.com/photo-1622290291468-a28f7a7dc6a8?auto=format&fit=crop&q=80&w=600"] }
-              ].map((product, i) => (
-                <AnimatedSection key={product.id} animation="fade-up" delay={i * 70}>
-                  <ProductCard product={product as any} />
-                </AnimatedSection>
-              ))}
+            <div className="max-w-4xl mx-auto py-12 text-center rounded-3xl border border-zinc-200 bg-zinc-50">
+              <p className="text-zinc-500 text-base md:text-lg font-medium">
+                No featured products with uploaded images are available right now.
+              </p>
             </div>
           )}
         </div>
@@ -385,28 +434,27 @@ export default async function LandingPage() {
           </AnimatedSection>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-6xl mx-auto">
-            {[
-              { name: "Summer Vibes", img: "https://images.unsplash.com/photo-1622290291468-a28f7a7dc6a8?auto=format&fit=crop&q=80&w=600", link: "/shop?category=summer" },
-              { name: "Party Wear", img: "https://images.unsplash.com/photo-1518831959646-742c3a14ebf7?auto=format&fit=crop&q=80&w=600", link: "/shop?category=party" },
-              { name: "Tiny Steps", img: "https://images.unsplash.com/photo-1519241047957-be31d7379a5d?auto=format&fit=crop&q=80&w=600", link: "/shop?category=footwear" },
-              { name: "Accessories", img: "https://images.unsplash.com/photo-1529604278261-8bfcb381165f?auto=format&fit=crop&q=80&w=600", link: "/shop?category=accessories" }
-            ].map((cat, i) => (
+            {discoverCards.length > 0 ? discoverCards.map((card, i) => (
               <AnimatedSection key={i} animation="fade-up" delay={i * 100}>
-                <Link href={cat.link}>
+                <Link href={card.link}>
                   <div className="group relative rounded-3xl overflow-hidden aspect-[4/5] shadow-md hover:shadow-xl transition-all duration-300">
                     <Image
-                      src={cat.img}
-                      alt={cat.name}
+                      src={card.img}
+                      alt={card.name}
                       fill
                       className="object-cover group-hover:scale-110 transition-transform duration-700"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex items-end p-6">
-                      <h3 className="text-white font-black text-xl tracking-wide group-hover:text-pink-300 transition-colors">{cat.name}</h3>
+                      <h3 className="text-white font-black text-xl tracking-wide group-hover:text-pink-300 transition-colors">{card.name}</h3>
                     </div>
                   </div>
                 </Link>
               </AnimatedSection>
-            ))}
+            )) : (
+              <div className="col-span-2 md:col-span-4 rounded-3xl border border-dashed border-zinc-200 bg-zinc-50 py-20 text-center text-zinc-500">
+                No uploaded product images available for Discover More yet.
+              </div>
+            )}
           </div>
         </div>
       </section>

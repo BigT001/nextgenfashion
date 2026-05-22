@@ -104,8 +104,24 @@ export function CartDrawer({ open, onOpenChange }: { open: boolean, onOpenChange
                         </button>
                         <span className="text-[11px] font-black w-4 text-center">{item.quantity}</span>
                         <button 
-                          onClick={() => updateQuantity(item.variantId, item.quantity + 1)}
-                          className="size-7 rounded-lg flex items-center justify-center hover:bg-white dark:hover:bg-zinc-800 transition-colors"
+                          onClick={() => {
+                            const max = item.availableStock ?? Infinity;
+                            if (item.quantity + 1 > max) {
+                              // notify user
+                              // eslint-disable-next-line no-console
+                              console.log('exceed stock');
+                              // use window toast via sonner? import toast here
+                              // we'll dynamically import toast to avoid circular deps
+                              import('sonner').then(({ toast }) => toast.error(`Only ${max} item(s) available in stock.`));
+                              return;
+                            }
+                            updateQuantity(item.variantId, item.quantity + 1);
+                          }}
+                          className={cn(
+                            "size-7 rounded-lg flex items-center justify-center transition-colors",
+                            item.availableStock !== undefined && item.quantity >= item.availableStock ? "opacity-40 cursor-not-allowed" : "hover:bg-white dark:hover:bg-zinc-800"
+                          )}
+                          disabled={item.availableStock !== undefined && item.quantity >= item.availableStock}
                         >
                           <Plus className="size-2.5" />
                         </button>

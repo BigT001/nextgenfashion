@@ -14,6 +14,7 @@ import {
   ExpandedState,
   getExpandedRowModel,
 } from "@tanstack/react-table";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import {
   Table,
@@ -33,6 +34,8 @@ interface DataTableProps<TData, TValue> {
   searchKey?: string;
   renderSubComponent?: (props: { row: any }) => React.ReactNode;
   onRowClick?: (row: TData) => void;
+  /** If true, row expansion via renderSubComponent only fires on mobile. Desktop shows all columns inline. */
+  expandOnMobileOnly?: boolean;
 }
 
 export function DataTable<TData, TValue>({
@@ -41,7 +44,9 @@ export function DataTable<TData, TValue>({
   searchKey,
   renderSubComponent,
   onRowClick,
+  expandOnMobileOnly = false,
 }: DataTableProps<TData, TValue>) {
+  const isMobile = useIsMobile();
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [expanded, setExpanded] = React.useState<ExpandedState>({});
@@ -98,10 +103,11 @@ export function DataTable<TData, TValue>({
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {
                   const colSize = header.column.columnDef.size;
+                  const metaClassName = (header.column.columnDef.meta as any)?.className;
                   return (
                     <TableHead
                       key={header.id}
-                      className="font-bold text-xs uppercase tracking-wider h-12 overflow-hidden"
+                      className={cn("font-bold text-xs uppercase tracking-wider h-12 overflow-hidden", metaClassName)}
                       style={colSize ? { width: colSize, minWidth: colSize, maxWidth: colSize } : undefined}
                     >
                       {header.isPlaceholder
@@ -125,7 +131,7 @@ export function DataTable<TData, TValue>({
                     aria-expanded={row.getIsExpanded()}
                     className={cn(
                       "group hover:bg-brand-navy/5 transition-colors border-border/50",
-                      (onRowClick || renderSubComponent) && "cursor-pointer",
+                      (onRowClick || (renderSubComponent && (!expandOnMobileOnly || isMobile))) && "cursor-pointer",
                       row.getIsExpanded() && "bg-brand-navy/5 border-b-transparent"
                     )}
                     onClick={(e) => {
@@ -139,6 +145,8 @@ export function DataTable<TData, TValue>({
                         return;
                       }
                       if (renderSubComponent) {
+                        // Only expand on mobile if expandOnMobileOnly is set
+                        if (expandOnMobileOnly && !isMobile) return;
                         row.toggleExpanded();
                         return;
                       }
@@ -147,10 +155,11 @@ export function DataTable<TData, TValue>({
                   >
                     {row.getVisibleCells().map((cell) => {
                       const colSize = cell.column.columnDef.size;
+                      const metaClassName = (cell.column.columnDef.meta as any)?.className;
                       return (
                         <TableCell
                           key={cell.id}
-                          className="py-4 overflow-hidden"
+                          className={cn("py-4 overflow-hidden", metaClassName)}
                           style={colSize ? { width: colSize, minWidth: colSize, maxWidth: colSize } : undefined}
                         >
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -158,7 +167,7 @@ export function DataTable<TData, TValue>({
                       );
                     })}
                   </TableRow>
-                  {row.getIsExpanded() && renderSubComponent && (
+                  {row.getIsExpanded() && renderSubComponent && (!expandOnMobileOnly || isMobile) && (
                     <TableRow className="bg-brand-navy/5 hover:bg-brand-navy/5 border-border/50 shadow-inner">
                       <TableCell colSpan={columns.length} className="p-0">
                         <div className="overflow-hidden animate-in slide-in-from-top-2 fade-in duration-300">

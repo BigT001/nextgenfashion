@@ -48,8 +48,8 @@ export async function ShopView({
         <div className="container mx-auto px-6">
           <div className="flex flex-col lg:flex-row gap-12">
 
-            {/* Filter Sidebar - Desktop */}
-            <aside className="hidden lg:block lg:w-64 shrink-0">
+            {/* Filter Sidebar - Desktop (sticky on scroll) */}
+            <aside className="hidden lg:block lg:w-64 shrink-0 self-start sticky top-24">
               <ShopFilters categories={categories} category={category} targetGender={targetGender} />
             </aside>
 
@@ -83,7 +83,7 @@ export async function ShopView({
                   />
                 </div>
               ) : (
-                <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-10">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
                   {products.map((product) => (
                     <ProductCard key={product.id} product={product} />
                   ))}

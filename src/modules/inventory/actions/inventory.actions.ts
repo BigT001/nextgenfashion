@@ -92,6 +92,7 @@ export async function getInventoryDashboardAction() {
     // Calculate Executive KPIs
     const totalInventoryValue = processedProducts.reduce((acc, p) => acc + (p.price * p.stock), 0);
     const stockAlerts = processedProducts.filter(p => p.status !== "In Stock").length;
+    const productsWithImages = processedProducts.filter(p => p.images && p.images.length > 0).length;
 
     return {
       success: true,
@@ -100,7 +101,8 @@ export async function getInventoryDashboardAction() {
         kpis: {
           totalProducts: products.length,
           stockAlerts,
-          totalValue: totalInventoryValue
+          totalValue: totalInventoryValue,
+          productsWithImages,
         }
       }
     };

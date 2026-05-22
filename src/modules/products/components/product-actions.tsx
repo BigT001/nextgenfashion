@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { ShoppingCart, Share2, Minus, Plus, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useCartStore, type CartItem } from "@/modules/cart/store/cart.store";
+import { useCartStore } from "@/modules/cart/store/cart.store";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -74,7 +74,7 @@ export function ProductActions({ product }: ProductActionsProps) {
       return;
     }
 
-    const cartItem: CartItem = {
+    const cartItem = {
       id: product.id,
       variantId: variant?.id || product.id,
       name: product.name,
