@@ -766,17 +766,17 @@ export function ProductForm({
           </TabsContent>
         </Tabs>
 
-        <div className="flex justify-between items-center pt-4 mt-4 border-t-2 border-brand-navy/5">
-          <div className="flex gap-4">
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-4 mt-4 border-t-2 border-brand-navy/5">
+          <div className="flex gap-4 w-full sm:w-auto order-2 sm:order-1">
             {activeTab !== "product" && (
                 <Button variant="ghost" onClick={() => {
                     const order = ["product", "media", "pricing"];
                     setActiveTab(order[order.indexOf(activeTab) - 1]);
-                }} type="button" className="text-xs font-black uppercase tracking-[0.3em] h-12 px-8 rounded-xl hover:bg-brand-navy/5 text-brand-navy transition-all">BACK</Button>
+                }} type="button" className="flex-1 sm:flex-none text-xs font-black uppercase tracking-[0.3em] h-12 px-8 rounded-xl hover:bg-brand-navy/5 text-brand-navy transition-all">BACK</Button>
             )}
           </div>
-          <div className="flex gap-4">
-            <Button variant="ghost" onClick={onClose} type="button" className="text-xs font-black uppercase tracking-[0.3em] h-12 px-8 rounded-xl hover:bg-rose-500/5 text-rose-600 transition-all">CANCEL</Button>
+          <div className="flex gap-4 w-full sm:w-auto order-1 sm:order-2">
+            <Button variant="ghost" onClick={onClose} type="button" className="flex-1 sm:flex-none text-xs font-black uppercase tracking-[0.3em] h-12 px-4 sm:px-8 rounded-xl hover:bg-rose-500/5 text-rose-600 transition-all">CANCEL</Button>
             {activeTab !== "pricing" ? (
                 <Button
                   type="button"
@@ -790,7 +790,7 @@ export function ProductForm({
                       handleTabChange(order[order.indexOf(activeTab) + 1]);
                     }
                   }}
-                  className="bg-brand-navy text-white font-black text-xs uppercase tracking-[0.3em] h-12 px-10 rounded-xl shadow-lg shadow-brand-navy/20 active:scale-95 transition-all"
+                  className="flex-1 sm:flex-none bg-brand-navy text-white font-black text-xs uppercase tracking-[0.3em] h-12 px-10 rounded-xl shadow-lg shadow-brand-navy/20 active:scale-95 transition-all"
                 >
                   {isEditing ? "SAVE" : "CONTINUE"}
                 </Button>
@@ -800,7 +800,7 @@ export function ProductForm({
                   disabled={isSubmitting}
                   onClick={() => form.handleSubmit(onSubmit)()}
                   data-action="save"
-                  className="bg-brand-navy text-white font-black text-xs uppercase tracking-[0.4em] h-12 px-12 rounded-xl shadow-[0_0_20px_rgba(var(--brand-navy-rgb),0.5)] active:scale-95 transition-all"
+                  className="flex-1 sm:flex-none bg-brand-navy text-white font-black text-xs uppercase tracking-[0.4em] h-12 px-12 rounded-xl shadow-[0_0_20px_rgba(var(--brand-navy-rgb),0.5)] active:scale-95 transition-all"
                 >
                   {isSubmitting ? "SAVING..." : "SAVE"}
                   <Save className="ml-5 h-6 w-6" />

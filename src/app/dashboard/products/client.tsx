@@ -479,6 +479,7 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
     {
       accessorKey: "images",
       header: "IMAGE",
+      size: 64, // Explicit size for image column
       cell: ({ row }) => (
         <div className="size-12 md:size-14 rounded-2xl bg-muted/30 flex items-center justify-center shrink-0 border border-border/20 overflow-hidden shadow-sm">
             {row.original.images?.[0] ? (
@@ -499,9 +500,9 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
       accessorKey: "name",
       header: "PRODUCT",
       cell: ({ row }) => (
-        <div className="flex flex-col gap-0.5 min-w-[120px]">
-            <span className="font-black text-sm tracking-tight group-hover:text-brand-navy transition-colors line-clamp-1">{row.original.name}</span>
-            <span className="text-[10px] text-muted-foreground font-black uppercase tracking-widest line-clamp-1">{row.original.category}</span>
+        <div className="flex flex-col gap-0.5 min-w-0 pr-2">
+            <span className="font-black text-sm tracking-tight group-hover:text-brand-navy transition-colors truncate">{row.original.name}</span>
+            <span className="text-[10px] text-muted-foreground font-black uppercase tracking-widest truncate">{row.original.category}</span>
         </div>
       ),
     },
@@ -509,6 +510,7 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
     {
       accessorKey: "stock",
       header: "STOCK",
+      size: 60, // Fixed size for stock
       cell: ({ row }) => (
         <div className={`font-black text-sm tracking-tighter ${row.original.status === "Out of Stock" ? "text-rose-600" : row.original.status === "Low Stock" ? "text-amber-500" : "text-emerald-600"}`}>
             {row.original.stock}
@@ -518,6 +520,7 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
     {
       id: "actions",
       header: () => <div className="text-right pr-2 md:pr-4">CONTROL</div>,
+      size: 60, // Fixed size for control
       cell: ({ row }) => (
         <div className="flex items-center justify-end gap-1 pr-1 md:pr-2">
           {/* Mobile: compact icon-only edit button */}

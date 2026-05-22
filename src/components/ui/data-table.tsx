@@ -91,14 +91,19 @@ export function DataTable<TData, TValue>({
           </button>
         </div>
       )}
-      <div className="rounded-2xl border bg-white/40 dark:bg-zinc-900/40 backdrop-blur-sm overflow-x-auto shadow-sm">
-        <Table className="min-w-full">
+      <div className="rounded-2xl border bg-white/40 dark:bg-zinc-900/40 backdrop-blur-sm overflow-hidden shadow-sm">
+        <Table className="w-full table-fixed">
           <TableHeader className="bg-muted/30">
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {
+                  const colSize = header.column.columnDef.size;
                   return (
-                    <TableHead key={header.id} className="font-bold text-xs uppercase tracking-wider h-12">
+                    <TableHead
+                      key={header.id}
+                      className="font-bold text-xs uppercase tracking-wider h-12 overflow-hidden"
+                      style={colSize ? { width: colSize, minWidth: colSize, maxWidth: colSize } : undefined}
+                    >
                       {header.isPlaceholder
                          ? null
                          : flexRender(
@@ -140,11 +145,18 @@ export function DataTable<TData, TValue>({
                       onRowClick?.(row.original);
                     }}
                   >
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id} className="py-4">
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </TableCell>
-                    ))}
+                    {row.getVisibleCells().map((cell) => {
+                      const colSize = cell.column.columnDef.size;
+                      return (
+                        <TableCell
+                          key={cell.id}
+                          className="py-4 overflow-hidden"
+                          style={colSize ? { width: colSize, minWidth: colSize, maxWidth: colSize } : undefined}
+                        >
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </TableCell>
+                      );
+                    })}
                   </TableRow>
                   {row.getIsExpanded() && renderSubComponent && (
                     <TableRow className="bg-brand-navy/5 hover:bg-brand-navy/5 border-border/50 shadow-inner">
