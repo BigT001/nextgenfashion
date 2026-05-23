@@ -58,21 +58,19 @@ export class ProductQueries {
    * Products WITH images are always shown first.
    */
   static async findFeatured(limit = 8) {
-    // Fetch more than needed so we can surface image-bearing products first
-    const products = await prisma.product.findMany({
-      where: { isSuspended: false },
-      take: limit * 4, // over-fetch so sorting is meaningful
+    // Fetch the most recent active products that already have at least one image.
+    return await prisma.product.findMany({
+      where: {
+        isSuspended: false,
+        images: { isEmpty: false },
+      },
+      take: limit,
       include: {
         category: true,
         variants: true,
       },
       orderBy: { createdAt: "desc" },
     });
-
-    // Sort: products with at least one image come first
-    const withImages = products.filter(p => p.images && p.images.length > 0);
-    const withoutImages = products.filter(p => !p.images || p.images.length === 0);
-    return [...withImages, ...withoutImages].slice(0, limit);
   }
 
   static async findById(id: string) {

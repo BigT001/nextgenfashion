@@ -8,7 +8,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GetProductsService } from "@/modules/products/services/get-products.service";
-import { ProductCard } from "@/modules/products/components/product-card";
 import { LiveBrandPulse } from "@/modules/brand/components/live-brand-pulse";
 import { AnimatedSection } from "@/components/ui/animated-section";
 import { ProductQueries } from "@/modules/products/queries/product.queries";
@@ -84,17 +83,36 @@ export default async function LandingPage() {
     return pastelPalette[sum % pastelPalette.length];
   };
 
-  let visibleFeaturedProducts = featuredProducts.filter((product: any) => product.images && product.images.length > 0);
+  type FeaturedImageItem = {
+    id: string;
+    product: any;
+    image: string;
+  };
 
-  // If there are no featured products with images, fall back to recent products
-  // that have uploaded images so the trending section is never empty in production.
-  if (visibleFeaturedProducts.length === 0) {
+  const buildImageItems = (products: any[]) => {
+    return products
+      .flatMap((product) =>
+        (product.images || [])
+          .filter((img: any): img is string => typeof img === "string" && img.trim().length > 0)
+          .map((img: string, index: number) => ({
+            id: `${product.id}-${index}`,
+            product,
+            image: img.trim(),
+          }))
+      )
+      .slice(0, 8);
+  };
+
+  let visibleFeaturedImages: FeaturedImageItem[] = buildImageItems(featuredProducts);
+
+  // If there are no featured product images, fall back to recent products with uploaded images.
+  if (visibleFeaturedImages.length === 0) {
     try {
       const recent = await GetProductsService.execute({ includeVariants: true });
-      visibleFeaturedProducts = (recent || []).filter((p: any) => p.images && p.images.length > 0).slice(0, 8);
+      visibleFeaturedImages = buildImageItems(recent || []);
     } catch (err) {
       console.error("[LANDING_PAGE] fallback products fetch failed:", err);
-      visibleFeaturedProducts = [];
+      visibleFeaturedImages = [];
     }
   }
 
@@ -319,11 +337,23 @@ export default async function LandingPage() {
             </h2>
           </AnimatedSection>
 
-          {visibleFeaturedProducts.length > 0 ? (
+          {visibleFeaturedImages.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 max-w-5xl mx-auto">
-              {visibleFeaturedProducts.slice(0, 8).map((product, i) => (
-                <AnimatedSection key={product.id} animation="fade-up" delay={i * 70}>
-                  <ProductCard product={product} />
+              {visibleFeaturedImages.map((item, i) => (
+                <AnimatedSection key={item.id} animation="fade-up" delay={i * 70}>
+                  <Link href={`/products/${item.product.id}`} className="block group">
+                    <div className="aspect-[3/4] rounded-[2.5rem] overflow-hidden bg-zinc-100 shadow-lg transition-transform duration-500 group-hover:-translate-y-1">
+                      <Image
+                        src={item.image}
+                        alt={item.product.name || "Product image"}
+                        fill
+                        className="object-cover transition-transform duration-1000 group-hover:scale-105"
+                      />
+                    </div>
+                    <div className="mt-4 text-center">
+                      <p className="font-black text-lg tracking-tight line-clamp-1">{item.product.name}</p>
+                    </div>
+                  </Link>
                 </AnimatedSection>
               ))}
             </div>

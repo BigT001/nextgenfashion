@@ -1,5 +1,9 @@
 import { ProductQueries } from "../queries/product.queries";
 import { prisma } from "@/services/prisma.service";
+import { PushPosProductImagesService } from "./push-pos-product-images.service";
+
+const getErrorMessage = (error: unknown) =>
+  error instanceof Error ? error.message : String(error ?? "Unknown error");
 
 /**
  * LINK PRODUCT IMAGE SERVICE
@@ -22,11 +26,25 @@ export class LinkProductImageService {
 
     // Prevent duplicate URLs
     if (currentImages.includes(imageUrl)) {
-      return await ProductQueries.update(productId, {});
+      const duplicateResult = await ProductQueries.findById(productId);
+      try {
+        await PushPosProductImagesService.execute(productId, [imageUrl]);
+      } catch (err: unknown) {
+        console.warn(`[LinkProductImage] POS image sync warning for duplicate image: ${getErrorMessage(err)}`);
+      }
+      return duplicateResult;
     }
 
-    return await ProductQueries.update(productId, {
+    const updatedProduct = await ProductQueries.update(productId, {
       images: [...currentImages, imageUrl]
     });
+
+    try {
+      await PushPosProductImagesService.execute(productId, [imageUrl]);
+    } catch (err: unknown) {
+      console.warn(`[LinkProductImage] POS image sync failed: ${getErrorMessage(err)}`);
+    }
+
+    return updatedProduct;
   }
 }

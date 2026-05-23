@@ -8,12 +8,17 @@ cloudinary.config({
 });
 
 export class CloudinaryService {
-  static async uploadImage(fileUri: string, folder: string = "products") {
+  static async uploadImage(fileUri: string, folder: string = "products", publicId?: string) {
     try {
-      const result = await cloudinary.uploader.upload(fileUri, {
+      const uploadOptions: Record<string, unknown> = {
         folder: `nextgenfashion/${folder}`,
         resource_type: "auto",
-      });
+      };
+      if (publicId) {
+        uploadOptions.public_id = publicId;
+      }
+
+      const result = await cloudinary.uploader.upload(fileUri, uploadOptions);
       return {
         url: result.secure_url,
         publicId: result.public_id,

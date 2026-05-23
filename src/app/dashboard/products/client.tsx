@@ -181,8 +181,16 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
       ));
 
       try {
+        const skuBasedId = match.sku
+          ? match.sku.toString().trim().replace(/[^a-zA-Z0-9_-]/g, "-").replace(/-+/g, "-").substring(0, 60).toUpperCase()
+          : null;
+        const publicId = skuBasedId
+          ? `product-${skuBasedId}-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`
+          : `product-${match.productId}-${Date.now()}`;
+
         const formData = new FormData();
         formData.append("file", file);
+        formData.append("publicId", publicId);
         
         const uploadRes = await uploadImageAction(formData) as any;
         if (!uploadRes.success || !uploadRes.url) {
@@ -355,18 +363,30 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
       setImportProgress(30);
 
       const uploadedImagesMap: Record<string, string> = {};
-      
+      const imageNameToSku: Record<string, string> = {};
+      parsedRows.forEach((row) => {
+        if (row.imageFilename && row.sku) {
+          imageNameToSku[row.imageFilename] = row.sku;
+        }
+      });
+
       if (imageFiles && imageFiles.length > 0) {
         let uploadedCount = 0;
         
         for (let i = 0; i < imageFiles.length; i++) {
           const file = imageFiles[i];
-          
+          const matchingSku = imageNameToSku[file.name];
+          const normalizedSku = matchingSku
+            ? matchingSku.toString().trim().replace(/[^a-zA-Z0-9_-]/g, "-").replace(/-+/g, "-").substring(0, 60).toUpperCase()
+            : file.name.replace(/\.[^/.]+$/, "").toString().trim().replace(/[^a-zA-Z0-9_-]/g, "-").replace(/-+/g, "-").substring(0, 60).toUpperCase();
+          const publicId = `import-${normalizedSku}-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`;
+
           setImportStep(`Uploading "${file.name}" to Cloudinary...`);
           setImportProgress(Math.round(30 + (uploadedCount / imageFiles.length) * 40));
 
           const formData = new FormData();
           formData.append("file", file);
+          formData.append("publicId", publicId);
           
           const uploadRes: any = await uploadImageAction(formData);
           if (uploadRes.success && uploadRes.url) {
@@ -588,6 +608,9 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
           >
             <Edit className="h-3.5 w-3.5" />
           </Button>
+          <div className={cn("flex items-center justify-center h-8 w-8 rounded-xl md:hidden text-muted-foreground bg-muted/10", row.getIsExpanded() && "bg-brand-navy/10")}> 
+            <ChevronDown className={cn("h-4 w-4 transition-transform", row.getIsExpanded() && "-rotate-180")} />
+          </div>
 
           {/* Desktop: labeled edit button + dropdown */}
           <Button
@@ -639,6 +662,89 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
   ];
 
 
+
+  const renderProductDetails = ({ row }: { row: any }) => {
+    const item = row.original;
+    return (
+      <div className="space-y-4 p-4 bg-white/95 rounded-3xl shadow-inner sm:hidden">
+        <div className="flex items-start gap-3">
+          <div className="size-16 rounded-3xl bg-muted/10 overflow-hidden border border-border/20">
+            {item.images?.[0] ? (
+              <Image src={item.images[0]} alt={item.name} width={84} height={84} className="object-cover w-full h-full" />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-muted-foreground"><ImageIcon className="size-6" /></div>
+            )}
+          </div>
+          <div className="min-w-0 space-y-2">
+            <p className="font-black text-base tracking-tight text-brand-navy truncate">{item.name}</p>
+            <p className="text-[10px] uppercase tracking-[0.35em] text-muted-foreground font-black">{item.category}</p>
+            <Badge variant="outline" className="font-black text-[10px] uppercase tracking-widest border-border/50 bg-muted/10 px-2 py-1">
+              {(item.variants?.length ?? 1)} VARS
+            </Badge>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3 text-[11px] text-brand-navy">
+          <div className="rounded-3xl border border-border/30 bg-muted/10 p-3">
+            <p className="text-[9px] uppercase tracking-[0.35em] text-muted-foreground font-black">SKU</p>
+            <p className="mt-1 font-black truncate">{item.sku || "—"}</p>
+          </div>
+          <div className="rounded-3xl border border-border/30 bg-muted/10 p-3">
+            <p className="text-[9px] uppercase tracking-[0.35em] text-muted-foreground font-black">Stock</p>
+            <p className={`mt-1 font-black ${
+                item.status === "Out of Stock" ? "text-rose-600" :
+                item.status === "Low Stock"   ? "text-amber-500" :
+                                                "text-emerald-600"
+            }`}>
+              {item.stock}{item.status === "Out of Stock" ? " · OOS" : item.status === "Low Stock" ? " · LOW" : ""}
+            </p>
+          </div>
+          <div className="rounded-3xl border border-border/30 bg-muted/10 p-3">
+            <p className="text-[9px] uppercase tracking-[0.35em] text-muted-foreground font-black">Wholesale</p>
+            <p className="mt-1 font-black">₦{Number(item.price || 0).toLocaleString()}</p>
+          </div>
+          <div className="rounded-3xl border border-border/30 bg-muted/10 p-3">
+            <p className="text-[9px] uppercase tracking-[0.35em] text-muted-foreground font-black">Retail</p>
+            <p className="mt-1 font-black">₦{Number(item.retailPrice || 0).toLocaleString()}</p>
+          </div>
+        </div>
+        <div className="rounded-3xl border border-border/30 bg-muted/10 p-4">
+          <p className="text-[9px] uppercase tracking-[0.35em] text-muted-foreground font-black mb-2">Description</p>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            {item.description || "No description available."}
+          </p>
+        </div>
+        <div className="flex gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            className="flex-1 h-11 font-black text-[10px] uppercase tracking-widest"
+            onClick={() => handleEditProduct(item.id)}
+            disabled={isLoadingProduct}
+          >
+            Edit Product
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            className="flex-1 h-11 font-black text-[10px] uppercase tracking-widest text-rose-600 border border-rose-100"
+            onClick={async () => {
+              if (confirm("Are you sure you want to delete this product?")) {
+                const res = (await deleteProductAction(item.id)) as any;
+                if (res.success) {
+                  toast.success(res.message || "Product deleted successfully");
+                  loadData();
+                } else {
+                  toast.error(res.error || "Failed to delete product");
+                }
+              }
+            }}
+          >
+            Delete
+          </Button>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-10 animate-slow-fade">
@@ -1170,7 +1276,7 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
       </div>
 
       {/* Catalog Table */}
-      <div className="overflow-hidden">
+      <div className="overflow-x-auto">
         <DataTable 
           columns={columns} 
           data={(showOnlyWithImages
@@ -1179,79 +1285,7 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
           )}
           searchKey="name"
           expandOnMobileOnly
-          renderSubComponent={({ row }) => (
-            <div className="px-5 py-6 bg-zinc-50/60 space-y-5 border-t border-border/20">
-
-              {/* SKU Badge */}
-              <div className="flex items-center gap-2">
-                <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">SKU</span>
-                <Badge variant="outline" className="font-black text-[10px] uppercase tracking-widest border-brand-navy/20 bg-brand-navy/5 text-brand-navy px-3 py-1">
-                  {row.original.sku || "—"}
-                </Badge>
-              </div>
-
-              {/* Pricing + Stock Grid */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-white rounded-2xl p-4 border border-border/30 space-y-0.5">
-                  <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Wholesale</p>
-                  <p className="text-base font-black text-brand-navy">₦{Number(row.original.price).toLocaleString()}</p>
-                </div>
-                <div className="bg-white rounded-2xl p-4 border border-border/30 space-y-0.5">
-                  <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Retail</p>
-                  <p className="text-base font-black text-brand-navy">₦{Number(row.original.retailPrice || 0).toLocaleString()}</p>
-                </div>
-                <div className="bg-white rounded-2xl p-4 border border-border/30 space-y-0.5">
-                  <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Cost</p>
-                  <p className="text-base font-black text-muted-foreground/50">₦{Number(row.original.costPrice || 0).toLocaleString()}</p>
-                </div>
-                <div className="bg-white rounded-2xl p-4 border border-border/30 space-y-0.5">
-                  <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Stock</p>
-                  <p className={`text-base font-black ${
-                    row.original.status === "Out of Stock" ? "text-rose-600"
-                    : row.original.status === "Low Stock" ? "text-amber-500"
-                    : "text-emerald-600"
-                  }`}>
-                    {row.original.stock}{row.original.status === "Out of Stock" ? " · OOS" : row.original.status === "Low Stock" ? " · LOW" : ""}
-                  </p>
-                </div>
-              </div>
-
-              {/* Description */}
-              <div className="bg-white rounded-2xl p-4 border border-border/30">
-                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-2">Description</p>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  {row.original.description || "No description available."}
-                </p>
-              </div>
-
-              {/* Actions — always side by side */}
-              <div className="flex gap-3 pt-1">
-                <Button
-                  className="flex-1 h-12 font-black text-[11px] uppercase tracking-widest bg-brand-navy text-white hover:bg-brand-navy/90 rounded-2xl shadow-lg shadow-brand-navy/20 active:scale-95 transition-all flex items-center justify-center gap-2"
-                  onClick={() => handleEditProduct(row.original.id)}
-                  disabled={isLoadingProduct}
-                >
-                  <Edit className="h-4 w-4" /> Edit
-                </Button>
-                <Button
-                  className="flex-1 h-12 font-black text-[11px] uppercase tracking-widest bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white border border-rose-200 rounded-2xl active:scale-95 transition-all flex items-center justify-center gap-2"
-                  onClick={async () => {
-                    if (confirm("Are you sure you want to delete this product?")) {
-                      const res = (await deleteProductAction(row.original.id)) as any;
-                      if (res.success) {
-                        toast.success(res.message || "Product deleted successfully");
-                        loadData();
-                      } else {
-                        toast.error(res.error || "Failed to delete product");
-                      }
-                    }
-                  }}
-                >
-                  <Trash2 className="h-4 w-4" /> Delete
-                </Button>
-              </div>
-            </div>
-          )}
+          renderSubComponent={renderProductDetails}
         />
       </div>
     </div>

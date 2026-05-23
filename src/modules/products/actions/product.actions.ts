@@ -20,12 +20,15 @@ export async function uploadImageAction(formData: FormData) {
     const file = formData.get("file") as File;
     if (!file) throw new Error("No file provided");
 
+    const publicId = formData.get("publicId");
+    const publicIdValue = typeof publicId === "string" && publicId.trim().length > 0 ? publicId.trim() : undefined;
+
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
     
     // Convert buffer to base64 for Cloudinary
     const fileBase64 = `data:${file.type};base64,${buffer.toString("base64")}`;
-    const result = await CloudinaryService.uploadImage(fileBase64);
+    const result = await CloudinaryService.uploadImage(fileBase64, "products", publicIdValue);
     
     return { success: true, ...result };
   } catch (error: any) {
@@ -41,12 +44,16 @@ export async function createProductAction(data: any) {
     // Process basePrice - use the lowest variant price if not provided
     const basePrice = productData.basePrice || Math.min(...variants.map((v: any) => v.price));
 
+    const normalizedImages = Array.isArray(images)
+      ? images.map((img: any) => typeof img === "string" ? img : img?.url).filter((url: any): url is string => typeof url === "string" && url.length > 0)
+      : [];
+
     const product = await CreateProductService.execute(
       { 
         ...productData, 
         basePrice, 
         categoryId,
-        images: images?.map((img: any) => img.url) || []
+        images: normalizedImages
       },
       variants
     );

@@ -303,8 +303,21 @@ export function ProductForm({
 
     try {
       const compressedBlob = await compressImage(file);
+      const skuValue = form.getValues("sku") || initialData?.sku || `UNNAMED-${Date.now()}`;
+      const normalizedSku = skuValue
+        .toString()
+        .trim()
+        .replace(/[^a-zA-Z0-9_-]/g, "-")
+        .replace(/-+/g, "-")
+        .substring(0, 60)
+        .toUpperCase();
+      const publicId = initialData?.id
+        ? `product-${normalizedSku}-${initialData.id.slice(0, 8)}-${Date.now()}`
+        : `product-${normalizedSku}-${Date.now()}`;
+
       const formData = new FormData();
       formData.append("file", compressedBlob, "compressed_image.jpg");
+      formData.append("publicId", publicId);
 
       // Start upload but keep UI interactive
       (async () => {
@@ -465,8 +478,17 @@ export function ProductForm({
                   </FormItem>
                 )} />
 
+                <FormField control={form.control} name="description" render={({ field }) => (
+                  <FormItem className="space-y-2">
+                    <FormLabel className="text-[11px] font-black uppercase tracking-widest text-brand-navy">Product Description</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Write a short description for the product..." className="min-h-[140px] resize-none bg-white border-2 border-brand-navy/5 rounded-3xl font-medium text-brand-navy focus:border-brand-navy/20 transition-all" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+
                 <div className="space-y-2">
-                  <FormLabel className="text-[11px] font-black uppercase tracking-widest text-brand-navy">Category Architecture</FormLabel>
                   <div className="flex flex-col gap-4 lg:flex-row">
                     <FormField control={form.control} name="categoryId" render={({ field }) => (
                       <FormItem className="flex-1 space-y-2">

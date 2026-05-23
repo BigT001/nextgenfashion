@@ -5,8 +5,15 @@ import "@/lib/listeners"; // Initialize system event listeners
 
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
+const getDatabaseConnectionString = () => {
+  if (process.env.NODE_ENV !== "production") {
+    return process.env.DIRECT_URL ?? process.env.DATABASE_URL;
+  }
+  return process.env.DATABASE_URL ?? process.env.DIRECT_URL;
+};
+
 const prismaClientSingleton = () => {
-  const connectionString = process.env.DATABASE_URL ?? process.env.DIRECT_URL;
+  const connectionString = getDatabaseConnectionString();
 
   if (!connectionString) {
     throw new Error("DATABASE_URL or DIRECT_URL is not defined. Check your .env configuration.");

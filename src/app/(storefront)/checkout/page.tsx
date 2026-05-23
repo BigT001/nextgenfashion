@@ -1,27 +1,20 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useCartStore } from "@/modules/cart/store/cart.store";
 import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { 
-    CreditCard, 
-    Truck, 
-    ArrowLeft, 
-    Zap, 
-    ShieldCheck, 
-    ShoppingCart, 
-    Lock,
-    Smartphone,
-    Banknote,
+import {
+    Truck,
+    ArrowLeft,
+    ShieldCheck,
+    ShoppingCart,
     User,
-    ChevronRight,
-    Sparkles
+    type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -31,19 +24,19 @@ import { cn } from "@/lib/utils";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { useFlutterwave, closePaymentModal } from "flutterwave-react-v3";
 
-type CheckoutStep = "IDENTITY" | "LOGISTICS" | "PAYMENT";
+type CheckoutStep = "IDENTITY" | "LOGISTICS";
 
 export default function CheckoutPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
   const { items, getTotal, clearCart } = useCartStore();
   const [loading, setLoading] = useState(false);
-  const [mounted, setMounted] = useState(false);
   const [step, setStep] = useState<CheckoutStep>("IDENTITY");
-  const [paymentMethod, setPaymentMethod] = useState<"CARD" | "TRANSFER" | "CASH">("CARD");
+  const [paymentMethod] = useState<"CARD" | "TRANSFER" | "CASH">("CARD");
+  const [txRef] = useState(() => `NG-${Date.now().toString(36).toUpperCase()}`);
   const [shippingInfo, setShippingInfo] = useState({
-    fullName: "",
-    email: "",
+    fullName: session?.user?.name || "",
+    email: session?.user?.email || "",
     phone: "",
     address: "",
     city: "",
@@ -57,58 +50,49 @@ export default function CheckoutPage() {
   const grandTotal = subtotal + taxAmount;
 
   useEffect(() => {
-    if (session?.user && !shippingInfo.fullName) {
-      setShippingInfo(prev => ({
-        ...prev,
-        fullName: session?.user?.name || "",
-        email: session?.user?.email || ""
-      }));
-    }
-  }, [session, shippingInfo.fullName]);
-
-  useEffect(() => {
-    setMounted(true);
-    if (mounted && items.length === 0) {
+    if (items.length === 0) {
       router.push("/shop");
     }
-    if (mounted && status === "unauthenticated") {
-        router.push("/auth/login?callbackUrl=/checkout");
+    if (status === "unauthenticated") {
+      router.push("/auth/login?callbackUrl=/checkout");
     }
-  }, [items, router, mounted, status]);
+  }, [items, router, status]);
 
-  if (!mounted || items.length === 0 || status !== "authenticated") return (
+  const fwConfig = useMemo(
+    () => ({
+      public_key: process.env.NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY || "",
+      tx_ref: txRef,
+      amount: grandTotal,
+      currency: "NGN",
+      payment_options: "card,banktransfer,ussd",
+      customer: {
+        email: shippingInfo.email,
+        phone_number: shippingInfo.phone,
+        name: shippingInfo.fullName,
+      },
+      customizations: {
+        title: "NextGen Fashion",
+        description: "Payment for luxury collection",
+        logo: "https://nextgenfashion.vercel.app/logo.png",
+      },
+    }),
+    [grandTotal, shippingInfo.email, shippingInfo.phone, shippingInfo.fullName, txRef]
+  );
+
+  const handleFlutterPayment = useFlutterwave(fwConfig);
+
+  if (items.length === 0 || status !== "authenticated") return (
       <div className="h-screen flex items-center justify-center">
           <LoadingSpinner size="lg" />
       </div>
   );
 
-  const fwConfig = {
-    public_key: process.env.NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY || "",
-    tx_ref: `NG-${Date.now().toString(36).toUpperCase()}`,
-    amount: grandTotal,
-    currency: 'NGN',
-    payment_options: 'card,banktransfer,ussd',
-    customer: {
-      email: shippingInfo.email,
-      phone_number: shippingInfo.phone,
-      name: shippingInfo.fullName,
-    },
-    customizations: {
-      title: 'NextGen Fashion',
-      description: 'Payment for luxury collection',
-      logo: 'https://nextgenfashion.vercel.app/logo.png',
-    },
-  };
-
-  const handleFlutterPayment = useFlutterwave(fwConfig);
-
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (step !== "PAYMENT") {
-        const nextStep = step === "IDENTITY" ? "LOGISTICS" : "PAYMENT";
-        setStep(nextStep);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        return;
+    if (step === "IDENTITY") {
+      setStep("LOGISTICS");
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
     }
 
     setLoading(true);
@@ -116,7 +100,16 @@ export default function CheckoutPage() {
     if (paymentMethod === "CARD" || paymentMethod === "TRANSFER") {
       handleFlutterPayment({
         callback: async (response) => {
-          if (response.status === "successful") {
+          const paymentStatus = String(response.status || "").toLowerCase();
+      console.debug("Flutterwave callback response:", response);
+
+      if (["successful", "success", "completed"].includes(paymentStatus)) {
+            const paymentRef = String(
+              (response as any).transaction_id ||
+              (response as any).tx_ref ||
+              (response as any).id ||
+              ""
+            );
             const result = await createOrderAction({
               items: items.map(item => ({
                 variantId: item.variantId,
@@ -126,7 +119,7 @@ export default function CheckoutPage() {
               totalAmount: grandTotal,
               shippingInfo,
               paymentMethod,
-              paymentRef: response.transaction_id ? response.transaction_id.toString() : response.tx_ref,
+              paymentRef: paymentRef || undefined,
               status: "COMPLETED"
             });
 
@@ -135,8 +128,11 @@ export default function CheckoutPage() {
               clearCart();
               router.push("/checkout/success");
             } else {
-              toast.error(result.error || "Payment received but order creation failed.");
+              console.error("Order creation failed after successful payment:", result.error);
+              toast.error(result.error || "Payment succeeded but order creation failed. Please contact support.");
             }
+          } else if (paymentStatus === "pending") {
+            toast.warning("Payment is pending. Please wait a moment and check your bank.");
           } else {
             toast.error("Payment was not successful.");
           }
@@ -173,10 +169,9 @@ export default function CheckoutPage() {
     }
   };
 
-  const steps: { id: CheckoutStep; label: string; icon: any }[] = [
+  const steps: { id: CheckoutStep; label: string; icon: LucideIcon }[] = [
     { id: "IDENTITY", label: "ACCOUNT", icon: User },
     { id: "LOGISTICS", label: "LOGISTICS", icon: Truck },
-    { id: "PAYMENT", label: "SETTLE", icon: CreditCard },
   ];
 
   return (
@@ -204,6 +199,24 @@ export default function CheckoutPage() {
             {/* Left: Transaction Details */}
             <form id="checkout-form" onSubmit={handleSubmit} className="lg:col-span-7 space-y-12">
               
+              {/* Persistent step tabs for consistent navigation */}
+              <div className="mb-6 flex items-center gap-3">
+                {steps.map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => setStep(s.id)}
+                    className={cn(
+                      "flex items-center gap-2 px-3 py-2 rounded-lg font-black text-[10px] uppercase tracking-widest transition-all",
+                      step === s.id ? "bg-brand-navy text-white shadow-md" : "text-muted-foreground/60 hover:bg-zinc-50/10"
+                    )}
+                  >
+                    <s.icon className="size-4" />
+                    <span className="hidden sm:inline">{s.label}</span>
+                  </button>
+                ))}
+              </div>
+
               {/* Step 1: Identity */}
               {step === "IDENTITY" && (
                 <div className="glass-card p-12 rounded-[3rem] border-none shadow-2xl animate-in slide-in-from-bottom-8 duration-500 space-y-10">
@@ -213,27 +226,9 @@ export default function CheckoutPage() {
                         </div>
                         <div className="space-y-1">
                             <h2 className="text-3xl font-black tracking-tight">Patron Account</h2>
-                            <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">PERSONAL INTEL FOR FULFILLMENT</p>
                         </div>
                     </div>
 
-                        {/* Step tabs inside Patron Account card for easier navigation */}
-                        <div className="mt-6 flex items-center gap-3 bg-white/5 p-2 rounded-xl inline-flex">
-                          {steps.map((s, i) => (
-                            <button
-                              key={s.id}
-                              type="button"
-                              onClick={() => setStep(s.id)}
-                              className={cn(
-                                "flex items-center gap-2 px-3 py-2 rounded-lg font-black text-[10px] uppercase tracking-widest transition-all",
-                                step === s.id ? "bg-brand-navy text-white shadow-md" : "text-muted-foreground/60 hover:bg-zinc-50/10"
-                              )}
-                            >
-                              <s.icon className="size-4" />
-                              <span className="hidden sm:inline">{s.label}</span>
-                            </button>
-                          ))}
-                        </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div className="space-y-3 md:col-span-2">
@@ -307,79 +302,13 @@ export default function CheckoutPage() {
                         <Button type="button" onClick={() => setStep("IDENTITY")} variant="outline" className="h-20 px-8 rounded-[2rem] border-none glass-card font-black text-[10px] uppercase tracking-widest group">
                             <ArrowLeft className="size-5 group-hover:-translate-x-1 transition-transform" />
                         </Button>
-                        <Button type="submit" className="flex-1 h-20 bg-zinc-950 text-white rounded-[2rem] font-black text-xs uppercase tracking-[0.3em] shadow-2xl transition-all active:scale-95 group">
-                            PROCEED TO SETTLEMENT
-                            <ArrowLeft className="ml-3 size-5 rotate-180 group-hover:translate-x-1 transition-transform" />
-                        </Button>
-                    </div>
-                </div>
-              )}
-
-              {/* Step 3: Payment */}
-              {step === "PAYMENT" && (
-                <div className="space-y-10 animate-in slide-in-from-bottom-8 duration-500">
-                    <div className="glass-card p-12 rounded-[3rem] border-none shadow-2xl space-y-12">
-                        <div className="flex items-center gap-5">
-                            <div className="size-16 bg-brand-navy/10 rounded-2xl flex items-center justify-center text-brand-navy shadow-inner">
-                                <CreditCard className="size-8" />
-                            </div>
-                            <div className="space-y-1">
-                                <h2 className="text-3xl font-black tracking-tight">Settlement</h2>
-                                <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">SECURE FINANCIAL ORCHESTRATION</p>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            {[
-                                { id: "CARD", label: "DEBIT CARD", icon: CreditCard, color: "text-purple-500" },
-                                { id: "TRANSFER", label: "BANK TRANS", icon: Smartphone, color: "text-blue-500" },
-                                { id: "CASH", label: "CASH", icon: Banknote, color: "text-emerald-500" }
-                            ].map((method) => (
-                                <button
-                                    key={method.id}
-                                    type="button"
-                                    onClick={() => setPaymentMethod(method.id as any)}
-                                    className={cn(
-                                        "flex flex-col items-center justify-center p-10 rounded-[2.5rem] border-2 transition-all gap-6 group relative overflow-hidden",
-                                        paymentMethod === method.id 
-                                        ? "border-brand-navy bg-brand-navy/5 text-brand-navy shadow-2xl shadow-brand-navy/10 scale-105" 
-                                        : "border-border/30 hover:border-brand-navy/30 hover:bg-zinc-50"
-                                    )}
-                                >
-                                    {paymentMethod === method.id && <div className="absolute top-4 right-4 animate-in zoom-in"><Sparkles className="size-4" /></div>}
-                                    <method.icon className={cn("size-10 group-hover:scale-110 transition-transform", paymentMethod === method.id ? "text-brand-navy" : "text-zinc-400")} />
-                                    <span className="text-[10px] font-black uppercase tracking-[0.3em]">{method.label}</span>
-                                </button>
-                            ))}
-                        </div>
-                        
-                        <div className="bg-zinc-950 text-white rounded-3xl p-8 flex gap-6 shadow-2xl overflow-hidden relative">
-                            <div className="absolute inset-0 bg-brand-mesh opacity-10" />
-                            <ShieldCheck className="size-8 text-brand-navy flex-shrink-0 relative z-10 animate-pulse" />
-                            <div className="relative z-10 space-y-1">
-                                <h4 className="text-sm font-black uppercase tracking-widest">Financial Integrity Verified</h4>
-                                <p className="text-xs text-zinc-500 font-medium leading-relaxed">
-                                    Your data is secured with industrial-grade 256-bit encryption.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="flex gap-4">
-                        <Button type="button" onClick={() => setStep("LOGISTICS")} variant="outline" className="h-20 px-8 rounded-[2rem] border-none glass-card font-black text-[10px] uppercase tracking-widest group">
-                            <ArrowLeft className="size-5 group-hover:-translate-x-1 transition-transform" />
-                        </Button>
-                        <Button 
-                            type="submit" 
-                            disabled={loading}
-                            className="flex-1 h-20 bg-brand-navy hover:bg-brand-navy/90 text-white rounded-[2rem] font-black text-xs uppercase tracking-[0.3em] shadow-2xl shadow-brand-navy/30 transition-all active:scale-95 group disabled:opacity-50"
-                        >
+                        <Button type="submit" disabled={loading} className="flex-1 h-20 bg-zinc-950 text-white rounded-[2rem] font-black text-xs uppercase tracking-[0.3em] shadow-2xl transition-all active:scale-95 group disabled:opacity-50">
                             {loading ? (
-                                <LoadingSpinner size="sm" variant="white" />
+                                "PROCESSING PAYMENT..."
                             ) : (
                                 <>
-                                    <Lock className="mr-3 size-5" />
-                                    AUTHORISE TRANSACTION
+                                    AUTHORISE PAYMENT
+                                    <ArrowLeft className="ml-3 size-5 rotate-180 group-hover:translate-x-1 transition-transform" />
                                 </>
                             )}
                         </Button>

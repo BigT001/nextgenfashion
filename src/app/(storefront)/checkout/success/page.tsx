@@ -3,14 +3,11 @@
 import Link from "next/link";
 import { CheckCircle2, Package, ArrowRight, ShoppingBag, Sparkles, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import confetti from "canvas-confetti";
 
 export default function OrderSuccessPage() {
-  const [mounted, setMounted] = useState(false);
-
   useEffect(() => {
-    setMounted(true);
     // Fire celebratory confetti
     const duration = 3 * 1000;
     const animationEnd = Date.now() + duration;
@@ -18,11 +15,12 @@ export default function OrderSuccessPage() {
 
     const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
 
-    const interval: any = setInterval(function() {
+    const interval = window.setInterval(() => {
       const timeLeft = animationEnd - Date.now();
 
       if (timeLeft <= 0) {
-        return clearInterval(interval);
+        window.clearInterval(interval);
+        return;
       }
 
       const particleCount = 50 * (timeLeft / duration);
@@ -30,10 +28,8 @@ export default function OrderSuccessPage() {
       confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } });
     }, 250);
 
-    return () => clearInterval(interval);
+    return () => window.clearInterval(interval);
   }, []);
-
-  if (!mounted) return null;
 
   return (
     <div className="min-h-screen bg-white selection:bg-brand-navy/30 flex flex-col items-center justify-center p-6 relative overflow-hidden">
@@ -51,10 +47,10 @@ export default function OrderSuccessPage() {
 
         <div className="space-y-6">
           <h1 className="text-5xl md:text-7xl font-black tracking-tighter leading-none">
-            ACQUISITION <span className="text-gradient">COMPLETE</span>.
+            CONGRATULATIONS <span className="text-gradient">🎉</span>
           </h1>
           <p className="text-xl text-muted-foreground font-medium max-w-lg mx-auto leading-relaxed">
-            Your selection has been secured. Our architectural fulfillment team is preparing your luxury pieces for express logistics.
+            Your payment was successful and your order is confirmed. Thank you for shopping with NextGen Fashion — your order details are now available in your dashboard.
           </p>
         </div>
 
@@ -76,12 +72,20 @@ export default function OrderSuccessPage() {
                 </div>
             </div>
 
-            <Link href="/shop" className="block w-full">
-                <Button className="w-full h-16 bg-zinc-950 text-white rounded-2xl font-black text-xs uppercase tracking-[0.3em] shadow-2xl group transition-all active:scale-95">
-                    RETURN TO CATALOGUE
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Link href="/dashboard/orders" className="block w-full">
+                <Button className="w-full h-16 bg-brand-navy text-white rounded-2xl font-black text-xs uppercase tracking-[0.3em] shadow-2xl group transition-all active:scale-95">
+                    VIEW DASHBOARD
                     <ArrowRight className="ml-3 size-4 group-hover:translate-x-1 transition-transform" />
                 </Button>
-            </Link>
+              </Link>
+              <Link href="/shop" className="block w-full">
+                <Button variant="outline" className="w-full h-16 border-2 border-brand-navy text-brand-navy rounded-2xl font-black text-xs uppercase tracking-[0.3em] shadow-none group transition-all active:scale-95">
+                    CONTINUE SHOPPING
+                    <ArrowRight className="ml-3 size-4 group-hover:translate-x-1 transition-transform" />
+                </Button>
+              </Link>
+            </div>
         </div>
 
         <div className="flex items-center justify-center gap-8 opacity-40">
@@ -102,6 +106,6 @@ function Badge({ className, children }: { className?: string; children: React.Re
     );
 }
 
-function cn(...inputs: any[]) {
+function cn(...inputs: Array<string | number | boolean | undefined | null>) {
     return inputs.filter(Boolean).join(" ");
 }

@@ -74,6 +74,14 @@ export function DataTable<TData, TValue>({
     },
   });
 
+  const currentPageCount = table.getRowModel().rows.length;
+  const totalResultCount = table.getFilteredRowModel().rows.length;
+  const pageIndex = table.getState().pagination.pageIndex;
+  const pageSize = table.getState().pagination.pageSize;
+  const startResult = totalResultCount === 0 ? 0 : pageIndex * pageSize + 1;
+  const endResult = totalResultCount === 0 ? 0 : startResult + currentPageCount - 1;
+  const resultLabel = totalResultCount === 1 ? "result" : "results";
+
   return (
     <div className="space-y-4">
       {searchKey && (
@@ -96,8 +104,8 @@ export function DataTable<TData, TValue>({
           </button>
         </div>
       )}
-      <div className="rounded-2xl border bg-white/40 dark:bg-zinc-900/40 backdrop-blur-sm overflow-hidden shadow-sm">
-        <Table className="w-full table-fixed">
+      <div className="rounded-2xl border bg-white/40 dark:bg-zinc-900/40 backdrop-blur-sm overflow-x-auto shadow-sm">
+        <Table className="w-full min-w-full table-fixed">
           <TableHeader className="bg-muted/30">
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
@@ -190,8 +198,10 @@ export function DataTable<TData, TValue>({
       </div>
       <div className="flex items-center justify-between px-2">
         <div className="text-sm text-muted-foreground">
-          Showing <span className="font-medium">{table.getRowModel().rows.length}</span> of{" "}
-          <span className="font-medium">{data.length}</span> results
+          Showing <span className="font-medium">{startResult}</span>
+          {currentPageCount > 0 && (
+            <>–<span className="font-medium">{endResult}</span></>
+          )} of <span className="font-medium">{totalResultCount}</span> {resultLabel}
         </div>
         <div className="flex items-center space-x-2">
           <Button

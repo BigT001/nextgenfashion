@@ -1,5 +1,6 @@
 import { NextResponse, after } from "next/server";
 import { SyncPosProductsService } from "@/modules/products/services/sync-pos-products.service";
+import { SyncPosTransactionsService } from "@/modules/pos/services/sync-pos-transactions.service";
 
 export const maxDuration = 300; // Allow up to 5 minutes execution time for full paginated catalog syncing
 
@@ -31,15 +32,25 @@ export async function GET(request: Request) {
   }
 
   try {
-    console.log("⏱️ Automated/Cron trigger received. Running POS synchronization in background...");
+    const { searchParams } = new URL(request.url);
+    const type = (searchParams.get("type") || searchParams.get("kind") || "products").toLowerCase();
 
-    // Utilize Next.js after to run the sync asynchronously in the background.
-    // This responds immediately (within milliseconds) to avoid Vercel and cron-job.org timeouts,
-    // while keeping the serverless instance alive until the sync completes.
+    console.log(`⏱️ Automated/Cron trigger received. Running POS ${type} synchronization in background...`);
+
     after(async () => {
       try {
-        const result = await SyncPosProductsService.execute();
-        console.log(`🎉 Background POS sync completed. Synced: ${result.totalSynced}, Created: ${result.totalCreated}, Updated: ${result.totalUpdated}.`);
+        if (type === "transactions") {
+          const result = await SyncPosTransactionsService.execute();
+          console.log(`🎉 Background POS transaction sync completed: ${result.totalCreated} created, ${result.totalUpdated} updated, ${result.totalSkipped} skipped.`);
+        } else if (type === "all") {
+          const productResult = await SyncPosProductsService.execute();
+          console.log(`🎉 Background POS product sync completed: Synced ${productResult.totalSynced}, Created ${productResult.totalCreated}, Updated ${productResult.totalUpdated}.`);
+          const transactionResult = await SyncPosTransactionsService.execute();
+          console.log(`🎉 Background POS transaction sync completed: ${transactionResult.totalCreated} created, ${transactionResult.totalUpdated} updated, ${transactionResult.totalSkipped} skipped.`);
+        } else {
+          const result = await SyncPosProductsService.execute();
+          console.log(`🎉 Background POS product sync completed: Synced ${result.totalSynced}, Created ${result.totalCreated}, Updated ${result.totalUpdated}.`);
+        }
       } catch (error) {
         console.error("❌ Background POS sync failed:", error);
       }
@@ -47,11 +58,12 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       success: true,
-      message: "POS Synchronization triggered and running asynchronously in background."
+      message: `POS ${type} synchronization triggered and running asynchronously in background.`,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown cron sync dispatch error";
     console.error("❌ Cron sync dispatch failed:", error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }
 
@@ -65,9 +77,28 @@ export async function POST(request: Request) {
   }
 
   try {
+    const { searchParams } = new URL(request.url);
+    const type = (searchParams.get("type") || searchParams.get("kind") || "products").toLowerCase();
+
+    if (type === "transactions") {
+      const result = await SyncPosTransactionsService.execute();
+      return NextResponse.json(result);
+    }
+
+    if (type === "all") {
+      const productResult = await SyncPosProductsService.execute();
+      const transactionResult = await SyncPosTransactionsService.execute();
+      return NextResponse.json({
+        success: true,
+        products: productResult,
+        transactions: transactionResult,
+      });
+    }
+
     const result = await SyncPosProductsService.execute();
     return NextResponse.json(result);
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown POS sync error";
+    return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }
