@@ -1,6 +1,7 @@
 import { events, SYSTEM_EVENTS } from "./events";
 import { NotificationService } from "@/services/notification.service";
 import { prisma } from "@/services/prisma.service";
+import { PushPosTransactionService } from "@/modules/pos/services/push-pos-transaction.service";
 
 /**
  * GLOBAL SYSTEM LISTENERS
@@ -57,6 +58,15 @@ events.on(SYSTEM_EVENTS.SALE.CREATED, async (data) => {
     });
 
     console.log(`[Event Success] Audit log and notification processed for order ${data.orderNumber}`);
+
+    // Reaction C: Push local sales to the PHP POS so the remote inventory stays in sync.
+    if (data.orderNumber && !data.orderNumber.startsWith("POS-")) {
+      PushPosTransactionService.execute(data.saleId).then((result) => {
+        console.log(`[POS Push] ${data.orderNumber} -> ${result.endpoint || "unknown"}: ${result.message}`);
+      }).catch((error) => {
+        console.error(`[POS Push] Failed to push sale ${data.orderNumber} to PHP POS:`, error);
+      });
+    }
   } catch (error) {
     console.error(`[Event Error] Failed to process sale:created side-effects:`, error);
   }

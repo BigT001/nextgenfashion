@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ShoppingCart, Share2, Minus, Plus, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCartStore } from "@/modules/cart/store/cart.store";
@@ -13,9 +13,10 @@ interface ProductActionsProps {
 
 export function ProductActions({ product }: ProductActionsProps) {
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
-  const [quantity, setQuantity] = useState(1);
-  const addItem = useCartStore((state) => state.addItem);
   const items = useCartStore((state) => state.items);
+  const addItem = useCartStore((state) => state.addItem);
+  const updateQuantity = useCartStore((state) => state.updateQuantity);
+  const [quantity, setQuantity] = useState(1);
 
   // Normalize sizes: treat OS / One Size as no-size (don't show selector)
   const rawSizes = Array.from(new Set(product.variants.map((v: any) => v.size || "").filter(Boolean))) as string[];
@@ -24,12 +25,57 @@ export function ProductActions({ product }: ProductActionsProps) {
   const totalStock = product.variants.reduce((acc: number, v: any) => acc + (v.inventory?.quantity || 0), 0);
   const isOutOfStock = totalStock <= 0;
 
+  const sameProductCartItems = useMemo(
+    () => items.filter((item: any) => item.id === product.id),
+    [items, product.id]
+  );
+
+  useEffect(() => {
+    if (!selectedSize && sizes.length > 0 && sameProductCartItems.length === 1) {
+      const cartSize = sameProductCartItems[0].size;
+      if (cartSize) {
+        setSelectedSize(cartSize);
+      }
+    }
+  }, [sameProductCartItems, selectedSize, sizes.length]);
+
   // Compute selected variant and available stock for UI limits
-  const selectedVariant = sizes.length > 0 && selectedSize
-    ? product.variants.find((v: any) => v.size === selectedSize)
-    : null;
+  const selectedVariant = useMemo(() => {
+    if (sizes.length > 0 && selectedSize) {
+      return product.variants.find((v: any) => v.size === selectedSize) ?? null;
+    }
+    if (sizes.length === 0) {
+      return product.variants.find((v: any) => (v.inventory?.quantity || 0) > 0) || product.variants[0] || null;
+    }
+    return null;
+  }, [product.variants, selectedSize, sizes.length]);
+
+  const variantId = selectedVariant ? selectedVariant.id : sizes.length === 0 ? product.id : null;
+  const existingCartItem = useMemo(
+    () => (variantId ? items.find((it: any) => it.variantId === variantId) : undefined),
+    [items, variantId]
+  );
+
+  useEffect(() => {
+    if (existingCartItem) {
+      setQuantity(existingCartItem.quantity);
+      return;
+    }
+
+    if (quantity !== 1) {
+      setQuantity(1);
+    }
+  }, [existingCartItem?.quantity, existingCartItem, quantity]);
 
   const maxAvailable = selectedVariant ? (selectedVariant.inventory?.quantity ?? 0) : totalStock;
+
+  const adjustQuantity = (newQuantity: number) => {
+    const cappedQuantity = Math.max(1, Math.min(newQuantity, maxAvailable));
+    setQuantity(cappedQuantity);
+    if (existingCartItem) {
+      updateQuantity(variantId, cappedQuantity);
+    }
+  };
 
   const handleAddToCart = () => {
     if (isOutOfStock) {
@@ -43,23 +89,7 @@ export function ProductActions({ product }: ProductActionsProps) {
       return;
     }
 
-    // Find the specific variant (match size if provided, otherwise pick an available variant)
-    let variant: any = null;
-    if (sizes.length > 0) {
-      variant = product.variants.find((v: any) => v.size === selectedSize);
-    } else {
-      // prefer a variant with inventory > 0
-      variant = product.variants.find((v: any) => (v.inventory?.quantity || 0) > 0) || product.variants[0];
-    }
-
-    // If this variant is already in cart, notify and stop
-    const existing = items.find((it: any) => it.variantId === (variant?.id || product.id));
-    if (existing) {
-      toast.error(`${product.name} is already in your cart.`);
-      return;
-    }
-
-    const stockAvailable = variant?.inventory?.quantity ?? 0;
+    const stockAvailable = selectedVariant?.inventory?.quantity ?? 0;
     if (stockAvailable <= 0) {
       toast.error(`The selected options for "${product.name}" are out of stock!`, {
         duration: 5000,
@@ -74,19 +104,24 @@ export function ProductActions({ product }: ProductActionsProps) {
       return;
     }
 
+    if (existingCartItem) {
+      updateQuantity(variantId, quantity);
+      toast.success(`${product.name} quantity updated in your bag.`);
+      return;
+    }
+
     const cartItem = {
       id: product.id,
-      variantId: variant?.id || product.id,
+      variantId,
       name: product.name,
-      price: Number(variant?.price || product.basePrice),
-      quantity: quantity,
+      price: Number(selectedVariant?.price || product.basePrice),
+      quantity,
       image: product.images?.[0],
       size: selectedSize || undefined,
       availableStock: stockAvailable,
     };
 
     addItem(cartItem);
-
     toast.success(`${product.name} added to your bag.`);
   };
 
@@ -147,7 +182,7 @@ export function ProductActions({ product }: ProductActionsProps) {
               variant="ghost"
               size="icon"
               className="size-10 rounded-lg hover:bg-white dark:hover:bg-zinc-800 transition-colors"
-              onClick={() => setQuantity(Math.max(1, quantity - 1))}
+              onClick={() => adjustQuantity(quantity - 1)}
               disabled={quantity <= 1}
             >
               <Minus className="size-4" />
@@ -157,22 +192,29 @@ export function ProductActions({ product }: ProductActionsProps) {
               variant="ghost"
               size="icon"
               className={cn("size-10 rounded-lg transition-colors", quantity >= maxAvailable || maxAvailable <= 0 ? "opacity-40 cursor-not-allowed" : "hover:bg-white dark:hover:bg-zinc-800")}
-              onClick={() => setQuantity(Math.min(maxAvailable, quantity + 1))}
+              onClick={() => adjustQuantity(quantity + 1)}
               disabled={quantity >= maxAvailable || maxAvailable <= 0}
             >
               <Plus className="size-4" />
             </Button>
           </div>
+            <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2 text-xs font-black text-emerald-500 uppercase tracking-widest">
-                <Zap className="size-4 fill-emerald-500" />
-                {maxAvailable <= 0 ? (
-                  <span className="text-rose-600">Out of stock</span>
-                ) : maxAvailable <= 10 ? (
-                  <span className="text-emerald-600">Limited stock — {maxAvailable} left</span>
-                ) : (
-                  <span className="text-emerald-600">In stock</span>
-                )}
+              <Zap className="size-4 fill-emerald-500" />
+              {maxAvailable <= 0 ? (
+                <span className="text-rose-600">Out of stock</span>
+              ) : maxAvailable <= 10 ? (
+                <span className="text-emerald-600">Limited stock — {maxAvailable} left</span>
+              ) : (
+                <span className="text-emerald-600">In stock</span>
+              )}
             </div>
+            {existingCartItem && (
+              <div className="text-[10px] font-black uppercase tracking-[0.3em] text-brand-navy">
+                In cart: {existingCartItem.quantity}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3">
@@ -187,7 +229,7 @@ export function ProductActions({ product }: ProductActionsProps) {
             )}
           >
             <ShoppingCart className="mr-3 size-5 group-hover:scale-110 transition-transform" />
-            {isOutOfStock ? "OUT OF STOCK" : "ADD TO COLLECTION"}
+            {isOutOfStock ? "OUT OF STOCK" : existingCartItem ? "UPDATE CART" : "ADD TO COLLECTION"}
           </Button>
           <div className="flex flex-1 gap-3">
             <Button size="icon" variant="outline" onClick={handleShare} className="h-14 w-14 rounded-xl border-2 border-border/50 hover:text-brand-silver hover:border-brand-silver/50 transition-all glass-card">

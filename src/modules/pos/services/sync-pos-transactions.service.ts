@@ -337,67 +337,140 @@ export class SyncPosTransactionsService {
   }
 
   private static async upsertTransaction(transaction: NormalizedTransaction): Promise<TransactionSyncOutcome> {
-    const customer = transaction.customerEmail || transaction.customerPhone ? await this.findOrCreateCustomer(transaction) : undefined;
-
-    const saleData = {
-      totalAmount: transaction.totalAmount,
-      status: transaction.status,
-      paymentMethod: transaction.paymentMethod,
-      paymentRef: transaction.paymentRef,
-      customer: customer
-        ? {
-            connectOrCreate: {
-              where: customer.email ? { email: customer.email } : { phone: customer.phone! },
-              create: {
-                name: customer.name ?? "POS Customer",
-                email: customer.email,
-                phone: customer.phone,
-              },
-            },
-          }
-        : undefined,
-      ...(transaction.items.length > 0 ? { items: { create: transaction.items } } : {}),
-      ...(transaction.createdAt ? { createdAt: transaction.createdAt } : {}),
-    };
-
     const existingSale = await prisma.sale.findUnique({
       where: { orderNumber: transaction.orderNumber },
+      include: { items: true },
     });
 
     if (existingSale) {
-      await prisma.sale.update({
+      return this.updateImportedSale(existingSale, transaction);
+    }
+
+    return this.createImportedSale(transaction);
+  }
+
+  private static async createImportedSale(transaction: NormalizedTransaction): Promise<TransactionSyncOutcome> {
+    await prisma.$transaction(async (tx) => {
+      const customer = transaction.customerEmail || transaction.customerPhone ? await this.findOrCreateCustomer(transaction, tx) : undefined;
+
+      for (const item of transaction.items) {
+        await this.adjustInventoryForImportedSale(item.variantId, item.quantity, tx);
+      }
+
+      await tx.sale.create({
+        data: {
+          orderNumber: transaction.orderNumber,
+          totalAmount: transaction.totalAmount,
+          status: transaction.status,
+          paymentMethod: transaction.paymentMethod,
+          paymentRef: transaction.paymentRef,
+          customer: customer
+            ? {
+                connectOrCreate: {
+                  where: customer.email ? { email: customer.email } : { phone: customer.phone! },
+                  create: {
+                    name: customer.name ?? "POS Customer",
+                    email: customer.email,
+                    phone: customer.phone,
+                  },
+                },
+              }
+            : undefined,
+          ...(transaction.items.length > 0 ? { items: { create: transaction.items } } : {}),
+          ...(transaction.createdAt ? { createdAt: transaction.createdAt } : {}),
+        },
+      });
+    });
+
+    return { success: true, orderNumber: transaction.orderNumber, action: "CREATE" };
+  }
+
+  private static async updateImportedSale(existingSale: any, transaction: NormalizedTransaction): Promise<TransactionSyncOutcome> {
+    await prisma.$transaction(async (tx) => {
+      const customer = transaction.customerEmail || transaction.customerPhone ? await this.findOrCreateCustomer(transaction, tx) : undefined;
+      const previousQuantities = new Map<string, number>();
+      existingSale.items.forEach((item: any) => previousQuantities.set(item.variantId, item.quantity));
+
+      const updatedQuantities = new Map<string, number>();
+      transaction.items.forEach((item) => updatedQuantities.set(item.variantId, item.quantity));
+
+      const variantIds = new Set<string>([
+        ...previousQuantities.keys(),
+        ...updatedQuantities.keys(),
+      ]);
+
+      for (const variantId of variantIds) {
+        const previousQty = previousQuantities.get(variantId) ?? 0;
+        const updatedQty = updatedQuantities.get(variantId) ?? 0;
+        const delta = updatedQty - previousQty;
+        if (delta !== 0) {
+          await this.adjustInventoryForImportedSale(variantId, delta, tx);
+        }
+      }
+
+      await tx.saleItem.deleteMany({
+        where: { saleId: existingSale.id },
+      });
+
+      await tx.sale.update({
         where: { orderNumber: transaction.orderNumber },
         data: {
           totalAmount: transaction.totalAmount,
           status: transaction.status,
           paymentMethod: transaction.paymentMethod,
           paymentRef: transaction.paymentRef,
-          customer: saleData.customer,
+          customer: customer
+            ? {
+                connectOrCreate: {
+                  where: customer.email ? { email: customer.email } : { phone: customer.phone! },
+                  create: {
+                    name: customer.name ?? "POS Customer",
+                    email: customer.email,
+                    phone: customer.phone,
+                  },
+                },
+              }
+            : undefined,
+          ...(transaction.items.length > 0 ? { items: { create: transaction.items } } : {}),
         },
       });
-
-      return { success: true, orderNumber: transaction.orderNumber, action: "UPDATE" };
-    }
-
-    await prisma.sale.create({
-      data: {
-        orderNumber: transaction.orderNumber,
-        totalAmount: transaction.totalAmount,
-        status: transaction.status,
-        paymentMethod: transaction.paymentMethod,
-        paymentRef: transaction.paymentRef,
-        customer: saleData.customer,
-        ...(transaction.items.length > 0 ? { items: { create: transaction.items } } : {}),
-        ...(transaction.createdAt ? { createdAt: transaction.createdAt } : {}),
-      },
     });
 
-    return { success: true, orderNumber: transaction.orderNumber, action: "CREATE" };
+    return { success: true, orderNumber: transaction.orderNumber, action: "UPDATE" };
   }
 
-  private static async findOrCreateCustomer(transaction: NormalizedTransaction) {
+  private static async adjustInventoryForImportedSale(variantId: string, quantity: number, tx: any) {
+    if (quantity === 0) return;
+
+    const inventory = await tx.inventory.findUnique({
+      where: { variantId },
+    });
+
+    const adjustment = -quantity;
+    if (inventory) {
+      await tx.inventory.update({
+        where: { variantId },
+        data: {
+          quantity: { increment: adjustment },
+        },
+      });
+      return;
+    }
+
+    await tx.inventory.create({
+      data: {
+        variantId,
+        quantity: adjustment,
+        lowStockThreshold: 5,
+      },
+    });
+  }
+
+  private static async findOrCreateCustomer(transaction: NormalizedTransaction, tx?: any) {
+    const client = tx || prisma;
+
     if (transaction.customerEmail) {
-      return await prisma.customer.upsert({
+      return await client.customer.upsert({
         where: { email: transaction.customerEmail },
         create: {
           name: transaction.customerName ?? "POS Customer",
@@ -411,7 +484,7 @@ export class SyncPosTransactionsService {
       });
     }
 
-    return await prisma.customer.upsert({
+    return await client.customer.upsert({
       where: { phone: transaction.customerPhone! },
       create: {
         name: transaction.customerName ?? "POS Customer",

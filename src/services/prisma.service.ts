@@ -6,10 +6,15 @@ import "@/lib/listeners"; // Initialize system event listeners
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 const getDatabaseConnectionString = () => {
+  const directUrl = process.env.DIRECT_URL;
+  const runtimeUrl = process.env.DATABASE_URL;
+
+  // Prefer direct database access in development, and only use the pooled runtime URL in production.
   if (process.env.NODE_ENV !== "production") {
-    return process.env.DIRECT_URL ?? process.env.DATABASE_URL;
+    return directUrl ?? runtimeUrl;
   }
-  return process.env.DATABASE_URL ?? process.env.DIRECT_URL;
+
+  return runtimeUrl ?? directUrl;
 };
 
 const prismaClientSingleton = () => {

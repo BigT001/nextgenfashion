@@ -57,23 +57,23 @@ async function purge() {
   const deletedCustomers = await prisma.customer.deleteMany({});
   console.log(`   ✅ Deleted ${deletedCustomers.count} Customer records.`);
 
-  // 9. Delete Users except SUPERADMIN
-  console.log("   👉 Deleting all User records (Except SUPERADMIN)...");
+  // 9. Delete Users except ADMIN and SUPERADMIN
+  console.log("   👉 Deleting all User records (Except ADMIN and SUPERADMIN)...");
   
-  // Find superadmins to verify
-  const superadmins = await prisma.user.findMany({
-    where: { role: "SUPERADMIN" }
+  // Find admins to verify
+  const admins = await prisma.user.findMany({
+    where: { role: { in: ["SUPERADMIN", "ADMIN"] } }
   });
-  console.log(`   🛡️ Super Admins found to keep: ${superadmins.map(s => s.email).join(", ")}`);
+  console.log(`   🛡️ Admins found to keep: ${admins.map(s => `${s.email} (${s.role})`).join(", ")}`);
 
   const deletedUsers = await prisma.user.deleteMany({
     where: {
       role: {
-        not: "SUPERADMIN"
+        notIn: ["SUPERADMIN", "ADMIN"]
       }
     }
   });
-  console.log(`   ✅ Deleted ${deletedUsers.count} test User records.`);
+  console.log(`   ... Deleted ${deletedUsers.count} test User records.`);
 
   console.log("\n🎉 Complete Database Purge finished successfully! The database is fresh, clean, and ready for live imports!");
 }

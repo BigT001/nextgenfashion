@@ -174,7 +174,10 @@ export const AnalyticsQueries = {
    */
   async getRecentSales() {
     return await prisma.sale.findMany({
-      orderBy: { createdAt: "desc" },
+      orderBy: [
+        { updatedAt: "desc" },
+        { createdAt: "desc" }
+      ],
       take: 5,
       include: {
         customer: true,

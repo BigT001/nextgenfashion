@@ -11,11 +11,15 @@ Quick links to core module services and logic.
 - **Products**: Catalog and variant management.
 - **Orders**: Web and POS transaction orchestration.
 - **Inventory**: Stock tracking and audit logging.
+- **POS Webhooks**: Dedicated transaction and stock sync webhook contract.
 
 ## 🚀 Operations
 - **Database**: PostgreSQL (Supabase) via Prisma.
 - **Events**: Reactive side-effects (Notifications, Alerts).
 - **Global Services**: Shared system utilities.
+
+## 📡 Integration
+- **POS Webhooks**: [POS Webhooks](./pos-webhooks.md)
 
 ---
 *Created by Antigravity - High-Fidelity OS Architecture.*
