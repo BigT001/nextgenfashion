@@ -158,9 +158,9 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
 
   const kpis = initialData.kpis;
   
-  // High-fidelity fallback toggle: Use mock data ONLY if merchant has zero real sales and lifetime revenue.
+  // High-fidelity fallback toggle: Use mock data ONLY if enabled via env var and merchant has zero real sales.
   // This allows demo curating to look spectacular, but switches instantly to actual logistics when real sales begin!
-  const showFallback = kpis.lifetimeRevenue === 0 && kpis.totalSales === 0;
+  const showFallback = process.env.NEXT_PUBLIC_ENABLE_MOCK_DATA === "true" && kpis.lifetimeRevenue === 0 && kpis.totalSales === 0;
 
   const revenueDisplay = showFallback ? 2450000 : kpis.lifetimeRevenue;
   const salesDisplay = showFallback ? 452 : kpis.totalSales;
@@ -383,35 +383,42 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
             </CardHeader>
             <CardContent className="px-2">
               <div className="space-y-6">
-                {recentSalesList.map((sale: any) => {
-                  const customerName = sale.customer?.name || "Offline";
-                  const initials = getInitials(customerName);
-                  
-                  return (
-                    <div key={sale.id} className="flex items-center justify-between pb-4 border-b border-border/20 last:border-0 last:pb-0 hover:translate-x-1 transition-transform">
-                      <div className="flex items-center gap-4">
-                        <div className="size-11 rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-border/10 flex items-center justify-center font-black text-xs text-brand-navy shadow-sm uppercase shrink-0">
-                          {initials}
+                {recentSalesList.length > 0 ? (
+                  recentSalesList.map((sale: any) => {
+                    const customerName = sale.customer?.name || "Offline";
+                    const initials = getInitials(customerName);
+                    
+                    return (
+                      <div key={sale.id} className="flex items-center justify-between pb-4 border-b border-border/20 last:border-0 last:pb-0 hover:translate-x-1 transition-transform">
+                        <div className="flex items-center gap-4">
+                          <div className="size-11 rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-border/10 flex items-center justify-center font-black text-xs text-brand-navy shadow-sm uppercase shrink-0">
+                            {initials}
+                          </div>
+                          <div className="space-y-0.5 max-w-[150px]">
+                            <p className="text-sm font-black tracking-tight text-foreground truncate">{customerName}</p>
+                            <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest flex items-center gap-1">
+                              <Clock className="size-3" />
+                              {timeAgo(sale.createdAt)}
+                            </p>
+                          </div>
                         </div>
-                        <div className="space-y-0.5 max-w-[150px]">
-                          <p className="text-sm font-black tracking-tight text-foreground truncate">{customerName}</p>
-                          <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest flex items-center gap-1">
-                            <Clock className="size-3" />
-                            {timeAgo(sale.createdAt)}
+                        <div className="text-right space-y-0.5">
+                          <p className="text-sm font-black tracking-tighter text-foreground">
+                            ₦{Number(sale.totalAmount).toLocaleString()}
                           </p>
+                          <Badge className="bg-emerald-500/10 text-emerald-600 border-none font-black text-[8px] tracking-widest px-2 uppercase shadow-sm">
+                            SUCCESS
+                          </Badge>
                         </div>
                       </div>
-                      <div className="text-right space-y-0.5">
-                        <p className="text-sm font-black tracking-tighter text-foreground">
-                          ₦{Number(sale.totalAmount).toLocaleString()}
-                        </p>
-                        <Badge className="bg-emerald-500/10 text-emerald-600 border-none font-black text-[8px] tracking-widest px-2 uppercase shadow-sm">
-                          SUCCESS
-                        </Badge>
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })
+                ) : (
+                  <div className="py-12 text-center text-muted-foreground flex flex-col items-center justify-center">
+                    <ShoppingBag className="size-12 opacity-20 mb-4" />
+                    <p className="text-sm font-bold italic">No transactions recorded yet.</p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -429,35 +436,42 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
             </CardHeader>
             <CardContent className="px-2">
               <div className="space-y-6">
-                {recentSalesList.map((sale: any) => {
-                  const customerName = sale.customer?.name || "Offline";
-                  const initials = getInitials(customerName);
-                  
-                  return (
-                    <div key={sale.id} className="flex items-center justify-between pb-4 border-b border-border/20 last:border-0 last:pb-0 hover:translate-x-1 transition-transform">
-                      <div className="flex items-center gap-4">
-                        <div className="size-11 rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-border/10 flex items-center justify-center font-black text-xs text-brand-navy shadow-sm uppercase shrink-0">
-                          {initials}
+                {recentSalesList.length > 0 ? (
+                  recentSalesList.map((sale: any) => {
+                    const customerName = sale.customer?.name || "Offline";
+                    const initials = getInitials(customerName);
+                    
+                    return (
+                      <div key={sale.id} className="flex items-center justify-between pb-4 border-b border-border/20 last:border-0 last:pb-0 hover:translate-x-1 transition-transform">
+                        <div className="flex items-center gap-4">
+                          <div className="size-11 rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-border/10 flex items-center justify-center font-black text-xs text-brand-navy shadow-sm uppercase shrink-0">
+                            {initials}
+                          </div>
+                          <div className="space-y-0.5 max-w-[150px]">
+                            <p className="text-sm font-black tracking-tight text-foreground truncate">{customerName}</p>
+                            <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest flex items-center gap-1">
+                              <Clock className="size-3" />
+                              {timeAgo(sale.createdAt)}
+                            </p>
+                          </div>
                         </div>
-                        <div className="space-y-0.5 max-w-[150px]">
-                          <p className="text-sm font-black tracking-tight text-foreground truncate">{customerName}</p>
-                          <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest flex items-center gap-1">
-                            <Clock className="size-3" />
-                            {timeAgo(sale.createdAt)}
+                        <div className="text-right space-y-0.5">
+                          <p className="text-sm font-black tracking-tighter text-foreground">
+                            ₦{Number(sale.totalAmount).toLocaleString()}
                           </p>
+                          <Badge className="bg-emerald-500/10 text-emerald-600 border-none font-black text-[8px] tracking-widest px-2 uppercase shadow-sm">
+                            SUCCESS
+                          </Badge>
                         </div>
                       </div>
-                      <div className="text-right space-y-0.5">
-                        <p className="text-sm font-black tracking-tighter text-foreground">
-                          ₦{Number(sale.totalAmount).toLocaleString()}
-                        </p>
-                        <Badge className="bg-emerald-500/10 text-emerald-600 border-none font-black text-[8px] tracking-widest px-2 uppercase shadow-sm">
-                          SUCCESS
-                        </Badge>
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })
+                ) : (
+                  <div className="py-12 text-center text-muted-foreground flex flex-col items-center justify-center">
+                    <ShoppingBag className="size-12 opacity-20 mb-4" />
+                    <p className="text-sm font-bold italic">No transactions recorded yet.</p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -520,29 +534,36 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
             </CardHeader>
             <CardContent className="px-2">
               <div className="space-y-5">
-                {topProductsList.map((item: any, idx: number) => (
-                  <div key={idx} className="flex items-center justify-between pb-4 border-b border-border/20 last:border-0 last:pb-0 hover:translate-x-1 transition-transform">
-                    <div className="flex items-center gap-4">
-                      <div className="size-8 rounded-xl bg-brand-navy/5 flex items-center justify-center font-black text-xs text-brand-navy">
-                        #{idx + 1}
+                {topProductsList.length > 0 ? (
+                  topProductsList.map((item: any, idx: number) => (
+                    <div key={idx} className="flex items-center justify-between pb-4 border-b border-border/20 last:border-0 last:pb-0 hover:translate-x-1 transition-transform">
+                      <div className="flex items-center gap-4">
+                        <div className="size-8 rounded-xl bg-brand-navy/5 flex items-center justify-center font-black text-xs text-brand-navy">
+                          #{idx + 1}
+                        </div>
+                        <div>
+                          <p className="text-sm font-black tracking-tight text-foreground">{item.name}</p>
+                          <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">
+                            {item.quantity} orders fulfilled
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm font-black tracking-tight text-foreground">{item.name}</p>
-                        <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">
-                          {item.quantity} orders fulfilled
+                      <div className="text-right">
+                        <p className="text-sm font-black tracking-tighter text-foreground">
+                          ₦{Number(item.revenue).toLocaleString()}
                         </p>
+                        <span className="text-[9px] text-emerald-500 font-black tracking-wider uppercase">
+                          TOP PERFORMER
+                        </span>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm font-black tracking-tighter text-foreground">
-                        ₦{Number(item.revenue).toLocaleString()}
-                      </p>
-                      <span className="text-[9px] text-emerald-500 font-black tracking-wider uppercase">
-                        TOP PERFORMER
-                      </span>
-                    </div>
+                  ))
+                ) : (
+                  <div className="py-12 text-center text-muted-foreground flex flex-col items-center justify-center">
+                    <Package className="size-12 opacity-20 mb-4" />
+                    <p className="text-sm font-bold italic">No sales data recorded yet.</p>
                   </div>
-                ))}
+                )}
               </div>
             </CardContent>
           </Card>
