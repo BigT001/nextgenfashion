@@ -181,9 +181,15 @@ export const CustomerQueries = {
    * Archive a customer
    */
   async archiveCustomer(id: string) {
-    return await prisma.customer.update({
-      where: { id },
-      data: { isArchived: true },
+    return await prisma.$transaction(async (tx) => {
+      await tx.user.deleteMany({
+        where: { customerId: id },
+      });
+
+      return await tx.customer.update({
+        where: { id },
+        data: { isArchived: true },
+      });
     });
   },
 

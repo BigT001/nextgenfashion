@@ -189,9 +189,10 @@ export function PatronSettingsModal({ isOpen, onClose, patron, onUpdate }: Patro
                                         type="button" 
                                         onClick={() => setView("delete")} 
                                         variant="outline" 
-                                        className="size-14 rounded-2xl border-none bg-red-50 text-red-500 hover:bg-red-100 transition-all flex-shrink-0 flex items-center justify-center shadow-sm active:scale-95"
+                                        className="size-14 rounded-2xl border-none bg-red-50 text-red-500 hover:bg-red-100 transition-all flex-shrink-0 flex items-center justify-center gap-2 shadow-sm active:scale-95"
                                     >
                                         <Trash2 className="size-5" />
+                                        Delete Account
                                     </Button>
                                 </div>
                             </div>
@@ -239,16 +240,16 @@ export function PatronSettingsModal({ isOpen, onClose, patron, onUpdate }: Patro
                                     <ShieldAlert className="size-10" />
                                 </div>
                                 <div className="space-y-2">
-                                    <h3 className="text-2xl font-black tracking-tight text-red-600">Archive Account?</h3>
+                                    <h3 className="text-2xl font-black tracking-tight text-red-600">Delete Account?</h3>
                                     <p className="text-zinc-500 text-sm font-medium leading-relaxed">
-                                        This action will archive your purchase history and personal data.
+                                        This will remove your login credentials. Your customer record and transaction history remain for admin reporting.
                                     </p>
                                 </div>
                             </div>
 
                             <div className="flex flex-col gap-3">
                                 <Button onClick={handleDeleteAccount} disabled={loading} className="h-14 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-red-200">
-                                    {loading ? <LoadingSpinner size="sm" variant="white" /> : "YES, ARCHIVE MY ACCOUNT"}
+                                    {loading ? <LoadingSpinner size="sm" variant="white" /> : "YES, DELETE MY ACCOUNT"}
                                 </Button>
                                 <Button onClick={() => setView("profile")} variant="ghost" className="h-14 rounded-2xl font-black text-[10px] uppercase tracking-widest text-zinc-400 hover:text-zinc-900 transition-all">
                                     CANCEL

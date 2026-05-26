@@ -196,14 +196,14 @@ export default function AccountClient({ initialPatronData, initialOrders }: Acco
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 pt-20 pb-40 relative">
+    <div className="min-h-screen bg-zinc-50 pt-8 md:pt-12 pb-40 relative">
       <div className="absolute top-0 left-0 w-full h-[400px] bg-brand-mesh opacity-5 pointer-events-none" />
       
       <div className="container mx-auto px-6 relative z-10">
-        <div className="max-w-6xl mx-auto space-y-12">
+        <div className="max-w-6xl mx-auto space-y-10">
           
           {/* Refined Profile Header */}
-          <div className="flex flex-col md:flex-row items-center justify-between gap-8 pt-10">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-6">
               <div className="relative group">
                 <div className="size-20 bg-white rounded-[2rem] shadow-xl flex items-center justify-center text-brand-navy ring-4 ring-white/50 overflow-hidden">
