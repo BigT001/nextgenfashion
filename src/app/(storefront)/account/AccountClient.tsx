@@ -23,7 +23,6 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { getPatronOrdersAction } from "@/modules/orders/actions/order.actions";
 import { OrderReceipt } from "@/modules/orders/components/order-receipt";
 import { updatePatronDetailsAction, getCustomerDetailAction } from "@/modules/customers/actions/customer.actions";
-import { uploadMediaAction } from "@/modules/media/actions/media.actions";
 import { PatronSettingsModal } from "@/modules/customers/components/patron-settings-modal";
 import { cn } from "@/lib/utils";
 import NextImage from "next/image";
@@ -144,26 +143,21 @@ export default function AccountClient({ initialPatronData, initialOrders }: Acco
         formData.append("file", compressedBlob, "profile_image.jpg");
         formData.append("folder", "profiles");
 
-        const result = await uploadMediaAction(formData);
-        
-        if (result.success && result.data?.url) {
-            const updateResult = await updatePatronDetailsAction({
-                customerId: (session?.user as any).customerId,
-                imageUrl: result.data.url
-            });
+        const response = await fetch("/api/customers/upload-image", {
+          method: "POST",
+          body: formData,
+        });
 
-            if (updateResult.success) {
-                toast.success("Profile image optimized and updated.");
-                await update(); // Update session
-                loadPatronData();
-            } else {
-                toast.error(updateResult.error || "Failed to link image.");
-            }
-        } else {
-            toast.error(result.error || "Failed to upload image.");
+        const result = await response.json();
+        if (!response.ok || !result.success) {
+            throw new Error(result.error || "Upload failed");
         }
-    } catch (error) {
-        toast.error("An unexpected error occurred during optimization.");
+
+        toast.success("Profile image optimized and updated.");
+        await update(); // Update session
+        loadPatronData();
+    } catch (error: any) {
+        toast.error(error?.message || "An unexpected error occurred during optimization.");
     } finally {
         setUploadingImage(false);
     }
@@ -203,62 +197,48 @@ export default function AccountClient({ initialPatronData, initialOrders }: Acco
         <div className="max-w-6xl mx-auto space-y-10">
           
           {/* Refined Profile Header */}
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="flex items-center gap-6">
-              <div className="relative group">
-                <div className="size-20 bg-white rounded-[2rem] shadow-xl flex items-center justify-center text-brand-navy ring-4 ring-white/50 overflow-hidden">
+          <div className="bg-white/95 border border-zinc-200 rounded-[2.5rem] shadow-[0_30px_80px_-38px_rgba(15,23,42,0.35)] p-5 sm:p-6 backdrop-blur-xl">
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-4">
+                <div className="relative shrink-0">
+                  <div className="size-22 sm:size-24 bg-slate-50 rounded-[2.5rem] shadow-xl flex items-center justify-center text-brand-navy ring-4 ring-white/80 overflow-hidden">
                     {patronData?.image || session?.user?.image ? (
-                        <NextImage src={patronData?.image || session?.user?.image} alt="Profile" fill className="object-cover" />
+                      <NextImage src={patronData?.image || session?.user?.image} alt="Profile" fill className="object-cover" />
                     ) : (
-                        <User className="size-10" />
+                      <User className="size-10" />
                     )}
-                    {uploadingImage && (
-                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                            <LoadingSpinner size="sm" variant="white" />
-                        </div>
-                    )}
-                </div>
-                <button 
+                  </div>
+                  <button
                     onClick={() => fileInputRef.current?.click()}
-                    className="absolute -bottom-1 -right-1 size-8 bg-brand-navy text-white rounded-xl flex items-center justify-center shadow-lg hover:scale-110 active:scale-95 transition-all"
-                >
+                    className="absolute -bottom-2 -right-2 size-9 bg-brand-navy text-white rounded-full flex items-center justify-center shadow-lg border-4 border-white hover:scale-110 active:scale-95 transition-all"
+                  >
                     <Camera className="size-4" />
-                </button>
-                <input 
-                    type="file" 
-                    ref={fileInputRef} 
-                    onChange={handleImageUpload} 
-                    className="hidden" 
-                    accept="image/*"
-                />
-              </div>
-              <div className="space-y-1">
-                <h1 className="text-3xl font-black tracking-tighter leading-none">{session?.user?.name || "Customer"}</h1>
-                <div className="flex items-center gap-3">
-                    <Badge className="bg-brand-navy/10 text-brand-navy border-none font-black text-[9px] px-2 py-0.5 uppercase tracking-widest">
-                        VIP PATRON
-                    </Badge>
-                    <span className="text-[10px] text-muted-foreground font-black uppercase tracking-widest opacity-40">{session?.user?.email}</span>
+                  </button>
+                </div>
+
+                <div className="space-y-1">
+                  <h1 className="text-3xl sm:text-4xl font-black tracking-tight leading-none">{session?.user?.name || "Customer"}</h1>
+                  <p className="text-sm text-muted-foreground max-w-md">Welcome back! Manage your account, keep your profile secure, and review your order portfolio below.</p>
                 </div>
               </div>
-            </div>
-            
-            <div className="flex items-center gap-3">
-                <Button 
-                    onClick={() => setIsSettingsOpen(true)}
-                    variant="outline" 
-                    className="h-12 px-6 glass-card border-none rounded-xl font-black text-[10px] uppercase tracking-widest transition-all hover:bg-white active:scale-95"
+
+              <div className="flex flex-row flex-wrap items-center justify-center gap-3">
+                <Button
+                  onClick={() => setIsSettingsOpen(true)}
+                  variant="outline"
+                  className="min-w-[44%] sm:min-w-[auto] h-14 px-6 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all hover:bg-zinc-50 active:scale-95"
                 >
-                    <Settings className="mr-2 size-4" />
-                    ACCOUNT SETTINGS
+                  <Settings className="mr-2 size-4" />
+                  SETTINGS
                 </Button>
-                <Button 
-                    onClick={() => signOut({ callbackUrl: "/" })} 
-                    className="h-12 px-6 bg-zinc-950 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-zinc-950/20 active:scale-95 transition-all"
+                <Button
+                  onClick={() => signOut({ callbackUrl: "/" })}
+                  className="min-w-[44%] sm:min-w-[auto] h-14 px-6 bg-zinc-950 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-zinc-950/20 active:scale-95 transition-all"
                 >
-                    <LogOut className="mr-2 size-4" />
-                    SIGN OUT
+                  <LogOut className="mr-2 size-4" />
+                  LOG OUT
                 </Button>
+              </div>
             </div>
           </div>
 
