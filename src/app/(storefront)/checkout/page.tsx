@@ -18,7 +18,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import { createOrderAction, validateCartItemsAction } from "@/modules/orders/actions/order.actions";
+import { createOrderAction } from "@/modules/orders/actions/order.actions";
+import { validateCartItemsAction } from "./validate-cart-action";
 import { getCustomerDetailAction } from "@/modules/customers/actions/customer.actions";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
