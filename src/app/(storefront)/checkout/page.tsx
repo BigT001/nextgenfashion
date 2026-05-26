@@ -18,7 +18,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import { createOrderAction } from "@/modules/orders/actions/order.actions";
+import { createOrderAction, validateCartItemsAction } from "@/modules/orders/actions/order.actions";
+import { getCustomerDetailAction } from "@/modules/customers/actions/customer.actions";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
@@ -29,11 +30,13 @@ type CheckoutStep = "IDENTITY" | "LOGISTICS";
 export default function CheckoutPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
-  const { items, getTotal, clearCart } = useCartStore();
+  const { items, getTotal, clearCart, removeItem } = useCartStore();
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<CheckoutStep>("IDENTITY");
   const [paymentMethod] = useState<"CARD" | "TRANSFER" | "CASH">("CARD");
   const [txRef] = useState(() => `NG-${Date.now().toString(36).toUpperCase()}`);
+  const [customerProfile, setCustomerProfile] = useState<any>(null);
+  const [isProfileLoading, setIsProfileLoading] = useState(false);
   const [shippingInfo, setShippingInfo] = useState({
     fullName: session?.user?.name || "",
     email: session?.user?.email || "",
@@ -49,6 +52,8 @@ export default function CheckoutPage() {
   const taxAmount = subtotal * taxRate;
   const grandTotal = subtotal + taxAmount;
 
+  const customerId = (session?.user as any)?.customerId;
+
   useEffect(() => {
     if (items.length === 0) {
       router.push("/shop");
@@ -57,6 +62,33 @@ export default function CheckoutPage() {
       router.push("/auth/login?callbackUrl=/checkout");
     }
   }, [items, router, status]);
+
+  useEffect(() => {
+    if (!customerId || status !== "authenticated") return;
+
+    setIsProfileLoading(true);
+    getCustomerDetailAction(customerId)
+      .then((result) => {
+        if (result.success) {
+          setCustomerProfile(result.data);
+        }
+      })
+      .catch((error) => console.error("Failed to load customer profile:", error))
+      .finally(() => setIsProfileLoading(false));
+  }, [customerId, status]);
+
+  useEffect(() => {
+    if (!customerProfile) return;
+
+    setShippingInfo((current) => ({
+      fullName: customerProfile.name || current.fullName,
+      email: customerProfile.email || current.email,
+      phone: customerProfile.phone || current.phone,
+      address: customerProfile.address || current.address,
+      city: current.city,
+      zip: current.zip,
+    }));
+  }, [customerProfile]);
 
   const fwConfig = useMemo(
     () => ({
@@ -87,6 +119,27 @@ export default function CheckoutPage() {
       </div>
   );
 
+  const validateCartBeforeCheckout = async () => {
+    const payloadItems = items.map((item) => ({
+      productId: item.id,
+      variantId: item.variantId,
+    }));
+
+    const validation = await validateCartItemsAction(payloadItems);
+    if (!validation.success) {
+      console.warn("[checkout] invalid cart items detected", validation.invalidItems);
+      validation.invalidItems?.forEach((item) => removeItem(item.variantId));
+      if (items.length === validation.invalidItems?.length) {
+        toast.error("Your cart contained only unavailable items. It has been cleared.");
+        router.push("/shop");
+        return false;
+      }
+      toast.error("Some unavailable items were removed from your cart. Please review the remaining items.");
+      return false;
+    }
+    return true;
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (step === "IDENTITY") {
@@ -96,22 +149,52 @@ export default function CheckoutPage() {
     }
 
     setLoading(true);
+    const isValidCart = await validateCartBeforeCheckout();
+    if (!isValidCart) {
+      setLoading(false);
+      return;
+    }
 
     if (paymentMethod === "CARD" || paymentMethod === "TRANSFER") {
       handleFlutterPayment({
         callback: async (response) => {
-          const paymentStatus = String(response.status || "").toLowerCase();
-      console.debug("Flutterwave callback response:", response);
+          const rawResponse = response as any;
+          const paymentStatus = String(
+            rawResponse.status || rawResponse.payment_status || rawResponse?.data?.status || ""
+          ).toLowerCase();
+          console.debug("Flutterwave callback response:", rawResponse);
 
-      if (["successful", "success", "completed"].includes(paymentStatus)) {
+          const isPaymentSuccessful = ["successful", "success", "completed", "approved"].includes(paymentStatus)
+            || rawResponse?.success === true
+            || rawResponse?.status === true
+            || rawResponse?.data?.status === "successful";
+
+          if (isPaymentSuccessful) {
             const paymentRef = String(
-              (response as any).transaction_id ||
-              (response as any).tx_ref ||
-              (response as any).id ||
+              rawResponse.transaction_id ||
+              rawResponse.tx_ref ||
+              rawResponse.id ||
+              rawResponse?.data?.tx_ref ||
+              rawResponse?.data?.transaction_id ||
               ""
             );
+            console.log("[checkout] sending order payload", {
+              items: items.map(item => ({ productId: item.id, variantId: item.variantId, quantity: item.quantity, price: item.price })),
+              totalAmount: grandTotal,
+              paymentMethod,
+              customerId: (session?.user as any)?.customerId,
+            });
+            console.log("[checkout] raw items", JSON.stringify(items.map(item => ({
+              id: item.id,
+              productId: item.id,
+              variantId: item.variantId,
+              quantity: item.quantity,
+              price: item.price,
+              name: item.name,
+            })), null, 2));
             const result = await createOrderAction({
               items: items.map(item => ({
+                productId: item.id,
                 variantId: item.variantId,
                 quantity: item.quantity,
                 price: item.price,
@@ -120,13 +203,15 @@ export default function CheckoutPage() {
               shippingInfo,
               paymentMethod,
               paymentRef: paymentRef || undefined,
-              status: "COMPLETED"
+              status: "COMPLETED",
+              customerId: (session?.user as any)?.customerId,
             });
+            console.debug("[checkout] createOrderAction result", result);
 
             if (result.success) {
               toast.success("Payment verified. Order received successfully.");
               clearCart();
-              router.push("/checkout/success");
+              router.push("/dashboard/orders");
             } else {
               console.error("Order creation failed after successful payment:", result.error);
               toast.error(result.error || "Payment succeeded but order creation failed. Please contact support.");
@@ -134,7 +219,8 @@ export default function CheckoutPage() {
           } else if (paymentStatus === "pending") {
             toast.warning("Payment is pending. Please wait a moment and check your bank.");
           } else {
-            toast.error("Payment was not successful.");
+            console.error("Flutterwave payment callback did not return success:", rawResponse);
+            toast.error("Payment was not successful. Please try again.");
           }
           closePaymentModal();
           setLoading(false);
@@ -147,8 +233,15 @@ export default function CheckoutPage() {
       return;
     }
 
+    console.log("[checkout] sending order payload", {
+      items: items.map(item => ({ productId: item.id, variantId: item.variantId, quantity: item.quantity, price: item.price })),
+      totalAmount: grandTotal,
+      paymentMethod,
+      customerId: (session?.user as any)?.customerId,
+    });
     const result = await createOrderAction({
       items: items.map(item => ({
+        productId: item.id,
         variantId: item.variantId,
         quantity: item.quantity,
         price: item.price,
@@ -156,13 +249,14 @@ export default function CheckoutPage() {
       totalAmount: grandTotal,
       shippingInfo,
       paymentMethod,
-      status: "PENDING"
+      status: "PENDING",
+      customerId: (session?.user as any)?.customerId,
     });
 
     if (result.success) {
       toast.success("Order received. Your luxury collection is being prepared.");
       clearCart();
-      router.push("/checkout/success");
+      router.push("/account");
     } else {
       toast.error(result.error || "Transaction failed. Please verify your details.");
       setLoading(false);
@@ -170,67 +264,74 @@ export default function CheckoutPage() {
   };
 
   const steps: { id: CheckoutStep; label: string; icon: LucideIcon }[] = [
-    { id: "IDENTITY", label: "ACCOUNT", icon: User },
-    { id: "LOGISTICS", label: "LOGISTICS", icon: Truck },
+    { id: "IDENTITY", label: "PROFILE", icon: User },
+    { id: "LOGISTICS", label: "DELIVERY", icon: Truck },
   ];
 
   return (
     <div className="relative min-h-screen bg-zinc-50 selection:bg-brand-navy/30 pb-32">
       <div className="absolute top-0 left-0 w-full h-[600px] bg-brand-mesh opacity-10" />
       
-      <div className="container mx-auto px-6 relative z-10 pt-20">
+      <div className="container mx-auto px-0 sm:px-6 relative z-10 pt-10 sm:pt-20">
         <div className="max-w-6xl mx-auto">
           {/* Executive Progress Orchestrator */}
-          <div className="flex flex-col md:flex-row items-center justify-between mb-16 gap-8 animate-slow-fade">
-            <div className="flex items-center gap-6">
+          <div className="flex flex-col md:flex-row items-center justify-between mb-10 gap-6 animate-slow-fade">
+            <div className="flex items-center gap-4">
                 <Link href="/shop" className="size-12 rounded-2xl glass-card flex items-center justify-center hover:bg-brand-navy hover:text-white transition-all shadow-sm group">
                     <ArrowLeft className="size-5 group-hover:-translate-x-1 transition-transform" />
                 </Link>
                 <div className="space-y-1">
-                    <h1 className="text-3xl font-black tracking-tighter">Secure Checkout</h1>
-                    <p className="text-[10px] text-muted-foreground font-black uppercase tracking-[0.3em]">REVENUE INTEGRITY GUARANTEED</p>
+                    <h1 className="text-3xl sm:text-4xl font-black tracking-tighter">Secure Checkout</h1>
                 </div>
             </div>
 
             {/* Top progress removed - moved into Patron Account card for easier navigation */}
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 items-start">
             {/* Left: Transaction Details */}
-            <form id="checkout-form" onSubmit={handleSubmit} className="lg:col-span-7 space-y-12">
+            <form id="checkout-form" onSubmit={handleSubmit} className="lg:col-span-7 space-y-10">
               
               {/* Persistent step tabs for consistent navigation */}
-              <div className="mb-6 flex items-center gap-3">
+              <div className="mb-6 grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:gap-4">
                 {steps.map((s) => (
                   <button
                     key={s.id}
                     type="button"
                     onClick={() => setStep(s.id)}
                     className={cn(
-                      "flex items-center gap-2 px-3 py-2 rounded-lg font-black text-[10px] uppercase tracking-widest transition-all",
-                      step === s.id ? "bg-brand-navy text-white shadow-md" : "text-muted-foreground/60 hover:bg-zinc-50/10"
+                      "flex items-center justify-center gap-2 rounded-[1.75rem] py-3 px-3 text-[11px] font-black uppercase tracking-[0.3em] transition-all shadow-sm min-h-[52px]",
+                      step === s.id
+                        ? "bg-brand-navy text-white"
+                        : "bg-white text-zinc-600 border border-zinc-200 hover:border-brand-navy/80"
                     )}
                   >
-                    <s.icon className="size-4" />
-                    <span className="hidden sm:inline">{s.label}</span>
+                    <s.icon className="size-5" />
+                    <span>{s.label}</span>
                   </button>
                 ))}
               </div>
 
               {/* Step 1: Identity */}
               {step === "IDENTITY" && (
-                <div className="glass-card p-12 rounded-[3rem] border-none shadow-2xl animate-in slide-in-from-bottom-8 duration-500 space-y-10">
-                    <div className="flex items-center gap-5">
-                        <div className="size-16 bg-brand-navy/10 rounded-2xl flex items-center justify-center text-brand-navy shadow-inner">
-                            <User className="size-8" />
+                <div className="glass-card p-6 sm:p-10 rounded-[2.5rem] border-none shadow-2xl animate-in slide-in-from-bottom-8 duration-500 space-y-8">
+                    <div className="flex items-center gap-4">
+                        <div className="relative size-12 rounded-3xl overflow-hidden bg-brand-navy/10 shadow-inner">
+                          {customerProfile?.image || session?.user?.image ? (
+                            <Image src={customerProfile?.image || session?.user?.image || ""} alt="Profile" fill className="object-cover" />
+                          ) : (
+                            <div className="size-12 flex items-center justify-center text-brand-navy bg-zinc-100">
+                              <User className="size-5" />
+                            </div>
+                          )}
                         </div>
-                        <div className="space-y-1">
-                            <h2 className="text-3xl font-black tracking-tight">Patron Account</h2>
+                        <div className="space-y-0.5">
+                            <p className="text-[10px] uppercase tracking-[0.35em] text-muted-foreground">Profile details</p>
+                            <h2 className="text-2xl font-black tracking-tight">Your account</h2>
                         </div>
                     </div>
 
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-3 md:col-span-2">
                             <Label htmlFor="fullName" className="text-[10px] font-black uppercase tracking-[0.2em] ml-2 opacity-60">Full Legal Name</Label>
                             <Input 
@@ -272,18 +373,18 @@ export default function CheckoutPage() {
 
               {/* Step 2: Logistics */}
               {step === "LOGISTICS" && (
-                <div className="glass-card p-12 rounded-[3rem] border-none shadow-2xl animate-in slide-in-from-bottom-8 duration-500 space-y-10">
-                    <div className="flex items-center gap-5">
-                        <div className="size-16 bg-brand-silver/10 rounded-2xl flex items-center justify-center text-brand-silver shadow-inner">
-                            <Truck className="size-8" />
+                <div className="glass-card p-6 sm:p-10 rounded-[2.5rem] border-none shadow-2xl animate-in slide-in-from-bottom-8 duration-500 space-y-8">
+                    <div className="flex items-center gap-4">
+                        <div className="size-12 bg-brand-silver/10 rounded-3xl flex items-center justify-center text-brand-silver shadow-inner">
+                            <Truck className="size-5" />
                         </div>
-                        <div className="space-y-1">
-                            <h2 className="text-3xl font-black tracking-tight">Delivery Logistics</h2>
-                            <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">GLOBAL EXPRESS FULFILLMENT</p>
+                        <div className="space-y-0.5">
+                            <p className="text-[10px] uppercase tracking-[0.35em] text-muted-foreground">Delivery</p>
+                            <h2 className="text-2xl font-black tracking-tight">Shipping details</h2>
                         </div>
                     </div>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-3 md:col-span-2">
                             <Label htmlFor="address" className="text-[10px] font-black uppercase tracking-[0.2em] ml-2 opacity-60">Fulfillment Address (Physical)</Label>
                             <Input id="address" name="address" value={shippingInfo.address} onChange={(e) => setShippingInfo({ ...shippingInfo, address: e.target.value })} placeholder="DESTINATION STREET & HOUSE" required className="h-20 rounded-3xl glass-card border-none bg-zinc-50/50 focus-visible:ring-brand-navy font-bold text-lg px-8" />
@@ -298,11 +399,8 @@ export default function CheckoutPage() {
                         </div>
                     </div>
 
-                    <div className="flex gap-4">
-                        <Button type="button" onClick={() => setStep("IDENTITY")} variant="outline" className="h-20 px-8 rounded-[2rem] border-none glass-card font-black text-[10px] uppercase tracking-widest group">
-                            <ArrowLeft className="size-5 group-hover:-translate-x-1 transition-transform" />
-                        </Button>
-                        <Button type="submit" disabled={loading} className="flex-1 h-20 bg-zinc-950 text-white rounded-[2rem] font-black text-xs uppercase tracking-[0.3em] shadow-2xl transition-all active:scale-95 group disabled:opacity-50">
+                    <div className="flex flex-col gap-4">
+                        <Button type="submit" disabled={loading} className="w-full h-24 bg-zinc-950 text-white rounded-[2rem] font-black text-base uppercase tracking-[0.35em] shadow-[0_20px_40px_-20px_rgba(15,23,42,0.5)] transition-all active:scale-[0.98] group disabled:opacity-60">
                             {loading ? (
                                 "PROCESSING PAYMENT..."
                             ) : (
@@ -318,8 +416,8 @@ export default function CheckoutPage() {
             </form>
 
             {/* Right: Revenue Summary */}
-            <div className="lg:col-span-5 lg:sticky lg:top-32 animate-slow-fade">
-              <div className="glass-card p-12 rounded-[3.5rem] border-none shadow-[0_50px_100px_-20px_rgba(0,0,0,0.15)] space-y-10 relative overflow-hidden">
+            <div className="order-first lg:order-none lg:col-span-5 lg:sticky lg:top-32 animate-slow-fade">
+              <div className="glass-card p-8 sm:p-12 rounded-[3.5rem] border-none shadow-[0_50px_100px_-20px_rgba(0,0,0,0.15)] space-y-10 relative overflow-hidden">
                 <div className="absolute inset-0 bg-brand-mesh opacity-5 pointer-events-none" />
                 <div className="flex items-center gap-4">
                     <div className="size-10 bg-brand-navy/10 rounded-xl flex items-center justify-center text-brand-navy">
@@ -328,9 +426,9 @@ export default function CheckoutPage() {
                     <h2 className="text-2xl font-black tracking-tight">Order Portfolio</h2>
                 </div>
                 
-                <div className="space-y-8 max-h-[350px] overflow-y-auto pr-4 scrollbar-hide">
+                <div className="space-y-8 max-h-[350px] overflow-y-auto pr-0 sm:pr-4 scrollbar-hide">
                   {items.map((item) => (
-                    <div key={item.variantId} className="flex gap-6 group">
+                    <div key={item.variantId} className="flex gap-4 group">
                       <div className="size-24 rounded-3xl bg-zinc-50 border-none relative overflow-hidden flex-shrink-0 glass-card">
                         {item.image && <Image src={item.image} alt={item.name} fill className="object-cover group-hover:scale-110 transition-transform duration-500" />}
                       </div>
