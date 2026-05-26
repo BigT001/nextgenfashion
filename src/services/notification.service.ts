@@ -42,25 +42,28 @@ export class NotificationService {
   /**
    * EMAIL: POS Customer Onboarding
    */
-  static async sendPosCustomerWelcomeEmail(data: {
+  static async sendCustomerWelcomeEmail(data: {
     email: string;
     name: string;
-    orderNumber: string;
   }) {
     try {
-      if (!resend) return { success: false, error: "Missing API Key" };
+      console.log(`Resend welcome email attempt for ${data.email}`);
+      if (!resend) {
+        console.warn("Resend API key missing. Welcome email not sent.");
+        return { success: false, error: "Missing API Key" };
+      }
       await resend.emails.send({
         from: 'NextGen Kiddies <concierge@nextgenkiddies.com>',
         to: [data.email],
-        subject: 'Your Curated Collection Awaits',
+        subject: 'Welcome to NextGen Kiddies',
         html: `
           <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
             <h1 style="color: #0B1E3F;">Welcome to the NextGen Community</h1>
             <p>Dear <strong>${data.name}</strong>,</p>
-            <p>Thank you for choosing NextGen Kiddies. Your latest acquisition (Order ${data.orderNumber}) has been successfully processed.</p>
-            <p>We have created a digital profile for you to track your orders and manage your preferences. You can access your account on our website using this email.</p>
+            <p>Your account has been successfully created and you can now shop with NextGen Kiddies.</p>
+            <p>Use this email to sign in and manage your orders, addresses, and preferences.</p>
             <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #666;">
-              &copy; ${new Date().getFullYear()} NextGen Kiddies. Elevating the Next Generation.
+              &copy; ${new Date().getFullYear()} NextGen Kiddies. Elevating the next generation of style.
             </div>
           </div>
         `

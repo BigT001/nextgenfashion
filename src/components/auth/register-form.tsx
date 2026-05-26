@@ -26,7 +26,10 @@ import { registerCustomerAction } from "@/modules/customers/actions/customer.act
 const registerSchema = z.object({
   name: z.string().min(2, "Full name is required"),
   email: z.string().email("Please enter a valid email address"),
-  phone: z.string().min(10, "Valid phone number is required"),
+  phone: z.string()
+    .min(11, "Phone number must be 11 digits")
+    .max(11, "Phone number must be 11 digits")
+    .regex(/^[0-9]+$/, "Phone number must contain only digits"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   confirmPassword: z.string().min(6, "Please confirm your password"),
 }).refine((data) => data.password === data.confirmPassword, {
@@ -142,9 +145,17 @@ export function RegisterForm() {
                     <div className="relative">
                       <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input 
-                        placeholder="+234 ..." 
+                        type="tel"
+                        inputMode="tel"
+                        maxLength={11}
+                        placeholder="08012345678" 
                         className="pl-12 h-12 bg-zinc-50 border-none shadow-sm focus-visible:ring-brand-navy rounded-xl font-bold" 
                         {...field} 
+                        onChange={(event) => {
+                          const cleaned = event.target.value.replace(/[^0-9]/g, "").slice(0, 11);
+                          field.onChange(cleaned);
+                        }}
+                        value={field.value}
                       />
                     </div>
                   </FormControl>

@@ -114,12 +114,26 @@ export async function registerCustomerAction(data: {
       return { user, customer };
     });
 
-    // 3. ASYNC NOTIFICATION: Welcome SMS
-    // We do this after the transaction is safe
-    NotificationService.sendWelcomeSms({
+    // 3. NOTIFICATION: send welcome SMS and email after registration
+    // Await the email send to ensure it runs before the action returns.
+    const [smsResult, emailResult] = await Promise.allSettled([
+      NotificationService.sendWelcomeSms({
         phone: data.phone,
-        name: data.name
-    }).catch(err => console.error("Welcome SMS failed:", err));
+        name: data.name,
+      }),
+      NotificationService.sendCustomerWelcomeEmail({
+        email: data.email,
+        name: data.name,
+      }),
+    ]);
+
+    if (smsResult.status === "rejected") {
+      console.error("Welcome SMS failed:", smsResult.reason);
+    }
+
+    if (emailResult.status === "rejected" || (emailResult.status === "fulfilled" && emailResult.value?.success === false)) {
+      console.error("Welcome email failed:", emailResult.status === "rejected" ? emailResult.reason : emailResult.value?.error);
+    }
 
     return {
       success: true,
