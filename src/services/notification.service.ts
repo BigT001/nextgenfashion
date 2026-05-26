@@ -62,7 +62,7 @@ export class NotificationService {
             <p>Dear <strong>${data.name}</strong>,</p>
             <p>Your account has been successfully created and you can now shop with NextGen Kiddies.</p>
             <p>Use this email to sign in and manage your orders, addresses, and preferences.</p>
-            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #666;">
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 20px; border-top: 20px; font-size: 12px; color: #666;">
               &copy; ${new Date().getFullYear()} NextGen Kiddies. Elevating the next generation of style.
             </div>
           </div>
@@ -73,6 +73,18 @@ export class NotificationService {
       console.error("Resend Error:", error);
       return { success: false, error };
     }
+  }
+
+  static async sendPosCustomerWelcomeEmail(data: {
+    email: string;
+    name: string;
+    orderNumber?: string;
+    totalAmount?: number;
+  }) {
+    return this.sendCustomerWelcomeEmail({
+      email: data.email,
+      name: data.name,
+    });
   }
 
   /**
