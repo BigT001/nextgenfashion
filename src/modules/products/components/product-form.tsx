@@ -58,17 +58,16 @@ import {
   createWarehouseAction, 
   deleteWarehouseAction 
 } from "@/modules/inventory/actions/warehouse.actions";
+
 import { toast } from "sonner";
 import { Barcode, RotateCcw, ShieldCheck, AlertCircle, MapPin, HardDrive } from "lucide-react";
+import { VariantBuilder, type Variant } from "./variant-builder";
 
 const productSchema = z.object({
   name: z.string().min(2, "Product Name is required"),
   description: z.string().optional(),
   categoryId: z.string().min(1, "Category is required"),
   sku: z.string().min(1, "Product ID is required"),
-  color: z.string().optional(),
-  size: z.string().optional(),
-  quantity: z.coerce.number().min(1, "Quantity must be at least 1"),
   tags: z.string().optional(),
   costPrice: z.coerce.number().min(1, "Cost Price is required"),
   sellingPrice: z.coerce.number().min(1, "Selling Price is required"),
@@ -77,7 +76,6 @@ const productSchema = z.object({
   tax: z.coerce.number().optional(),
   hasTax: z.boolean().optional(),
   warehouseId: z.string().optional(),
-  targetGender: z.enum(["BOYS", "GIRLS", "BOTH"]),
 });
 
 type ProductFormValues = z.infer<typeof productSchema>;
@@ -92,11 +90,17 @@ export function ProductForm({
   const isEditing = !!initialData;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+
   const [images, setImages] = useState<{ id: string; url: string; publicId: string; status?: "idle" | "uploading" | "uploaded" | "failed" }[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [activeTab, setActiveTab] = useState("product");
   const [isScanMode, setIsScanMode] = useState(false);
   const [skuStatus, setSkuStatus] = useState<"auto" | "scanned" | "conflict" | "syncing">("auto");
+  const [variants, setVariants] = useState<Variant[]>([]);
+  const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [isAddingCategory, setIsAddingCategory] = useState(false);
+  
 
   useEffect(() => {
     async function fetchData() {
@@ -138,9 +142,6 @@ export function ProductForm({
       description: initialData.description || "",
       categoryId: initialData.categoryId,
       sku: initialData.sku || initialData.variants?.[0]?.sku || "",
-      color: initialData.variants?.[0]?.color || "",
-      size: initialData.variants?.[0]?.size || "",
-      quantity: Number(initialData.variants?.[0]?.inventory?.quantity || 0),
       tags: initialData.tags || "",
       costPrice: initialData.costPrice || 0,
       sellingPrice: initialData.basePrice || initialData.price || 0,
@@ -149,15 +150,11 @@ export function ProductForm({
       tax: initialData.tax || 7.5,
       hasTax: !!initialData.tax && initialData.tax > 0,
       warehouseId: initialData.variants?.[0]?.inventory?.warehouseId || "",
-      targetGender: initialData.targetGender || "BOTH",
     } : {
       name: "",
       description: "",
       categoryId: "",
       sku: "",
-      color: "",
-      size: "",
-      quantity: 0,
       tags: "",
       costPrice: 0,
       sellingPrice: 0,
@@ -166,9 +163,23 @@ export function ProductForm({
       tax: 7.5,
       hasTax: false,
       warehouseId: "",
-      targetGender: "BOTH",
     },
   });
+
+  // Initialize variants from existing data
+  useEffect(() => {
+    if (initialData?.variants && initialData.variants.length > 0) {
+      const initialVariants: Variant[] = initialData.variants.map((v: any, idx: number) => ({
+        id: v.id || `var-${idx}`,
+        color: v.color || "",
+        size: v.size || "",
+        sku: v.sku,
+        price: Number(v.price || form.getValues("sellingPrice")),
+        quantity: v.inventory?.quantity || 0,
+      }));
+      setVariants(initialVariants);
+    }
+  }, [initialData]);
 
   const generateAutoSku = () => {
     if (isScanMode || isEditing) return;
@@ -209,7 +220,6 @@ export function ProductForm({
         form.setValue("description", existing.product.description || "");
         form.setValue("costPrice", Number(existing.product.costPrice || 0));
         form.setValue("sellingPrice", Number(existing.price || 0));
-        form.setValue("quantity", existing.inventory?.quantity || 0);
         setSkuStatus("scanned");
     } else {
         setSkuStatus(isScanMode ? "scanned" : "auto");
@@ -218,10 +228,14 @@ export function ProductForm({
 
   const validateTab = async (tab: string) => {
     if (tab === "product") {
-        const fields: (keyof ProductFormValues)[] = ["name", "categoryId", "quantity"];
+        const fields: (keyof ProductFormValues)[] = ["name", "categoryId"];
         const result = await form.trigger(fields);
         if (!result) {
-            toast.error("Please fill Name, Category and Quantity to proceed");
+            toast.error("Please fill Name and Category to proceed");
+            return false;
+        }
+        if (variants.length === 0) {
+            toast.error("Please add at least one variant (color & size combination)");
             return false;
         }
     }
@@ -255,10 +269,6 @@ export function ProductForm({
     // Explicitly prevent any form submission during tab navigation
     setActiveTab(value);
   };
-
-  const [newCategoryName, setNewCategoryName] = useState("");
-  const [isAddingCategory, setIsAddingCategory] = useState(false);
-  const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
 
   const compressImage = (file: File): Promise<Blob> => {
     return new Promise((resolve, reject) => {
@@ -315,8 +325,9 @@ export function ProductForm({
         ? `product-${normalizedSku}-${initialData.id.slice(0, 8)}-${Date.now()}`
         : `product-${normalizedSku}-${Date.now()}`;
 
+      const compressedFile = new File([compressedBlob], "compressed_image.jpg", { type: "image/jpeg" });
       const formData = new FormData();
-      formData.append("file", compressedBlob, "compressed_image.jpg");
+      formData.append("file", compressedFile);
       formData.append("publicId", publicId);
 
       // Start upload but keep UI interactive
@@ -359,6 +370,7 @@ export function ProductForm({
     }
     setIsAddingCategory(false);
   };
+  
 
   const handleAddWarehouse = async () => {
     if (!newWhName.trim()) return;
@@ -385,13 +397,12 @@ export function ProductForm({
         setIsSubmitting(false);
         return;
       }
-      const variant = {
-        size: values.size,
-        color: values.color,
-        sku: values.sku.toUpperCase(),
-        price: values.sellingPrice,
-        stock: values.quantity,
-      };
+
+      if (variants.length === 0) {
+        toast.error("Add at least one variant before saving");
+        setIsSubmitting(false);
+        return;
+      }
 
       const uploadingImages = images.filter(img => img.status === "uploading");
       const failedImages = images.filter(img => img.status === "failed");
@@ -417,15 +428,24 @@ export function ProductForm({
         return;
       }
 
+      // Build variants payload from the VariantBuilder data
+      const variantPayload = variants.map(v => ({
+        size: v.size,
+        color: v.color,
+        sku: v.sku.toUpperCase(),
+        price: v.price,
+        stock: v.quantity,
+      }));
+
       const payload = {
         ...values,
         tax: values.hasTax ? values.tax : 0,
         baseSku: values.sku.split("-")[0] || values.sku,
-        variants: [variant],
+        variants: variantPayload,
         images: validImages,
       };
 
-      console.log(`[ProductForm] Submitting ${isEditing ? "UPDATE" : "CREATE"} with ${validImages.length} image(s):`, validImages);
+      console.log(`[ProductForm] Submitting ${isEditing ? "UPDATE" : "CREATE"} with ${variants.length} variant(s) and ${validImages.length} image(s):`, payload);
 
       const result = isEditing 
         ? await updateProductAction(initialData.id, payload)
@@ -492,7 +512,41 @@ export function ProductForm({
                   <div className="flex flex-col gap-4 lg:flex-row">
                     <FormField control={form.control} name="categoryId" render={({ field }) => (
                       <FormItem className="flex-1 space-y-2">
-                        <FormLabel className="text-[11px] font-black uppercase tracking-widest text-brand-navy">Product Category</FormLabel>
+                        <div className="flex justify-between items-center px-1">
+                          <FormLabel className="text-[11px] font-black uppercase tracking-widest text-brand-navy">Product Category</FormLabel>
+                          <Dialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen}>
+                            <DialogTrigger className="text-[9px] font-black uppercase px-3 py-1 rounded-full bg-brand-navy text-white hover:bg-brand-navy/90 transition-all flex items-center gap-2">
+                              <Plus className="size-3" />
+                              New
+                            </DialogTrigger>
+                            <DialogContent className="sm:max-w-md">
+                              <div className="space-y-4">
+                                <h3 className="text-sm font-bold">Add New Category</h3>
+                                <Input
+                                  placeholder="e.g. Women's Wear"
+                                  value={newCategoryName}
+                                  onChange={(e) => setNewCategoryName(e.target.value)}
+                                />
+                                <div className="flex gap-2">
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => setIsCategoryDialogOpen(false)}
+                                  >
+                                    Cancel
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    disabled={isAddingCategory}
+                                    onClick={handleAddCategory}
+                                  >
+                                    {isAddingCategory ? "Adding..." : "Add"}
+                                  </Button>
+                                </div>
+                              </div>
+                            </DialogContent>
+                          </Dialog>
+                        </div>
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger className="h-10 bg-white border-2 border-brand-navy/5 rounded-xl font-bold text-brand-navy">
@@ -513,29 +567,7 @@ export function ProductForm({
                       </FormItem>
                     )} />
 
-                    <FormField control={form.control} name="targetGender" render={({ field }) => (
-                      <FormItem className="flex-1 space-y-3">
-                        <FormLabel className="text-[11px] font-black uppercase tracking-widest text-brand-navy">Target Audience</FormLabel>
-                        <div className="flex bg-brand-navy/5 p-1 rounded-2xl border border-brand-navy/10">
-                          {["BOYS", "GIRLS", "BOTH"].map((option) => (
-                            <button
-                              key={option}
-                              type="button"
-                              onClick={() => field.onChange(option)}
-                              className={cn(
-                                "flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                                field.value === option
-                                  ? "bg-brand-navy text-white shadow-md scale-[1.02]"
-                                  : "text-brand-navy/40 hover:text-brand-navy hover:bg-brand-navy/5"
-                              )}
-                            >
-                              {option}
-                            </button>
-                          ))}
-                        </div>
-                        <FormMessage />
-                      </FormItem>
-                    )} />
+                    
                   </div>
                 </div>
               </div>
@@ -573,33 +605,21 @@ export function ProductForm({
                 )} />
 
                 <div className="grid grid-cols-2 gap-4">
-                    <FormField control={form.control} name="color" render={({ field }) => (
-                      <FormItem className="space-y-2">
-                        <FormLabel className="text-[11px] font-black uppercase tracking-widest text-brand-navy">Color</FormLabel>
-                        <FormControl><Input placeholder="e.g. Navy" className="h-10 bg-white border-2 border-brand-navy/5 rounded-xl font-bold text-brand-navy" {...field} /></FormControl>
-                      </FormItem>
-                    )} />
-                    <FormField control={form.control} name="size" render={({ field }) => (
-                      <FormItem className="space-y-2">
-                        <FormLabel className="text-[11px] font-black uppercase tracking-widest text-brand-navy">Size</FormLabel>
-                        <FormControl><Input placeholder="e.g. XL" className="h-10 bg-white border-2 border-brand-navy/5 rounded-xl font-bold text-brand-navy" {...field} /></FormControl>
+                    <FormField control={form.control} name="tags" render={({ field }) => (
+                      <FormItem className="col-span-2 space-y-2">
+                        <FormLabel className="text-[11px] font-black uppercase tracking-widest text-brand-navy">Search Tags</FormLabel>
+                        <FormControl><Input placeholder="luxury, summer, silk" className="h-10 bg-white border-2 border-brand-navy/5 rounded-xl font-bold text-brand-navy" {...field} /></FormControl>
                       </FormItem>
                     )} />
                 </div>
 
-                <FormField control={form.control} name="quantity" render={({ field }) => (
-                  <FormItem className="space-y-2">
-                    <FormLabel className="text-[11px] font-black uppercase tracking-widest text-brand-navy">Quantity in Stock</FormLabel>
-                    <FormControl><Input type="number" placeholder="0" className="h-10 bg-white border-2 border-brand-navy/5 rounded-xl font-bold text-brand-navy" {...field} /></FormControl>
-                  </FormItem>
-                )} />
-
-                <FormField control={form.control} name="tags" render={({ field }) => (
-                  <FormItem className="space-y-2">
-                    <FormLabel className="text-[11px] font-black uppercase tracking-widest text-brand-navy">Search Tags</FormLabel>
-                    <FormControl><Input placeholder="luxury, summer, silk" className="h-10 bg-white border-2 border-brand-navy/5 rounded-xl font-bold text-brand-navy" {...field} /></FormControl>
-                  </FormItem>
-                )} />
+                <VariantBuilder
+                  variants={variants}
+                  onVariantsChange={setVariants}
+                  productName={form.getValues("name")}
+                  costPrice={form.getValues("costPrice")}
+                  sellingPrice={form.getValues("sellingPrice")}
+                />
               </div>
             </div>
           </TabsContent>
