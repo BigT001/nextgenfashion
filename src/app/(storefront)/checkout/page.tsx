@@ -424,7 +424,7 @@ export default function CheckoutPage() {
                     <div className="size-10 bg-brand-navy/10 rounded-xl flex items-center justify-center text-brand-navy">
                         <ShoppingCart className="size-5" />
                     </div>
-                    <h2 className="text-2xl font-black tracking-tight">Order Portfolio</h2>
+                    <h2 className="text-2xl font-black tracking-tight">Orders</h2>
                 </div>
                 
                 <div className="space-y-8 max-h-[350px] overflow-y-auto pr-0 sm:pr-4 scrollbar-hide">

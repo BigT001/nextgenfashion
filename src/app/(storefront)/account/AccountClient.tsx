@@ -40,6 +40,7 @@ export default function AccountClient({ initialPatronData, initialOrders }: Acco
   const [patronData, setPatronData] = useState<any>(initialPatronData);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -200,7 +201,7 @@ export default function AccountClient({ initialPatronData, initialOrders }: Acco
           <div className="bg-white/95 border border-zinc-200 rounded-[2.5rem] shadow-[0_30px_80px_-38px_rgba(15,23,42,0.35)] p-5 sm:p-6 backdrop-blur-xl">
             <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-4">
-                <div className="relative shrink-0">
+                <div className="relative shrink-0 cursor-pointer" onClick={() => fileInputRef.current?.click()}>
                   <div className="size-22 sm:size-24 bg-slate-50 rounded-[2.5rem] shadow-xl flex items-center justify-center text-brand-navy ring-4 ring-white/80 overflow-hidden">
                     {patronData?.image || session?.user?.image ? (
                       <NextImage src={patronData?.image || session?.user?.image} alt="Profile" fill className="object-cover" />
@@ -209,16 +210,24 @@ export default function AccountClient({ initialPatronData, initialOrders }: Acco
                     )}
                   </div>
                   <button
+                    type="button"
                     onClick={() => fileInputRef.current?.click()}
                     className="absolute -bottom-2 -right-2 size-9 bg-brand-navy text-white rounded-full flex items-center justify-center shadow-lg border-4 border-white hover:scale-110 active:scale-95 transition-all"
                   >
                     <Camera className="size-4" />
                   </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleImageUpload}
+                  />
                 </div>
 
                 <div className="space-y-1">
                   <h1 className="text-3xl sm:text-4xl font-black tracking-tight leading-none">{session?.user?.name || "Customer"}</h1>
-                  <p className="text-sm text-muted-foreground max-w-md">Welcome back! Manage your account, keep your profile secure, and review your order portfolio below.</p>
+                  <p className="text-sm text-muted-foreground max-w-md">Welcome back! Manage your account, keep your profile secure, and review your orders below.</p>
                 </div>
               </div>
 
@@ -247,8 +256,8 @@ export default function AccountClient({ initialPatronData, initialOrders }: Acco
             <div className="lg:col-span-8 space-y-8">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                    <h2 className="text-2xl font-black tracking-tight">Order Portfolio</h2>
-                    <p className="text-[9px] text-muted-foreground font-black uppercase tracking-widest">TRANSACTIONAL LEDGER</p>
+                    <h2 className="text-2xl font-black tracking-tight">Orders</h2>
+                    <p className="text-[9px] text-muted-foreground font-black uppercase tracking-widest">Your order history in one place</p>
                 </div>
                 <Button variant="ghost" className="text-brand-navy font-black text-[9px] uppercase tracking-widest gap-2">
                     <Clock className="size-4" />
@@ -266,162 +275,148 @@ export default function AccountClient({ initialPatronData, initialOrders }: Acco
                     </Button>
                   </div>
                 ) : (
-                  orders.map((order) => (
-                    <div key={order.id} className="glass-card overflow-hidden rounded-[2rem] border-none shadow-sm group hover:shadow-xl hover:shadow-brand-navy/5 transition-all duration-500 bg-white">
-                      <div className="p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6">
-                        <div className="flex items-center gap-5">
-                            <div className="size-14 bg-zinc-50 rounded-xl flex items-center justify-center text-brand-navy group-hover:rotate-12 transition-transform shadow-inner border border-border/10">
-                                <Zap className="size-6" />
-                            </div>
-                            <div className="space-y-0.5">
-                                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground opacity-60">ACQUISITION ID</p>
-                                <h3 className="text-lg font-black tracking-tighter">{order.orderNumber}</h3>
-                                <div className="flex items-center gap-3">
-                                    <span className="text-[9px] font-bold text-muted-foreground">{new Date(order.createdAt).toLocaleDateString()}</span>
-                                    <span className="size-1 rounded-full bg-border" />
-                                    <span className="text-[9px] font-bold text-muted-foreground uppercase">{order.items?.length || 0} ITEMS</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="flex items-center gap-8">
-                            <div className="text-right space-y-0.5">
-                                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground opacity-60">REVENUE TOTAL</p>
-                                <p className="text-lg font-black tracking-tighter">₦{Number(order.totalAmount).toLocaleString()}</p>
-                            </div>
-                            
-                            <div className="flex flex-col items-end gap-1.5">
-                                <Badge className={cn(
-                                    "font-black text-[9px] px-2 py-0.5 uppercase tracking-widest border-none shadow-sm",
-                                    order.status === "COMPLETED" ? "bg-emerald-500/10 text-emerald-600" :
-                                    order.status === "PENDING" ? "bg-amber-500/10 text-amber-600" :
-                                    order.status === "PROCESSING" ? "bg-blue-500/10 text-blue-600" :
-                                    order.status === "SHIPPED" ? "bg-violet-500/10 text-violet-600" :
-                                    "bg-rose-500/10 text-rose-600"
-                                )}>
-                                    {order.status}
-                                </Badge>
-                                <Button 
-                                    onClick={() => setSelectedOrderId(order.id)}
-                                    variant="link" 
-                                    className="p-0 h-auto text-[9px] font-black uppercase tracking-widest text-brand-navy hover:no-underline flex items-center gap-1.5"
-                                >
-                                    RECEIPT <ChevronRight className="size-3" />
-                                </Button>
-                            </div>
-                        </div>
-                      </div>
-
-                      {/* Visual Logistics Journey Progress Timeline */}
-                      {!order.userId && !order.orderNumber.includes("POS") && order.status !== "CANCELLED" && order.status !== "REFUNDED" && (
-                        <div className="px-6 md:px-8 pb-8 pt-4 border-t border-border/10 bg-zinc-50/20">
-                          <div className="space-y-6 max-w-2xl mx-auto">
-                            <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-[0.15em] text-muted-foreground">
-                              <span>LOGISTICS SIGNATURE PIPELINE</span>
-                              <span className="text-brand-navy dark:text-brand-silver">
-                                {order.status === "PENDING" && "Phase 1: Validating Fashion Signature"}
-                                {order.status === "PROCESSING" && "Phase 2: Handcrafting & Preparing"}
-                                {order.status === "SHIPPED" && "Phase 3: Package Dispatched / In Transit"}
-                                {order.status === "COMPLETED" && "Phase 4: Acquisition Delivered Successfully"}
-                              </span>
-                            </div>
-                            
-                            <div className="relative pt-2">
-                              {/* Background Bar */}
-                              <div className="absolute top-[17px] left-4 right-4 h-1 bg-zinc-200 rounded-full" />
-                              
-                              {/* Active Progress Sheen */}
-                              <div 
-                                className="absolute top-[17px] left-4 h-1 bg-brand-navy transition-all duration-1000 ease-out rounded-full" 
-                                style={{ 
-                                  width: 
-                                    order.status === "PENDING" ? "0%" : 
-                                    order.status === "PROCESSING" ? "33%" : 
-                                    order.status === "SHIPPED" ? "66%" : 
-                                    order.status === "COMPLETED" ? "100%" : "0%" 
-                                }}
-                              />
-                              
-                              {/* Milestones grid */}
-                              <div className="grid grid-cols-4 relative z-10">
-                                <div className="flex flex-col items-center gap-2">
-                                  <div className={cn(
-                                    "size-6 rounded-full flex items-center justify-center text-[10px] font-black border transition-all duration-500 shadow-sm",
-                                    ["PENDING", "PROCESSING", "SHIPPED", "COMPLETED"].includes(order.status)
-                                      ? "bg-brand-navy border-brand-navy text-white scale-110"
-                                      : "bg-white border-zinc-200 text-zinc-400"
-                                  )}>
-                                    1
-                                  </div>
-                                  <span className={cn(
-                                    "text-[9px] font-black uppercase tracking-wider transition-colors",
-                                    ["PENDING", "PROCESSING", "SHIPPED", "COMPLETED"].includes(order.status) ? "text-brand-navy" : "text-zinc-400"
-                                  )}>Placed</span>
-                                </div>
-
-                                <div className="flex flex-col items-center gap-2">
-                                  <div className={cn(
-                                    "size-6 rounded-full flex items-center justify-center text-[10px] font-black border transition-all duration-500 shadow-sm",
-                                    ["PROCESSING", "SHIPPED", "COMPLETED"].includes(order.status)
-                                      ? "bg-brand-navy border-brand-navy text-white scale-110"
-                                      : "bg-white border-zinc-200 text-zinc-400"
-                                  )}>
-                                    2
-                                  </div>
-                                  <span className={cn(
-                                    "text-[9px] font-black uppercase tracking-wider transition-colors",
-                                    ["PROCESSING", "SHIPPED", "COMPLETED"].includes(order.status) ? "text-brand-navy" : "text-zinc-400"
-                                  )}>Preparing</span>
-                                </div>
-
-                                <div className="flex flex-col items-center gap-2">
-                                  <div className={cn(
-                                    "size-6 rounded-full flex items-center justify-center text-[10px] font-black border transition-all duration-500 shadow-sm",
-                                    ["SHIPPED", "COMPLETED"].includes(order.status)
-                                      ? "bg-brand-navy border-brand-navy text-white scale-110"
-                                      : "bg-white border-zinc-200 text-zinc-400"
-                                  )}>
-                                    3
-                                  </div>
-                                  <span className={cn(
-                                    "text-[9px] font-black uppercase tracking-wider transition-colors",
-                                    ["SHIPPED", "COMPLETED"].includes(order.status) ? "text-brand-navy" : "text-zinc-400"
-                                  )}>Shipped</span>
-                                </div>
-
-                                <div className="flex flex-col items-center gap-2">
-                                  <div className={cn(
-                                    "size-6 rounded-full flex items-center justify-center text-[10px] font-black border transition-all duration-500 shadow-sm",
-                                    ["COMPLETED"].includes(order.status)
-                                      ? "bg-brand-navy border-brand-navy text-white scale-110"
-                                      : "bg-white border-zinc-200 text-zinc-400"
-                                  )}>
-                                    4
-                                  </div>
-                                  <span className={cn(
-                                    "text-[9px] font-black uppercase tracking-wider transition-colors",
-                                    ["COMPLETED"].includes(order.status) ? "text-brand-navy" : "text-zinc-400"
-                                  )}>Delivered</span>
-                                </div>
+                  orders.map((order) => {
+                    const isExpanded = expandedOrderId === order.id;
+                    return (
+                      <div key={order.id} className="glass-card overflow-hidden rounded-[2rem] border-none shadow-sm group hover:shadow-xl hover:shadow-brand-navy/5 transition-all duration-500 bg-white">
+                        <div className="p-6 md:p-8 flex flex-col md:flex-row items-start justify-between gap-6">
+                          <div className="flex items-start gap-5 flex-1">
+                              <div className="size-14 bg-zinc-50 rounded-xl flex items-center justify-center text-brand-navy group-hover:rotate-12 transition-transform shadow-inner border border-border/10">
+                                  <Zap className="size-6" />
                               </div>
-                            </div>
+                              <div className="space-y-3">
+                                  <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 gap-2">
+                                    <div>
+                                      <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground opacity-60">ORDER ID</p>
+                                      <h3 className="text-lg font-black tracking-tighter">{order.orderNumber}</h3>
+                                    </div>
+                                    <div className="rounded-full bg-zinc-100 px-3 py-1 text-[9px] uppercase tracking-[0.28em] font-black text-muted-foreground">
+                                      {order.items?.length || 0} items
+                                    </div>
+                                  </div>
+                                  <div className="flex flex-wrap items-center gap-3 text-[10px] text-muted-foreground">
+                                      <span>{new Date(order.createdAt).toLocaleDateString()}</span>
+                                      <span className="h-1 w-1 rounded-full bg-border" />
+                                      <span>{order.paymentMethod || "CARD"}</span>
+                                  </div>
+                              </div>
+                          </div>
+
+                          <div className="flex flex-col items-start md:items-end gap-4">
+                              <Badge className={cn(
+                                  "font-black text-[9px] px-2 py-0.5 uppercase tracking-widest border-none shadow-sm",
+                                  order.status === "COMPLETED" ? "bg-emerald-500/10 text-emerald-600" :
+                                  order.status === "PENDING" ? "bg-amber-500/10 text-amber-600" :
+                                  order.status === "PROCESSING" ? "bg-blue-500/10 text-blue-600" :
+                                  order.status === "SHIPPED" ? "bg-violet-500/10 text-violet-600" :
+                                  "bg-rose-500/10 text-rose-600"
+                              )}>
+                                  {order.status}
+                              </Badge>
+                              <div className="text-right space-y-0.5">
+                                  <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground opacity-60">ORDER VALUE</p>
+                                  <p className="text-lg font-black tracking-tighter">₦{Number(order.totalAmount).toLocaleString()}</p>
+                              </div>
+                              <Button
+                                onClick={() => setExpandedOrderId(isExpanded ? null : order.id)}
+                                variant="link"
+                                className="p-0 h-auto text-[9px] font-black uppercase tracking-widest text-brand-navy hover:no-underline flex items-center gap-1.5"
+                              >
+                                {isExpanded ? "HIDE DETAILS" : "VIEW DETAILS"}
+                                <ChevronRight className={cn("size-3 transition-transform", isExpanded && "rotate-90")} />
+                              </Button>
                           </div>
                         </div>
-                      )}
-                      
-                      <div className="bg-zinc-50/50 p-3 px-6 border-t border-border/30 flex gap-3 overflow-x-auto scrollbar-hide">
-                          {order.items.map((item: any, idx: number) => (
-                              <div key={idx} className="size-10 rounded-lg bg-white border border-border/10 relative overflow-hidden flex-shrink-0 shadow-sm">
-                                  {item.variant?.product?.images?.[0] ? (
-                                      <NextImage src={item.variant.product.images[0]} alt="" fill className="object-cover" />
-                                  ) : (
-                                      <div className="flex items-center justify-center h-full opacity-10"><Package className="size-3" /></div>
-                                  )}
+
+                        {isExpanded && (
+                          <div className="border-t border-border/10 bg-zinc-50/70 p-6 md:p-8 space-y-6">
+                            <div className="grid gap-4 lg:grid-cols-3">
+                              <div className="rounded-[1.75rem] bg-white p-5 border border-border/10 shadow-sm">
+                                <p className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground">Order ID</p>
+                                <p className="mt-2 font-black text-sm break-all">{order.orderNumber}</p>
                               </div>
-                          ))}
+                              <div className="rounded-[1.75rem] bg-white p-5 border border-border/10 shadow-sm">
+                                <p className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground">Customer</p>
+                                <p className="mt-2 font-black text-sm">{order.customer?.name || patronData?.name || session?.user?.name || "You"}</p>
+                              </div>
+                              <div className="rounded-[1.75rem] bg-white p-5 border border-border/10 shadow-sm">
+                                <p className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground">Status</p>
+                                <p className="mt-2 font-black text-sm">{order.status}</p>
+                              </div>
+                            </div>
+
+                            <div className="grid gap-4 lg:grid-cols-2">
+                              <div className="rounded-[1.75rem] bg-white p-5 border border-border/10 shadow-sm">
+                                <p className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground">Payment Method</p>
+                                <p className="mt-2 font-black text-sm">{order.paymentMethod || "CARD"}</p>
+                              </div>
+                              <div className="rounded-[1.75rem] bg-white p-5 border border-border/10 shadow-sm">
+                                <p className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground">Order Date</p>
+                                <p className="mt-2 font-black text-sm">{new Date(order.createdAt).toLocaleDateString()}</p>
+                              </div>
+                            </div>
+
+                            {order.shippingInfo?.address && (
+                              <div className="rounded-[1.75rem] bg-white p-5 border border-border/10 shadow-sm">
+                                <p className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground">Shipping Address</p>
+                                <p className="mt-2 text-sm font-medium leading-relaxed text-zinc-700">{order.shippingInfo.address}</p>
+                              </div>
+                            )}
+
+                            {!order.userId && !order.orderNumber.includes("POS") && order.status !== "CANCELLED" && order.status !== "REFUNDED" && (
+                              <div className="space-y-5 rounded-[1.75rem] bg-white p-5 border border-border/10 shadow-sm">
+                                <div className="flex items-center justify-between gap-4">
+                                  <p className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground">Logistics Progress</p>
+                                  <Badge className={cn(
+                                      "font-black text-[9px] px-2 py-0.5 uppercase tracking-widest border-none shadow-sm",
+                                      order.status === "COMPLETED" ? "bg-emerald-500/10 text-emerald-600" :
+                                      order.status === "SHIPPED" ? "bg-violet-500/10 text-violet-600" :
+                                      order.status === "PROCESSING" ? "bg-blue-500/10 text-blue-600" :
+                                      order.status === "PENDING" ? "bg-amber-500/10 text-amber-600" :
+                                      "bg-rose-500/10 text-rose-600"
+                                  )}>
+                                      {order.status}
+                                  </Badge>
+                                </div>
+                                <div className="h-1 rounded-full bg-zinc-200 overflow-hidden">
+                                  <div className="h-full bg-brand-navy transition-all duration-1000" style={{ width: order.status === "PENDING" ? "0%" : order.status === "PROCESSING" ? "33%" : order.status === "SHIPPED" ? "66%" : "100%" }} />
+                                </div>
+                                <div className="grid grid-cols-4 gap-3 text-[9px] uppercase tracking-[0.3em] text-muted-foreground">
+                                  <span className={cn("text-center", ["PENDING", "PROCESSING", "SHIPPED", "COMPLETED"].includes(order.status) ? "text-brand-navy" : "text-zinc-400")}>Placed</span>
+                                  <span className={cn("text-center", ["PROCESSING", "SHIPPED", "COMPLETED"].includes(order.status) ? "text-brand-navy" : "text-zinc-400")}>Preparing</span>
+                                  <span className={cn("text-center", ["SHIPPED", "COMPLETED"].includes(order.status) ? "text-brand-navy" : "text-zinc-400")}>Shipped</span>
+                                  <span className={cn("text-center", ["COMPLETED"].includes(order.status) ? "text-brand-navy" : "text-zinc-400")}>Delivered</span>
+                                </div>
+                              </div>
+                            )}
+
+                            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                              <p className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground">Items included</p>
+                              <Button
+                                onClick={() => setSelectedOrderId(order.id)}
+                                variant="outline"
+                                className="h-12 px-5 rounded-2xl text-[9px] font-black uppercase tracking-widest"
+                              >
+                                View Receipt
+                              </Button>
+                            </div>
+
+                            <div className="bg-zinc-50/50 p-3 px-6 border-t border-border/30 flex gap-3 overflow-x-auto scrollbar-hide">
+                                {order.items?.map((item: any, idx: number) => (
+                                    <div key={idx} className="size-10 rounded-lg bg-white border border-border/10 relative overflow-hidden flex-shrink-0 shadow-sm">
+                                        {item.variant?.product?.images?.[0] ? (
+                                            <NextImage src={item.variant.product.images[0]} alt="" fill className="object-cover" />
+                                        ) : (
+                                            <div className="flex items-center justify-center h-full opacity-10"><Package className="size-3" /></div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </div>
