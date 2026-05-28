@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model Account {
@@ -75,12 +76,12 @@ model Product {
   description  String?
   basePrice    Decimal          @db.Decimal(10, 2)
   categoryId   String
+  targetGender String?
   images       String[]
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
   costPrice    Decimal?         @db.Decimal(10, 2)
   tax          Decimal?         @db.Decimal(10, 2)
-  targetGender TargetGender     @default(BOTH)
   isSuspended  Boolean          @default(false)
   category     Category         @relation(fields: [categoryId], references: [id])
   variants     ProductVariant[]
@@ -196,10 +197,4 @@ enum PaymentMethod {
   CARD
   TRANSFER
   POS
-}
-
-enum TargetGender {
-  BOYS
-  GIRLS
-  BOTH
 }
