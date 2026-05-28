@@ -1,12 +1,10 @@
 import { prisma } from "@/services/prisma.service";
-import { Prisma, type TargetGender } from "@prisma/client";
-import { PushPosProductImagesService } from "./push-pos-product-images.service";
+import { Prisma } from "@prisma/client";
 
 interface ProductUpdatePayload {
   name?: string;
   description?: string | null;
   categoryId?: string | null;
-  targetGender?: string | null;
   sellingPrice?: number;
   costPrice?: number;
   tax?: number;
@@ -20,9 +18,6 @@ interface ProductUpdatePayload {
   }>;
   warehouseId?: string | null;
 }
-
-const getErrorMessage = (error: unknown) =>
-  error instanceof Error ? error.message : String(error ?? "Unknown error");
 
 /**
  * UPDATE PRODUCT SERVICE
@@ -50,7 +45,7 @@ export class UpdateProductService {
   }
 
   static async execute(id: string, payload: ProductUpdatePayload) {
-    const { name, description, categoryId, targetGender, sellingPrice, costPrice, tax, images, variants } = payload;
+    const { name, description, categoryId, sellingPrice, costPrice, tax, images, variants } = payload;
 
     const existingProduct = await prisma.product.findUnique({
       where: { id },
@@ -77,9 +72,7 @@ export class UpdateProductService {
     if (categoryId !== undefined && categoryId !== null) {
       updateData.category = { connect: { id: categoryId } };
     }
-    if (targetGender !== undefined && targetGender !== null) {
-      updateData.targetGender = targetGender as TargetGender;
-    }
+    // targetAudience removed from schema — no-op
     if (resolvedImages !== null) {
       updateData.images = resolvedImages;
     }
@@ -94,25 +87,25 @@ export class UpdateProductService {
 
     console.log(`[UpdateProduct] Persisted images: ${updatedProduct.images.length} URL(s) saved for product ${updatedProduct.name}`);
 
-    if (imageChanges.length > 0) {
-      try {
-        await PushPosProductImagesService.execute(id, imageChanges);
-      } catch (error: unknown) {
-        console.warn(`[UpdateProduct] POS image sync failed for product ${id}:`, getErrorMessage(error));
-      }
-    }
-
     // 2. Update the variant and inventory if provided
     if (variants && variants.length > 0) {
       const v = variants[0];
-      const variantSku = String(v.sku || "").toUpperCase();
+      let variantSku = String(v.sku || "").toUpperCase();
 
       // Find first variant belonging to this product
-      let variant = await prisma.productVariant.findFirst({
-        where: { productId: id }
-      });
+      let variant = await prisma.productVariant.findFirst({ where: { productId: id } });
 
       if (variant) {
+        // Ensure SKU uniqueness: if desired SKU exists on another variant, generate a safe fallback
+        const existingBySku = await prisma.productVariant.findUnique({ where: { sku: variantSku } });
+        if (existingBySku && existingBySku.id !== variant.id) {
+          let candidate = `${variantSku}-${Date.now().toString().slice(-4)}`;
+          while (await prisma.productVariant.findUnique({ where: { sku: candidate } })) {
+            candidate = `${variantSku}-${Math.floor(1000 + Math.random() * 9000)}`;
+          }
+          variantSku = candidate;
+        }
+
         // Update existing variant
         variant = await prisma.productVariant.update({
           where: { id: variant.id },
