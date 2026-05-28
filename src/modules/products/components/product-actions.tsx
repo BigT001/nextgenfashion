@@ -19,12 +19,60 @@ export function ProductActions({ product }: ProductActionsProps) {
   const updateQuantity = useCartStore((state) => state.updateQuantity);
   const [quantity, setQuantity] = useState(1);
 
-  // Normalize sizes: treat OS / One Size as no-size (don't show selector)
-  const rawSizes = Array.from(new Set(product.variants.map((v: any) => v.size || "").filter(Boolean))) as string[];
-  const sizes = rawSizes.filter((s) => !/^\s*(os|one[\s-]*size|onesize)\s*$/i.test(s));
-  const colors = Array.from(new Set(product.variants.map((v: any) => v.color || "").filter(Boolean))) as string[];
+  const variants = product.variants ?? [];
+  const normalize = (value?: string) => value?.toString().trim() ?? "";
+  const splitSizes = (raw?: string): string[] => {
+    if (!raw) return [];
+    return raw
+      .toString()
+      .split(/[,\/|]+/) // split on comma, slash, or pipe
+      .map((s: string) => normalize(s))
+      .filter(Boolean);
+  };
 
-  const totalStock = product.variants.reduce((acc: number, v: any) => acc + (v.inventory?.quantity || 0), 0);
+  const uniqueColors = useMemo<string[]>(() =>
+    Array.from<string>(
+      new Set(
+        variants
+          .map((v: any) => normalize(v.color))
+          .filter((color: string) => color.length > 0)
+      )
+    ) as string[],
+    [variants]
+  );
+
+  const uniqueSizes = useMemo<string[]>(() => {
+    const all = variants.flatMap((v: any) => splitSizes(v.size));
+    return Array.from(
+      new Set(all.filter((sz: string) => sz.length > 0 && !/^\s*(os|one[\s-]*size|onesize)\s*$/i.test(sz)))
+    );
+  }, [variants]);
+
+  const colors = useMemo<string[]>(() => {
+    if (!selectedSize) return uniqueColors;
+    return Array.from(
+      new Set(
+        variants
+          .filter((v: any) => splitSizes(v.size).includes(selectedSize))
+          .map((v: any) => normalize(v.color))
+          .filter((color: string) => color.length > 0)
+      )
+    );
+  }, [variants, selectedSize, uniqueColors]);
+
+  const sizes = useMemo<string[]>(() => {
+    if (!selectedColor) return uniqueSizes;
+    return Array.from(
+      new Set(
+        variants
+          .filter((v: any) => normalize(v.color) === selectedColor)
+          .flatMap((v: any) => splitSizes(v.size))
+          .filter((size: string) => size.length > 0)
+      )
+    );
+  }, [variants, selectedColor, uniqueSizes]);
+
+  const totalStock = variants.reduce((acc: number, v: any) => acc + (v.inventory?.quantity || 0), 0);
   const isOutOfStock = totalStock <= 0;
 
   const sameProductCartItems = useMemo(
@@ -33,54 +81,71 @@ export function ProductActions({ product }: ProductActionsProps) {
   );
 
   useEffect(() => {
-    if (!selectedSize && sizes.length > 0 && sameProductCartItems.length === 1) {
+    if (!selectedColor && uniqueColors.length === 1) {
+      setSelectedColor(uniqueColors[0]);
+    }
+  }, [uniqueColors, selectedColor]);
+
+  useEffect(() => {
+    if (!selectedSize && uniqueSizes.length === 1) {
+      setSelectedSize(uniqueSizes[0]);
+    }
+  }, [uniqueSizes, selectedSize]);
+
+  useEffect(() => {
+    if (!selectedSize && sameProductCartItems.length === 1) {
       const cartSize = sameProductCartItems[0].size;
       if (cartSize) {
         setSelectedSize(cartSize);
       }
     }
-  }, [sameProductCartItems, selectedSize, sizes.length]);
+  }, [sameProductCartItems, selectedSize]);
 
   useEffect(() => {
-    if (!selectedColor && colors.length === 1) {
-      setSelectedColor(colors[0]);
-    }
-  }, [colors, selectedColor]);
-
-  useEffect(() => {
-    if (!selectedColor && colors.length > 0 && sameProductCartItems.length === 1) {
+    if (!selectedColor && sameProductCartItems.length === 1) {
       const cartColor = sameProductCartItems[0].color;
       if (cartColor) {
         setSelectedColor(cartColor);
       }
     }
-  }, [sameProductCartItems, selectedColor, colors.length]);
+  }, [sameProductCartItems, selectedColor]);
 
   useEffect(() => {
-    if (selectedSize && !selectedColor && colors.length > 0) {
-      const matchingColors = product.variants
-        .filter((v: any) => v.size === selectedSize && v.color)
-        .map((v: any) => v.color)
-        .filter((color: unknown): color is string => typeof color === "string");
-      const uniqueColors = Array.from(new Set(matchingColors)) as string[];
-      if (uniqueColors.length === 1) {
-        setSelectedColor(uniqueColors[0]);
+    if (selectedColor && selectedSize) {
+      const validCombo = variants.some(
+        (v: any) => normalize(v.color) === selectedColor && splitSizes(v.size).includes(selectedSize || "")
+      );
+      if (!validCombo) {
+        setSelectedSize(null);
       }
     }
-  }, [product.variants, selectedColor, selectedSize, colors.length, sizes.length]);
+  }, [selectedColor, selectedSize, variants]);
+
+  useEffect(() => {
+    if (!selectedColor && selectedSize && colors.length === 1) {
+      setSelectedColor(colors[0]);
+    }
+  }, [colors, selectedColor, selectedSize]);
+
+  useEffect(() => {
+    if (!selectedSize && selectedColor && sizes.length === 1) {
+      setSelectedSize(sizes[0]);
+    }
+  }, [sizes, selectedColor, selectedSize]);
 
   const selectedVariant = useMemo(() => {
-    if (sizes.length > 0 && selectedSize && colors.length > 0 && selectedColor) {
-      return product.variants.find((v: any) => v.size === selectedSize && v.color === selectedColor) ?? null;
+    const exactMatch = variants.find(
+      (v: any) => normalize(v.color) === selectedColor && splitSizes(v.size).includes(selectedSize || "")
+    );
+    if (exactMatch) return exactMatch;
+    if (selectedColor) {
+      return variants.find((v: any) => normalize(v.color) === selectedColor) ?? null;
     }
-    if (sizes.length > 0 && selectedSize) {
-      return product.variants.find((v: any) => v.size === selectedSize) ?? null;
+    if (selectedSize) {
+      return variants.find((v: any) => splitSizes(v.size).includes(selectedSize || "")) ?? null;
     }
-    if (colors.length > 0 && selectedColor) {
-      return product.variants.find((v: any) => v.color === selectedColor) ?? null;
-    }
-    return product.variants.find((v: any) => (v.inventory?.quantity || 0) > 0) || product.variants[0] || null;
-  }, [product.variants, selectedColor, selectedSize, sizes.length, colors.length]);
+    return variants.find((v: any) => (v.inventory?.quantity || 0) > 0) || variants[0] || null;
+  }, [variants, selectedColor, selectedSize]);
 
   const isCssColor = (color: string) => {
     if (!color || typeof window === "undefined") return false;
@@ -106,7 +171,7 @@ export function ProductActions({ product }: ProductActionsProps) {
     );
   };
 
-  const variantId = selectedVariant ? selectedVariant.id : sizes.length === 0 ? product.id : null;
+  const variantId = selectedVariant?.id ?? null;
   const existingCartItem = useMemo(
     () => (variantId ? items.find((it: any) => it.variantId === variantId) : undefined),
     [items, variantId]
@@ -118,10 +183,8 @@ export function ProductActions({ product }: ProductActionsProps) {
       return;
     }
 
-    if (quantity !== 1) {
-      setQuantity(1);
-    }
-  }, [existingCartItem?.quantity, existingCartItem, quantity]);
+    setQuantity(1);
+  }, [existingCartItem?.quantity, existingCartItem]);
 
   const maxAvailable = selectedVariant ? (selectedVariant.inventory?.quantity ?? 0) : totalStock;
 
@@ -164,13 +227,18 @@ export function ProductActions({ product }: ProductActionsProps) {
       return;
     }
 
+    if (!variantId) {
+      toast.error("Unable to determine a valid product variant. Please refresh the page or choose another option.");
+      return;
+    }
+
     if (existingCartItem) {
       updateQuantity(variantId, quantity);
       toast.success(`${product.name} quantity updated in your bag.`);
       return;
     }
 
-    const cartItem = {
+    const cartItem: Parameters<typeof addItem>[0] = {
       id: product.id,
       variantId,
       name: product.name,
