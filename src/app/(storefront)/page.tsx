@@ -15,6 +15,16 @@ import { ResolveProductImagesService, type ProductWithVariants } from "@/modules
 
 type FeaturedProduct = Awaited<ReturnType<typeof GetProductsService.findFeatured>>[number];
 type CategoryWithProducts = Awaited<ReturnType<typeof ProductQueries.findCategories>>[number];
+type CategoryProductRow = {
+  id: string;
+  name: string;
+  categoryId?: string | null;
+  category?: { name?: string | null } | null;
+  variants?: Array<{
+    sku?: string | null;
+    barcode?: string | null;
+  }> | null;
+};
 
 export default async function LandingPage() {
   let featuredProducts: FeaturedProduct[] = [];
@@ -33,16 +43,7 @@ export default async function LandingPage() {
   }
 
   const categoryProducts: ProductWithVariants[] = dbCategories.flatMap((cat) => {
-    const rawProducts = (cat.products ?? []) as Array<{
-      id: string;
-      name: string;
-      categoryId?: string | null;
-      category?: { name?: string | null } | null;
-      variants?: Array<{
-        sku?: string | null;
-        barcode?: string | null;
-      }> | null;
-    }>;
+    const rawProducts = (cat.products ?? []) as unknown as CategoryProductRow[];
 
     return rawProducts.map((product) => ({
       id: product.id,
@@ -61,7 +62,7 @@ export default async function LandingPage() {
   const resolvedCategoryImageMap = new Map(resolvedCategoryProducts.map((item) => [item.id, item.resolvedImage]));
 
   const categories = dbCategories.map(cat => {
-    const rawProducts = (cat.products ?? []) as Array<{ id: string }>;
+    const rawProducts = (cat.products ?? []) as unknown as Array<{ id: string }>;
     const firstProduct = rawProducts[0];
     const productImage = firstProduct ? resolvedCategoryImageMap.get(firstProduct.id) || "" : "";
     const displayImage = productImage || cat.image;
