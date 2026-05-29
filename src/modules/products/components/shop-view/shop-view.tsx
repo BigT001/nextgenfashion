@@ -1,13 +1,10 @@
-import Image from "next/image";
-import Link from "next/link";
-import { ArrowRight, ShoppingCart, Zap, Heart, Filter, SlidersHorizontal, Package } from "lucide-react";
+import { Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GetProductsService } from "@/modules/products/services/get-products.service";
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ProductCard } from "@/modules/products/components/product-card";
 import { ProductQueries } from "@/modules/products/queries/product.queries";
+import { deepSerialize } from "@/lib/deep-serialize";
 import { MobileDrawer } from "./mobile-drawer";
 import { ShopFilters } from "./shop-filters";
 
@@ -21,25 +18,35 @@ interface ShopViewProps {
   badge?: string;
 }
 
+type ShopProduct = {
+  id: string;
+  name: string;
+  basePrice: unknown;
+  [key: string]: unknown;
+};
+
 export async function ShopView({
   category,
   targetGender,
   search,
   maxPrice,
-  title = "EXPLORE THE COLLECTION",
-  description = "Discover our complete range of premium, sustainably engineered fashion for the next generation.",
-  badge = "Full Catalog 2026"
 }: ShopViewProps) {
   // Fetch categories for the sidebar
-  const categories = await ProductQueries.findCategories(targetGender);
 
-  // Fetch products with filters
-  const products = await GetProductsService.execute({
+  // Fetch and deeply serialize categories for the sidebar
+
+  // Deeply serialize categories and all nested products into plain objects
+  const rawCategories = await ProductQueries.findCategories(targetGender);
+  const categories = JSON.parse(JSON.stringify(rawCategories.map((cat: Record<string, unknown>) => deepSerialize(cat))));
+
+  // Fetch and deeply serialize products with filters
+  const rawProducts = await GetProductsService.execute({
     categoryId: category,
     targetGender: targetGender,
     search: search,
     maxPrice: maxPrice,
   });
+  const products = JSON.parse(JSON.stringify(deepSerialize(rawProducts)));
 
   return (
     <div className="min-h-screen bg-background selection:bg-brand-navy/30">
@@ -84,7 +91,7 @@ export async function ShopView({
                 </div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-                  {products.map((product) => (
+                  {(products as ShopProduct[]).map((product) => (
                     <ProductCard key={product.id} product={product} />
                   ))}
                 </div>

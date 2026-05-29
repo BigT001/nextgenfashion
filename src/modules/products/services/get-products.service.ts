@@ -1,5 +1,6 @@
 import { ProductQueries } from "../queries/product.queries";
-import { serialize } from "@/lib/utils";
+import { serialize } from "@/lib/server-serialization";
+import { ResolveProductImagesService } from "@/modules/media/services/resolve-product-images.service";
 
 /**
  * GET PRODUCTS SERVICE
@@ -24,17 +25,21 @@ export class GetProductsService {
       includeVariants: params?.includeVariants,
     };
     const result = await ProductQueries.findAll(searchParams);
-    return serialize(result);
+    const resolved = await ResolveProductImagesService.resolve(result);
+    return serialize(resolved);
   }
 
   static async byId(id: string) {
     if (!id) throw new Error("Product ID is required");
     const result = await ProductQueries.findById(id);
-    return serialize(result);
+    if (!result) return null;
+    const [resolved] = await ResolveProductImagesService.resolve([result]);
+    return serialize(resolved);
   }
 
   static async findFeatured(limit = 8) {
     const result = await ProductQueries.findFeatured(limit);
-    return serialize(result);
+    const resolved = await ResolveProductImagesService.resolve(result);
+    return serialize(resolved);
   }
 }

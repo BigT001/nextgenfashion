@@ -11,10 +11,14 @@ import { GetProductsService } from "@/modules/products/services/get-products.ser
 import { LiveBrandPulse } from "@/modules/brand/components/live-brand-pulse";
 import { AnimatedSection } from "@/components/ui/animated-section";
 import { ProductQueries } from "@/modules/products/queries/product.queries";
+import { ResolveProductImagesService } from "@/modules/media/services/resolve-product-images.service";
+
+type FeaturedProduct = Awaited<ReturnType<typeof GetProductsService.findFeatured>>[number];
+type CategoryWithProducts = Awaited<ReturnType<typeof ProductQueries.findCategories>>[number];
 
 export default async function LandingPage() {
-  let featuredProducts: any[] = [];
-  let dbCategories: any[] = [];
+  let featuredProducts: FeaturedProduct[] = [];
+  let dbCategories: CategoryWithProducts[] = [];
   try {
     const [products, cats] = await Promise.all([
       GetProductsService.findFeatured(8),
@@ -28,8 +32,13 @@ export default async function LandingPage() {
     dbCategories = [];
   }
 
+  const categoryProducts = dbCategories.flatMap((cat) => cat.products || []);
+  const resolvedCategoryProducts = await ResolveProductImagesService.resolve(categoryProducts);
+  const resolvedCategoryImageMap = new Map(resolvedCategoryProducts.map((item) => [item.id, item.resolvedImage]));
+
   const categories = dbCategories.map(cat => {
-    const productImage = cat.products?.[0]?.images?.[0];
+    const firstProduct = cat.products?.[0];
+    const productImage = firstProduct ? resolvedCategoryImageMap.get(firstProduct.id) || "" : "";
     const displayImage = productImage || cat.image;
 
     return {
@@ -85,52 +94,30 @@ export default async function LandingPage() {
 
   type FeaturedImageItem = {
     id: string;
-    product: any;
+    product: FeaturedProduct;
     image: string;
   };
 
-  const buildImageItems = (products: any[]) => {
-    return products
-      .flatMap((product) =>
-        (product.images || [])
-          .filter((img: any): img is string => typeof img === "string" && img.trim().length > 0)
-          .map((img: string, index: number) => ({
-            id: `${product.id}-${index}`,
-            product,
-            image: img.trim(),
-          }))
-      )
-      .slice(0, 8);
-  };
+  const resolvedFeaturedProducts = await ResolveProductImagesService.resolve(featuredProducts);
+  const uniqueFeaturedProducts = resolvedFeaturedProducts
+    .filter((product, index, products) => Boolean(product?.id) && products.findIndex((candidate) => candidate?.id === product.id) === index)
+    .slice(0, 8);
 
-  let visibleFeaturedImages: FeaturedImageItem[] = buildImageItems(featuredProducts);
+  const visibleFeaturedImages: FeaturedImageItem[] = uniqueFeaturedProducts
+    .filter((product) => Boolean(product.resolvedImage && product.resolvedImage.trim() !== ""))
+    .map((product) => ({
+      id: product.id,
+      product,
+      image: product.resolvedImage,
+    }));
 
-  // If there are no featured product images, fall back to recent products with uploaded images.
-  if (visibleFeaturedImages.length === 0) {
-    try {
-      const recent = await GetProductsService.execute({ includeVariants: true });
-      visibleFeaturedImages = buildImageItems(recent || []);
-    } catch (err) {
-      console.error("[LANDING_PAGE] fallback products fetch failed:", err);
-      visibleFeaturedImages = [];
-    }
-  }
+  const discoverProducts = uniqueFeaturedProducts
+    .filter((product) => Boolean(product.resolvedImage && product.resolvedImage.trim() !== ""))
+    .slice(0, 4);
 
-  let discoverProducts: any[] = [];
-  try {
-    const recent = await GetProductsService.execute({ includeVariants: true });
-    discoverProducts = (recent || []).filter((product: any) => product.images && product.images.length > 0);
-    if (discoverProducts.length > 4) {
-      discoverProducts = discoverProducts.sort(() => Math.random() - 0.5).slice(0, 4);
-    }
-  } catch (err) {
-    console.error("[LANDING_PAGE] discover products fetch failed:", err);
-    discoverProducts = [];
-  }
-
-  const discoverCards = discoverProducts.slice(0, 4).map((product: any) => ({
+  const discoverCards = discoverProducts.map((product) => ({
     name: product.category?.name || product.name,
-    img: product.images?.[0],
+    img: product.resolvedImage,
     link: product.categoryId ? `/shop?category=${product.categoryId}` : "/shop"
   }));
 
@@ -343,12 +330,21 @@ export default async function LandingPage() {
                 <AnimatedSection key={item.id} animation="fade-up" delay={i * 70}>
                   <Link href={`/products/${item.product.id}`} className="block group">
                     <div className="aspect-[3/4] rounded-[2.5rem] overflow-hidden bg-zinc-100 shadow-lg transition-transform duration-500 group-hover:-translate-y-1">
-                      <Image
-                        src={item.image}
-                        alt={item.product.name || "Product image"}
-                        fill
-                        className="object-cover transition-transform duration-1000 group-hover:scale-105"
-                      />
+                      {item.image && item.image.trim() !== "" ? (
+                        <Image
+                          src={item.image}
+                          alt={item.product.name || "Product image"}
+                          fill
+                          className="object-cover transition-transform duration-1000 group-hover:scale-105"
+                        />
+                      ) : (
+                        <div className="flex items-center justify-center h-full opacity-10">
+                          <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <rect width="64" height="64" rx="16" fill="#e0e7ef" />
+                            <path d="M20 44L44 20M44 44L20 20" stroke="#b3b9c9" strokeWidth="4" strokeLinecap="round" />
+                          </svg>
+                        </div>
+                      )}
                     </div>
                     <div className="mt-4 text-center">
                       <p className="font-black text-lg tracking-tight line-clamp-1">{item.product.name}</p>
@@ -360,7 +356,7 @@ export default async function LandingPage() {
           ) : (
             <div className="max-w-4xl mx-auto py-12 text-center rounded-3xl border border-zinc-200 bg-zinc-50">
               <p className="text-zinc-500 text-base md:text-lg font-medium">
-                No featured products with uploaded images are available right now.
+                No featured products are available right now.
               </p>
             </div>
           )}
@@ -467,13 +463,22 @@ export default async function LandingPage() {
             {discoverCards.length > 0 ? discoverCards.map((card, i) => (
               <AnimatedSection key={i} animation="fade-up" delay={i * 100}>
                 <Link href={card.link}>
-                  <div className="group relative rounded-3xl overflow-hidden aspect-[4/5] shadow-md hover:shadow-xl transition-all duration-300">
-                    <Image
-                      src={card.img}
-                      alt={card.name}
-                      fill
-                      className="object-cover group-hover:scale-110 transition-transform duration-700"
-                    />
+                  <div className="group relative rounded-3xl overflow-hidden aspect-[4/5] shadow-md hover:shadow-xl transition-all duration-300 bg-zinc-100">
+                    {card.img && card.img.trim() !== "" ? (
+                      <Image
+                        src={card.img}
+                        alt={card.name}
+                        fill
+                        className="object-cover group-hover:scale-110 transition-transform duration-700"
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center h-full opacity-10">
+                        <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <rect width="64" height="64" rx="16" fill="#e0e7ef" />
+                          <path d="M20 44L44 20M44 44L20 20" stroke="#b3b9c9" strokeWidth="4" strokeLinecap="round" />
+                        </svg>
+                      </div>
+                    )}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex items-end p-6">
                       <h3 className="text-white font-black text-xl tracking-wide group-hover:text-pink-300 transition-colors">{card.name}</h3>
                     </div>

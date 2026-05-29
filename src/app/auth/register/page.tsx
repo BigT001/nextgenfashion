@@ -4,13 +4,13 @@ import { Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ProductQueries } from "@/modules/products/queries/product.queries";
+import { ResolveProductImagesService } from "@/modules/media/services/resolve-product-images.service";
 
 export default async function RegisterPage() {
-  // Fetch a real product image from the database
   const featuredProducts = await ProductQueries.findFeatured(10);
-  // Pick one that has an image
-  const productWithImage = featuredProducts.find(p => p.images && p.images.length > 0);
-  const displayImage = productWithImage?.images[0] || "https://images.unsplash.com/photo-1519689680058-324335c77eba?auto=format&fit=crop&q=80&w=1000";
+  const resolvedProducts = await ResolveProductImagesService.resolve(featuredProducts);
+  const productWithImage = resolvedProducts.find((product) => Boolean(product.resolvedImage && product.resolvedImage.trim() !== ""));
+  const displayImage = productWithImage?.resolvedImage || "https://images.unsplash.com/photo-1519689680058-324335c77eba?auto=format&fit=crop&q=80&w=1000";
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-[#F8FAFC] p-4 md:p-6 relative overflow-hidden">

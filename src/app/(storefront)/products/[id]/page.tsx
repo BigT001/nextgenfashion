@@ -10,6 +10,7 @@ import { Check, Zap, ShieldCheck, Truck, Sparkles, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ProductActions } from "@/modules/products/components/product-actions";
 import { ConversionPulse } from "@/modules/products/components/conversion-pulse";
+import { ResolveProductImagesService } from "@/modules/media/services/resolve-product-images.service";
 
 export default async function ProductDetailPage({
   params,
@@ -23,8 +24,14 @@ export default async function ProductDetailPage({
     notFound();
   }
 
-  const totalStock = product.variants?.reduce((acc: number, v: any) => acc + (v.inventory?.quantity || 0), 0) ?? 0;
-  const isNew = product.createdAt && new Date(product.createdAt) > new Date(Date.now() - 1000 * 60 * 60 * 24 * 30);
+  const resolvedProducts = await ResolveProductImagesService.resolve([product]);
+  const resolvedProduct = resolvedProducts[0];
+  const displayImage = resolvedProduct.resolvedImage || "";
+
+  const totalStock = product.variants?.reduce((acc: number, v: { inventory?: { quantity?: number | null } | null }) => acc + (v.inventory?.quantity || 0), 0) ?? 0;
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const isNew = product.createdAt && new Date(product.createdAt) > thirtyDaysAgo;
 
   return (
     <div className="relative min-h-screen bg-background selection:bg-brand-navy/30">
@@ -38,9 +45,9 @@ export default async function ProductDetailPage({
           <div className="space-y-6 animate-slow-fade lg:sticky lg:top-24">
             <div className="aspect-square lg:aspect-[4/5] max-w-md mx-auto relative rounded-3xl overflow-hidden glass-card border-none shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] group">
               <div className="absolute inset-0 bg-brand-mesh opacity-5 z-0" />
-              {product.images && product.images[0] ? (
+              {displayImage ? (
                 <Image
-                  src={product.images[0]}
+                  src={displayImage}
                   alt={product.name}
                   fill
                   sizes="(max-width: 768px) 100vw, (max-width: 1280px) 60vw, 40vw"
@@ -61,19 +68,17 @@ export default async function ProductDetailPage({
               )}
             </div>
             
-            {product.images && product.images.length > 1 && (
+            {displayImage && (
               <div className="grid grid-cols-4 gap-4 px-4 max-w-md mx-auto">
-                {product.images.map((img, i) => (
-                  <div key={i} className="aspect-square relative rounded-2xl overflow-hidden glass-card border-none cursor-pointer hover:scale-105 transition-all shadow-sm">
-                    <Image
-                      src={img}
-                      alt={`${product.name} ${i}`}
-                      fill
-                      sizes="80px"
-                      className="object-cover"
-                    />
-                  </div>
-                ))}
+                <div className="col-span-4 aspect-square relative rounded-2xl overflow-hidden glass-card border-none shadow-sm">
+                  <Image
+                    src={displayImage}
+                    alt={`${product.name} preview`}
+                    fill
+                    sizes="80px"
+                    className="object-cover"
+                  />
+                </div>
               </div>
             )}
           </div>
@@ -124,13 +129,16 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     const product = await GetProductsService.byId(id);
     if (!product) return { title: "Product not found" };
 
+    const [resolvedProduct] = await ResolveProductImagesService.resolve([product]);
+    const resolvedImage = resolvedProduct?.resolvedImage || "";
+
     return {
       title: `${product.name} — NextGen Fashion`,
       description: product.description || `Buy ${product.name} for ₦${Number(product.basePrice).toLocaleString()}`,
       openGraph: {
         title: product.name,
         description: product.description || undefined,
-        images: product.images && product.images.length > 0 ? [{ url: product.images[0], alt: product.name }] : undefined,
+        images: resolvedImage ? [{ url: resolvedImage, alt: product.name }] : undefined,
       },
     };
   } catch (err) {
