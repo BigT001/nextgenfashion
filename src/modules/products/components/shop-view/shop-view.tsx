@@ -31,22 +31,29 @@ export async function ShopView({
   search,
   maxPrice,
 }: ShopViewProps) {
-  // Fetch categories for the sidebar
+  let categories: Array<Record<string, unknown>> = [];
+  let products: ShopProduct[] = [];
 
-  // Fetch and deeply serialize categories for the sidebar
+  try {
+    const rawCategories = await ProductQueries.findCategories(targetGender);
+    categories = JSON.parse(JSON.stringify(rawCategories.map((cat: Record<string, unknown>) => deepSerialize(cat))));
+  } catch (error) {
+    console.error("[ShopView] Failed to load categories:", error);
+    categories = [];
+  }
 
-  // Deeply serialize categories and all nested products into plain objects
-  const rawCategories = await ProductQueries.findCategories(targetGender);
-  const categories = JSON.parse(JSON.stringify(rawCategories.map((cat: Record<string, unknown>) => deepSerialize(cat))));
-
-  // Fetch and deeply serialize products with filters
-  const rawProducts = await GetProductsService.execute({
-    categoryId: category,
-    targetGender: targetGender,
-    search: search,
-    maxPrice: maxPrice,
-  });
-  const products = JSON.parse(JSON.stringify(deepSerialize(rawProducts)));
+  try {
+    const rawProducts = await GetProductsService.execute({
+      categoryId: category,
+      targetGender: targetGender,
+      search: search,
+      maxPrice: maxPrice,
+    });
+    products = JSON.parse(JSON.stringify(deepSerialize(rawProducts)));
+  } catch (error) {
+    console.error("[ShopView] Failed to load products:", error);
+    products = [];
+  }
 
   return (
     <div className="min-h-screen bg-background selection:bg-brand-navy/30">

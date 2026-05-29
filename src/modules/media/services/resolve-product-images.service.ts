@@ -81,7 +81,7 @@ const sanitizeImageSources = (values: unknown[]) => {
     .filter((value) => isValidImageSource(value));
 };
 
-const collectCloudinaryAssets = async () => {
+const collectCloudinaryAssets = async (shouldFetchRemoteAssets: boolean) => {
   const assetGroups = new Map<string, Array<{ publicId: string; secureUrl: string; slug: string; timestamp: number; tokens: string[] }>>();
   const globalTokenFrequency = new Map<string, number>();
 
@@ -110,6 +110,11 @@ const collectCloudinaryAssets = async () => {
     existingGroup.push(assetRecord);
     assetGroups.set(slug, existingGroup);
   };
+
+  if (!shouldFetchRemoteAssets) {
+    console.warn("[ResolveProductImagesService] Cloudinary credentials are incomplete; skipping remote asset discovery.");
+    return { assetGroups, globalTokenFrequency };
+  }
 
   try {
     let nextCursor: string | undefined = undefined;
@@ -174,14 +179,24 @@ export class ResolveProductImagesService {
   static async resolve<T extends ProductWithVariants>(products: T[]): Promise<ResolvedProduct<T>[]> {
     if (products.length === 0) return [];
 
-    cloudinary.config({
-      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-      api_key: process.env.CLOUDINARY_API_KEY,
-      api_secret: process.env.CLOUDINARY_API_SECRET,
-      secure: true,
-    });
+    const hasCloudinaryCredentials = Boolean(
+      process.env.CLOUDINARY_CLOUD_NAME &&
+      process.env.CLOUDINARY_API_KEY &&
+      process.env.CLOUDINARY_API_SECRET
+    );
 
-    const { assetGroups, globalTokenFrequency } = await collectCloudinaryAssets();
+    if (hasCloudinaryCredentials) {
+      cloudinary.config({
+        cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+        api_key: process.env.CLOUDINARY_API_KEY,
+        api_secret: process.env.CLOUDINARY_API_SECRET,
+        secure: true,
+      });
+    } else {
+      console.warn("[ResolveProductImagesService] Cloudinary environment variables are not fully configured.");
+    }
+
+    const { assetGroups, globalTokenFrequency } = await collectCloudinaryAssets(hasCloudinaryCredentials);
 
     if (assetGroups.size === 0) {
       console.warn("[ResolveProductImagesService] No Cloudinary assets were discovered; using local product placeholder fallback.");
