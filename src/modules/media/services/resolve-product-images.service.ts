@@ -1,12 +1,5 @@
 import { v2 as cloudinary } from "cloudinary";
 
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-  secure: true,
-});
-
 const normalizeIdentifier = (value: string) =>
   value
     .trim()
@@ -22,6 +15,11 @@ const extractProductSlug = (value: string) => {
   return normalizeIdentifier(withoutTimestamp);
 };
 
+const extractAssetTimestamp = (value: string) => {
+  const match = value.match(/-(\d{10,})$/);
+  return match ? Number(match[1]) : 0;
+};
+
 const tokenizeIdentifier = (value: string) => {
   const normalized = normalizeIdentifier(value);
   if (!normalized) return [];
@@ -30,12 +28,12 @@ const tokenizeIdentifier = (value: string) => {
   const tokens = new Set<string>();
 
   for (const segment of segments) {
-    if (segment.length >= 3) {
+    if (segment.length >= 4) {
       tokens.add(segment);
     }
 
-    if (/^[A-Z]+$/.test(segment)) {
-      for (let length = 3; length <= Math.min(segment.length, 5); length += 1) {
+    if (/^[A-Z]+$/.test(segment) && segment.length >= 4) {
+      for (let length = 4; length <= Math.min(segment.length, 5); length += 1) {
         tokens.add(segment.slice(0, length));
       }
     }
@@ -65,9 +63,15 @@ export class ResolveProductImagesService {
   static async resolve<T extends ProductWithVariants>(products: T[]): Promise<ResolvedProduct<T>[]> {
     if (products.length === 0) return [];
 
+    cloudinary.config({
+      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+      api_key: process.env.CLOUDINARY_API_KEY,
+      api_secret: process.env.CLOUDINARY_API_SECRET,
+      secure: true,
+    });
+
     const folder = "nextgenfashion/products";
-    const assetIndex = new Map<string, string>();
-    const assetRecords: Array<{ publicId: string; secureUrl: string; tokens: string[] }> = [];
+    const assetGroups = new Map<string, Array<{ publicId: string; secureUrl: string; slug: string; timestamp: number; tokens: string[] }>>();
     const globalTokenFrequency = new Map<string, number>();
 
     try {
@@ -90,19 +94,25 @@ export class ResolveProductImagesService {
           const secureUrl = String(asset.secure_url || asset.url || "");
           if (!publicId || !secureUrl) continue;
 
-          const normalizedAssetKey = extractProductSlug(publicId);
-          assetIndex.set(normalizedAssetKey, secureUrl);
+          const slug = extractProductSlug(publicId);
+          const timestamp = extractAssetTimestamp(publicId);
+          const tokens = tokenizeIdentifier(slug);
 
-          const tokens = tokenizeIdentifier(normalizedAssetKey);
           for (const token of tokens) {
             globalTokenFrequency.set(token, (globalTokenFrequency.get(token) || 0) + 1);
           }
 
-          assetRecords.push({
+          const assetRecord = {
             publicId,
             secureUrl,
+            slug,
+            timestamp,
             tokens,
-          });
+          };
+
+          const existingGroup = assetGroups.get(slug) || [];
+          existingGroup.push(assetRecord);
+          assetGroups.set(slug, existingGroup);
         }
 
         nextCursor = result.next_cursor || undefined;
@@ -124,22 +134,16 @@ export class ResolveProductImagesService {
         if (variant.barcode) candidateKeys.add(normalizeIdentifier(variant.barcode));
       }
 
-      // Prefer direct substring match on asset baseId
-      let matchedUrl = "";
-      let foundDirect = false;
+      let matchedAssets: Array<{ publicId: string; secureUrl: string; slug: string; timestamp: number; tokens: string[] }> = [];
       for (const key of candidateKeys) {
-        for (const asset of assetRecords) {
-          if (asset.publicId && extractProductSlug(asset.publicId).includes(key)) {
-            matchedUrl = asset.secureUrl;
-            foundDirect = true;
-            break;
-          }
+        const exactGroup = assetGroups.get(key);
+        if (exactGroup && exactGroup.length > 0) {
+          matchedAssets = exactGroup.slice().sort((a, b) => b.timestamp - a.timestamp);
+          break;
         }
-        if (foundDirect) break;
       }
 
-      // If no direct substring match, use token overlap but require at least 2 unique tokens
-      if (!matchedUrl) {
+      if (matchedAssets.length === 0) {
         const hintTokens = new Map<string, number>();
         for (const key of candidateKeys) {
           const tokens = tokenizeIdentifier(key);
@@ -148,14 +152,16 @@ export class ResolveProductImagesService {
           }
         }
 
-        let bestAsset: { secureUrl: string } | null = null;
+        let bestGroup: Array<{ publicId: string; secureUrl: string; slug: string; timestamp: number; tokens: string[] }> | null = null;
         let bestScore = -1;
         let bestTokenCount = 0;
 
-        for (const asset of assetRecords) {
+        for (const assetGroup of assetGroups.values()) {
+          const representative = assetGroup[0];
           let score = 0;
           let matchedTokenCount = 0;
-          for (const token of asset.tokens) {
+
+          for (const token of representative.tokens) {
             if (hintTokens.has(token)) {
               const rarityWeight = 1 / (globalTokenFrequency.get(token) || 1);
               const tokenStrength = token.length >= 6 ? 6 : token.length >= 4 ? 4 : 2;
@@ -163,27 +169,31 @@ export class ResolveProductImagesService {
               matchedTokenCount += 1;
             }
           }
+
           if (
             (matchedTokenCount > bestTokenCount && matchedTokenCount >= 2) ||
             (matchedTokenCount === bestTokenCount && score > bestScore && matchedTokenCount >= 2)
           ) {
             bestScore = score;
-            bestAsset = asset;
+            bestGroup = assetGroup.slice().sort((a, b) => b.timestamp - a.timestamp);
             bestTokenCount = matchedTokenCount;
           }
         }
-        if (bestTokenCount >= 2 && bestScore > 0) {
-          matchedUrl = bestAsset?.secureUrl || "";
+
+        if (bestTokenCount >= 2 && bestScore > 0 && bestGroup) {
+          matchedAssets = bestGroup;
         }
       }
 
-      const resolvedImages = matchedUrl
-        ? [matchedUrl]
+      const resolvedImages = matchedAssets.length > 0
+        ? matchedAssets.map((asset) => asset.secureUrl)
         : fallbackImages;
+
+      const resolvedImage = matchedAssets[0]?.secureUrl || fallbackImages[0] || "";
 
       return {
         ...product,
-        resolvedImage: matchedUrl || fallbackImages[0] || "",
+        resolvedImage,
         images: resolvedImages,
       };
     });
