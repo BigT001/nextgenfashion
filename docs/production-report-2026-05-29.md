@@ -35,6 +35,11 @@
 - Switched featured product ordering to stable `id` ordering and added a fallback empty array on query failure.
 - Re-ran `npm run build` successfully after the featured query hardening.
 
+### Production image fallback
+- Added a local product placeholder asset at `public/images/product-placeholder.svg`.
+- Updated `ResolveProductImagesService` to broaden Cloudinary searches and fall back to the placeholder when no Cloudinary asset resolves, preventing blank product images in production.
+- Re-ran `npm run build` successfully after image fallback hardening.
+
 ## Git commits pushed to main
 - `6387127` — `fix cloudinary image matching and duplicate assets`
 - `5b6c40a` — `fix storefront image typing and unique asset assignment`

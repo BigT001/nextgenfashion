@@ -59,6 +59,8 @@ export type ResolvedProduct<T extends ProductWithVariants = ProductWithVariants>
   images: string[];
 };
 
+const PRODUCT_PLACEHOLDER_IMAGE = "/images/product-placeholder.svg";
+
 export class ResolveProductImagesService {
   static async resolve<T extends ProductWithVariants>(products: T[]): Promise<ResolvedProduct<T>[]> {
     if (products.length === 0) return [];
@@ -70,55 +72,64 @@ export class ResolveProductImagesService {
       secure: true,
     });
 
-    const folder = "nextgenfashion/products";
     const assetGroups = new Map<string, Array<{ publicId: string; secureUrl: string; slug: string; timestamp: number; tokens: string[] }>>();
     const globalTokenFrequency = new Map<string, number>();
+    const searchExpressions = [
+      "folder:nextgenfashion/products AND resource_type:image",
+      "folder:nextgenfashion AND resource_type:image",
+    ];
 
     try {
-      let nextCursor: string | undefined = undefined;
-      do {
-        const search = cloudinary.search
-          .expression(`folder:${folder} AND resource_type:image`)
-          .sort_by("public_id", "asc")
-          .max_results(200);
+      for (const expression of searchExpressions) {
+        let nextCursor: string | undefined = undefined;
+        do {
+          const search = cloudinary.search
+            .expression(expression)
+            .sort_by("public_id", "asc")
+            .max_results(200);
 
-        if (nextCursor) {
-          search.next_cursor(nextCursor);
-        }
-
-        const result = await search.execute();
-        const assets = result.resources || [];
-
-        for (const asset of assets) {
-          const publicId = String(asset.public_id || "");
-          const secureUrl = String(asset.secure_url || asset.url || "");
-          if (!publicId || !secureUrl) continue;
-
-          const slug = extractProductSlug(publicId);
-          const timestamp = extractAssetTimestamp(publicId);
-          const tokens = tokenizeIdentifier(slug);
-
-          for (const token of tokens) {
-            globalTokenFrequency.set(token, (globalTokenFrequency.get(token) || 0) + 1);
+          if (nextCursor) {
+            search.next_cursor(nextCursor);
           }
 
-          const assetRecord = {
-            publicId,
-            secureUrl,
-            slug,
-            timestamp,
-            tokens,
-          };
+          const result = await search.execute();
+          const assets = result.resources || [];
 
-          const existingGroup = assetGroups.get(slug) || [];
-          existingGroup.push(assetRecord);
-          assetGroups.set(slug, existingGroup);
-        }
+          for (const asset of assets) {
+            const publicId = String(asset.public_id || "");
+            const secureUrl = String(asset.secure_url || asset.url || "");
+            if (!publicId || !secureUrl) continue;
 
-        nextCursor = result.next_cursor || undefined;
-      } while (nextCursor);
+            const slug = extractProductSlug(publicId);
+            const timestamp = extractAssetTimestamp(publicId);
+            const tokens = tokenizeIdentifier(slug);
+
+            for (const token of tokens) {
+              globalTokenFrequency.set(token, (globalTokenFrequency.get(token) || 0) + 1);
+            }
+
+            const assetRecord = {
+              publicId,
+              secureUrl,
+              slug,
+              timestamp,
+              tokens,
+            };
+
+            const existingGroup = assetGroups.get(slug) || [];
+            existingGroup.push(assetRecord);
+            assetGroups.set(slug, existingGroup);
+          }
+
+          nextCursor = result.next_cursor || undefined;
+        } while (nextCursor);
+      }
     } catch (error) {
       console.error("[ResolveProductImagesService] Cloudinary search failed:", error);
+    }
+
+    if (assetGroups.size === 0) {
+      console.warn("[ResolveProductImagesService] No Cloudinary assets were discovered; using local product placeholder fallback.");
     }
 
     const usedUrls = new Set<string>();
@@ -202,8 +213,12 @@ export class ResolveProductImagesService {
         : selectUniqueAssets(assetPool.filter((asset) => asset.slug.length > 0));
 
       const selectedAsset = selectedAssets[0];
-      const resolvedImages = selectedAsset ? [selectedAsset.secureUrl] : fallbackImages;
-      const resolvedImage = selectedAsset?.secureUrl || fallbackImages[0] || "";
+      const resolvedImages = selectedAsset
+        ? [selectedAsset.secureUrl]
+        : fallbackImages.length > 0
+          ? fallbackImages
+          : [PRODUCT_PLACEHOLDER_IMAGE];
+      const resolvedImage = resolvedImages[0] || PRODUCT_PLACEHOLDER_IMAGE;
 
       return {
         ...product,
