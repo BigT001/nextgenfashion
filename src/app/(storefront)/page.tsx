@@ -11,7 +11,7 @@ import { GetProductsService } from "@/modules/products/services/get-products.ser
 import { LiveBrandPulse } from "@/modules/brand/components/live-brand-pulse";
 import { AnimatedSection } from "@/components/ui/animated-section";
 import { ProductQueries } from "@/modules/products/queries/product.queries";
-import { ResolveProductImagesService } from "@/modules/media/services/resolve-product-images.service";
+import { ResolveProductImagesService, type ProductWithVariants } from "@/modules/media/services/resolve-product-images.service";
 
 type FeaturedProduct = Awaited<ReturnType<typeof GetProductsService.findFeatured>>[number];
 type CategoryWithProducts = Awaited<ReturnType<typeof ProductQueries.findCategories>>[number];
@@ -32,7 +32,17 @@ export default async function LandingPage() {
     dbCategories = [];
   }
 
-  const categoryProducts = dbCategories.flatMap((cat) => cat.products || []);
+  const categoryProducts: ProductWithVariants[] = dbCategories.flatMap((cat) =>
+    (cat.products || []).map((product) => ({
+      id: product.id,
+      name: product.name,
+      images: [],
+      categoryId: product.categoryId,
+      category: null,
+      variants: [],
+    }))
+  );
+
   const resolvedCategoryProducts = await ResolveProductImagesService.resolve(categoryProducts);
   const resolvedCategoryImageMap = new Map(resolvedCategoryProducts.map((item) => [item.id, item.resolvedImage]));
 

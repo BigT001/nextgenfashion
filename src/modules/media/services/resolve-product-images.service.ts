@@ -121,6 +121,18 @@ export class ResolveProductImagesService {
       console.error("[ResolveProductImagesService] Cloudinary search failed:", error);
     }
 
+    const usedUrls = new Set<string>();
+    const assetPool = Array.from(assetGroups.values()).flat().sort((a, b) => b.timestamp - a.timestamp);
+
+    const selectUniqueAssets = (candidates: Array<{ publicId: string; secureUrl: string; slug: string; timestamp: number; tokens: string[] }>) => {
+      const unused = candidates.filter((asset) => !usedUrls.has(asset.secureUrl));
+      const selected = unused.length > 0 ? unused : candidates;
+      if (selected.length > 0) {
+        usedUrls.add(selected[0].secureUrl);
+      }
+      return selected;
+    };
+
     return products.map((product) => {
       const fallbackImages = Array.isArray(product.images)
         ? product.images.filter((image): image is string => Boolean(image && image.trim() !== ""))
@@ -185,11 +197,13 @@ export class ResolveProductImagesService {
         }
       }
 
-      const resolvedImages = matchedAssets.length > 0
-        ? matchedAssets.map((asset) => asset.secureUrl)
-        : fallbackImages;
+      const selectedAssets = matchedAssets.length > 0
+        ? selectUniqueAssets(matchedAssets)
+        : selectUniqueAssets(assetPool.filter((asset) => asset.slug.length > 0));
 
-      const resolvedImage = matchedAssets[0]?.secureUrl || fallbackImages[0] || "";
+      const selectedAsset = selectedAssets[0];
+      const resolvedImages = selectedAsset ? [selectedAsset.secureUrl] : fallbackImages;
+      const resolvedImage = selectedAsset?.secureUrl || fallbackImages[0] || "";
 
       return {
         ...product,
