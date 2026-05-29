@@ -14,8 +14,7 @@ export class ProductQueries {
     maxPrice?: number;
     includeVariants?: boolean;
   }) {
-    // Over-fetch then sort: products with images surface first
-    const products = await prisma.product.findMany({
+    return await prisma.product.findMany({
       where: {
         isSuspended: false,
         ...(params.targetGender && {
@@ -46,31 +45,28 @@ export class ProductQueries {
       },
       orderBy: { createdAt: "desc" },
     });
-
-    // Sort: products WITH images come first
-    const withImages = products.filter(p => p.images && p.images.length > 0);
-    const withoutImages = products.filter(p => !p.images || p.images.length === 0);
-    return [...withImages, ...withoutImages];
   }
 
   /**
    * Fetch high-visibility featured products for the storefront.
-   * Products WITH images are always shown first.
    */
   static async findFeatured(limit = 8) {
-    // Fetch the most recent active products that already have at least one image.
-    return await prisma.product.findMany({
-      where: {
-        isSuspended: false,
-        images: { isEmpty: false },
-      },
-      take: limit,
-      include: {
-        category: true,
-        variants: true,
-      },
-      orderBy: { createdAt: "desc" },
-    });
+    try {
+      return await prisma.product.findMany({
+        where: {
+          isSuspended: false,
+        },
+        take: limit,
+        include: {
+          category: true,
+          variants: true,
+        },
+        orderBy: { id: "desc" },
+      });
+    } catch (error) {
+      console.error("[ProductQueries.findFeatured] Failed to load featured products:", error);
+      return [];
+    }
   }
 
   static async findById(id: string) {
@@ -104,14 +100,13 @@ export class ProductQueries {
       orderBy: { name: "asc" },
       include: {
         _count: {
-          select: { 
-            products: targetGender ? { where: genderFilter } : true 
+          select: {
+            products: true,
           },
         },
         products: {
           where: genderFilter,
           take: 1,
-          select: { images: true },
         },
       },
     });

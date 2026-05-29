@@ -30,6 +30,11 @@
 - Added explicit category product row typing so the build no longer flags the nested `cat.products` conversion in production.
 - Re-ran `npm run build` successfully after the stricter cast adjustment.
 
+### Build-time database resilience
+- Hardened `ProductQueries.findFeatured()` in `src/modules/products/queries/product.queries.ts` so prerendering no longer aborts when featured product lookups hit a database schema/runtime issue.
+- Switched featured product ordering to stable `id` ordering and added a fallback empty array on query failure.
+- Re-ran `npm run build` successfully after the featured query hardening.
+
 ## Git commits pushed to main
 - `6387127` — `fix cloudinary image matching and duplicate assets`
 - `5b6c40a` — `fix storefront image typing and unique asset assignment`
