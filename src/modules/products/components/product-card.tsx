@@ -3,18 +3,54 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ShoppingCart, Zap } from "lucide-react";
+import { useState } from "react";
 import { useCartStore } from "@/modules/cart/store/cart.store";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
+type ProductVariant = {
+  id?: string | null;
+  price?: unknown;
+  inventory?: {
+    quantity?: number | null;
+  } | null;
+};
+
+interface ProductCardProduct {
+  id: string;
+  name: string;
+  basePrice: unknown;
+  category?: {
+    name?: string | null;
+  } | null;
+  images?: unknown;
+  resolvedImage?: string | null;
+  variants?: ProductVariant[] | null;
+}
+
 interface ProductCardProps {
-  product: any;
+  product: ProductCardProduct;
   className?: string;
 }
 
+interface CartItem {
+  variantId: string;
+}
+
 export function ProductCard({ product, className }: ProductCardProps) {
+  const [imageFailed, setImageFailed] = useState(false);
+
+  const productImages = Array.isArray(product.images)
+    ? product.images.filter((image): image is string => typeof image === "string" && image.trim().length > 0)
+    : [];
+
+  const imageSrc = productImages[0]
+    || (typeof product.resolvedImage === "string" && product.resolvedImage.trim().length > 0 ? product.resolvedImage : "")
+    || "/images/product-placeholder.svg";
+
+  const displayImageSrc = imageFailed ? "/images/product-placeholder.svg" : imageSrc;
 
   const addItem = useCartStore((state) => state.addItem);
   const setOpenCart = useCartStore((state) => state.setOpenCart);
@@ -24,15 +60,24 @@ export function ProductCard({ product, className }: ProductCardProps) {
     e.stopPropagation();
     e.preventDefault();
     const variant = product.variants?.[0];
-    const variantId = variant?.id || product.id;
-    const price = variant?.price ? Number(variant.price) : Number(product.basePrice || 0);
-    const stock = variant?.inventory?.quantity ?? 0;
+    const variantId = typeof variant?.id === "string" ? variant.id : null;
+    const price = typeof variant?.price === "number" || typeof variant?.price === "string"
+      ? Number(variant.price)
+      : Number(product.basePrice || 0);
+    const stock = typeof variant?.inventory?.quantity === "number"
+      ? variant.inventory.quantity
+      : 0;
+
+    if (!variantId) {
+      toast.error(`Unable to add ${product.name} to cart. Missing product variant.`);
+      return;
+    }
 
     if (stock <= 0) {
       toast.error(`${product.name} is out of stock.`);
       return;
     }
-    const exists = items.find((it: any) => it.variantId === variantId);
+    const exists = items.find((it: CartItem) => it.variantId === variantId);
     if (exists) {
       toast.error(`${product.name} is already in your cart.`);
       return;
@@ -44,7 +89,7 @@ export function ProductCard({ product, className }: ProductCardProps) {
       name: product.name,
       price,
       quantity: 1,
-      image: product.images?.[0],
+      image: productImages[0],
       availableStock: stock,
     };
     addItem(item);
@@ -61,11 +106,14 @@ export function ProductCard({ product, className }: ProductCardProps) {
       >
         <div className="aspect-[3/4] bg-muted/30 rounded-[2.5rem] relative overflow-hidden glass-card border-none group-hover:shadow-[0_40px_80px_-15px_rgba(0,0,0,0.1)] transition-all duration-700">
           <Link href={`/products/${product.id}`} className="absolute inset-0 z-0">
-            {product.images && product.images[0] ? (
+            {displayImageSrc ? (
               <Image
-                src={product.images[0]}
+                src={displayImageSrc}
                 alt={product.name}
                 fill
+                unoptimized
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+                onError={() => setImageFailed(true)}
                 className="object-cover group-hover:scale-110 transition-transform duration-1000"
               />
             ) : (

@@ -61,19 +61,79 @@ export type ResolvedProduct<T extends ProductWithVariants = ProductWithVariants>
 
 const PRODUCT_PLACEHOLDER_IMAGE = "/images/product-placeholder.svg";
 
-export class ResolveProductImagesService {
-  static async resolve<T extends ProductWithVariants>(products: T[]): Promise<ResolvedProduct<T>[]> {
-    if (products.length === 0) return [];
+const isValidImageSource = (value: string) => {
+  if (!value) return false;
+  if (value.startsWith("/")) return true;
 
-    cloudinary.config({
-      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-      api_key: process.env.CLOUDINARY_API_KEY,
-      api_secret: process.env.CLOUDINARY_API_SECRET,
-      secure: true,
-    });
+  try {
+    const parsedUrl = new URL(value);
+    return ["http:", "https:"].includes(parsedUrl.protocol);
+  } catch {
+    return false;
+  }
+};
 
-    const assetGroups = new Map<string, Array<{ publicId: string; secureUrl: string; slug: string; timestamp: number; tokens: string[] }>>();
-    const globalTokenFrequency = new Map<string, number>();
+const sanitizeImageSources = (values: unknown[]) => {
+  return values
+    .filter((value): value is string => typeof value === "string")
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0)
+    .filter((value) => isValidImageSource(value));
+};
+
+const collectCloudinaryAssets = async () => {
+  const assetGroups = new Map<string, Array<{ publicId: string; secureUrl: string; slug: string; timestamp: number; tokens: string[] }>>();
+  const globalTokenFrequency = new Map<string, number>();
+
+  const addAssetRecord = (asset: { public_id?: string | null; secure_url?: string | null; url?: string | null }) => {
+    const publicId = String(asset.public_id || "");
+    const secureUrl = String(asset.secure_url || asset.url || "");
+    if (!publicId || !secureUrl) return;
+
+    const slug = extractProductSlug(publicId);
+    const timestamp = extractAssetTimestamp(publicId);
+    const tokens = tokenizeIdentifier(slug);
+
+    for (const token of tokens) {
+      globalTokenFrequency.set(token, (globalTokenFrequency.get(token) || 0) + 1);
+    }
+
+    const assetRecord = {
+      publicId,
+      secureUrl,
+      slug,
+      timestamp,
+      tokens,
+    };
+
+    const existingGroup = assetGroups.get(slug) || [];
+    existingGroup.push(assetRecord);
+    assetGroups.set(slug, existingGroup);
+  };
+
+  try {
+    let nextCursor: string | undefined = undefined;
+    do {
+      const result = await cloudinary.api.resources({
+        type: "upload",
+        resource_type: "image",
+        prefix: "nextgenfashion/products",
+        max_results: 500,
+        next_cursor: nextCursor,
+      });
+
+      const assets = Array.isArray(result.resources) ? result.resources : [];
+      for (const asset of assets) {
+        addAssetRecord(asset);
+      }
+
+      nextCursor = typeof result.next_cursor === "string" ? result.next_cursor : undefined;
+    } while (nextCursor);
+  } catch (error) {
+    console.error("[ResolveProductImagesService] Cloudinary resources API failed:", error);
+  }
+
+  if (assetGroups.size === 0) {
     const searchExpressions = [
       "folder:nextgenfashion/products AND resource_type:image",
       "folder:nextgenfashion AND resource_type:image",
@@ -96,29 +156,7 @@ export class ResolveProductImagesService {
           const assets = result.resources || [];
 
           for (const asset of assets) {
-            const publicId = String(asset.public_id || "");
-            const secureUrl = String(asset.secure_url || asset.url || "");
-            if (!publicId || !secureUrl) continue;
-
-            const slug = extractProductSlug(publicId);
-            const timestamp = extractAssetTimestamp(publicId);
-            const tokens = tokenizeIdentifier(slug);
-
-            for (const token of tokens) {
-              globalTokenFrequency.set(token, (globalTokenFrequency.get(token) || 0) + 1);
-            }
-
-            const assetRecord = {
-              publicId,
-              secureUrl,
-              slug,
-              timestamp,
-              tokens,
-            };
-
-            const existingGroup = assetGroups.get(slug) || [];
-            existingGroup.push(assetRecord);
-            assetGroups.set(slug, existingGroup);
+            addAssetRecord(asset);
           }
 
           nextCursor = result.next_cursor || undefined;
@@ -127,6 +165,23 @@ export class ResolveProductImagesService {
     } catch (error) {
       console.error("[ResolveProductImagesService] Cloudinary search failed:", error);
     }
+  }
+
+  return { assetGroups, globalTokenFrequency };
+};
+
+export class ResolveProductImagesService {
+  static async resolve<T extends ProductWithVariants>(products: T[]): Promise<ResolvedProduct<T>[]> {
+    if (products.length === 0) return [];
+
+    cloudinary.config({
+      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+      api_key: process.env.CLOUDINARY_API_KEY,
+      api_secret: process.env.CLOUDINARY_API_SECRET,
+      secure: true,
+    });
+
+    const { assetGroups, globalTokenFrequency } = await collectCloudinaryAssets();
 
     if (assetGroups.size === 0) {
       console.warn("[ResolveProductImagesService] No Cloudinary assets were discovered; using local product placeholder fallback.");
@@ -213,17 +268,22 @@ export class ResolveProductImagesService {
         : selectUniqueAssets(assetPool.filter((asset) => asset.slug.length > 0));
 
       const selectedAsset = selectedAssets[0];
-      const resolvedImages = selectedAsset
-        ? [selectedAsset.secureUrl]
-        : fallbackImages.length > 0
-          ? fallbackImages
+      const sanitizedFallbackImages = sanitizeImageSources(fallbackImages);
+      const selectedImage = selectedAsset && isValidImageSource(selectedAsset.secureUrl)
+        ? selectedAsset.secureUrl
+        : undefined;
+      const resolvedImages = selectedImage
+        ? [selectedImage]
+        : sanitizedFallbackImages.length > 0
+          ? sanitizedFallbackImages
           : [PRODUCT_PLACEHOLDER_IMAGE];
-      const resolvedImage = resolvedImages[0] || PRODUCT_PLACEHOLDER_IMAGE;
+      const sanitizedResolvedImages = sanitizeImageSources(resolvedImages);
+      const resolvedImage = sanitizedResolvedImages[0] || PRODUCT_PLACEHOLDER_IMAGE;
 
       return {
         ...product,
         resolvedImage,
-        images: resolvedImages,
+        images: sanitizedResolvedImages,
       };
     });
   }

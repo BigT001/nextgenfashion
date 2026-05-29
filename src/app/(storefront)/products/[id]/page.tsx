@@ -26,7 +26,7 @@ export default async function ProductDetailPage({
 
   const resolvedProducts = await ResolveProductImagesService.resolve([product]);
   const resolvedProduct = resolvedProducts[0];
-  const displayImage = resolvedProduct.resolvedImage || "";
+  const displayImage = resolvedProduct.resolvedImage || "/images/product-placeholder.svg";
 
   const totalStock = product.variants?.reduce((acc: number, v: { inventory?: { quantity?: number | null } | null }) => acc + (v.inventory?.quantity || 0), 0) ?? 0;
   const thirtyDaysAgo = new Date();
@@ -50,6 +50,7 @@ export default async function ProductDetailPage({
                   src={displayImage}
                   alt={product.name}
                   fill
+                  unoptimized
                   sizes="(max-width: 768px) 100vw, (max-width: 1280px) 60vw, 40vw"
                   className="object-cover relative z-10 group-hover:scale-110 transition-transform duration-1000"
                   priority
@@ -75,6 +76,7 @@ export default async function ProductDetailPage({
                     src={displayImage}
                     alt={`${product.name} preview`}
                     fill
+                    unoptimized
                     sizes="80px"
                     className="object-cover"
                   />
