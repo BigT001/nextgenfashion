@@ -61,10 +61,29 @@ export class ProductQueries {
           category: true,
           variants: true,
         },
-        orderBy: { id: "desc" },
+        orderBy: { createdAt: "desc" },
       });
     } catch (error) {
       console.error("[ProductQueries.findFeatured] Failed to load featured products:", error);
+
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2022") {
+        try {
+          console.warn("[ProductQueries.findFeatured] Falling back to featured products query without ordering due to schema mismatch.");
+          return await prisma.product.findMany({
+            where: {
+              isSuspended: false,
+            },
+            take: limit,
+            include: {
+              category: true,
+              variants: true,
+            },
+          });
+        } catch (fallbackError) {
+          console.error("[ProductQueries.findFeatured] Fallback query also failed:", fallbackError);
+        }
+      }
+
       return [];
     }
   }
