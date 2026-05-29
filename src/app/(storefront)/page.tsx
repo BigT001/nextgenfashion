@@ -32,22 +32,37 @@ export default async function LandingPage() {
     dbCategories = [];
   }
 
-  const categoryProducts: ProductWithVariants[] = dbCategories.flatMap((cat) =>
-    (cat.products || []).map((product) => ({
+  const categoryProducts: ProductWithVariants[] = dbCategories.flatMap((cat) => {
+    const rawProducts = (cat.products ?? []) as Array<{
+      id: string;
+      name: string;
+      categoryId?: string | null;
+      category?: { name?: string | null } | null;
+      variants?: Array<{
+        sku?: string | null;
+        barcode?: string | null;
+      }> | null;
+    }>;
+
+    return rawProducts.map((product) => ({
       id: product.id,
       name: product.name,
       images: [],
-      categoryId: product.categoryId,
-      category: null,
-      variants: [],
-    }))
-  );
+      categoryId: product.categoryId ?? null,
+      category: product.category ? { name: product.category.name } : null,
+      variants: (product.variants ?? []).map((variant) => ({
+        sku: variant.sku ?? null,
+        barcode: variant.barcode ?? null,
+      })),
+    }));
+  });
 
   const resolvedCategoryProducts = await ResolveProductImagesService.resolve(categoryProducts);
   const resolvedCategoryImageMap = new Map(resolvedCategoryProducts.map((item) => [item.id, item.resolvedImage]));
 
   const categories = dbCategories.map(cat => {
-    const firstProduct = cat.products?.[0];
+    const rawProducts = (cat.products ?? []) as Array<{ id: string }>;
+    const firstProduct = rawProducts[0];
     const productImage = firstProduct ? resolvedCategoryImageMap.get(firstProduct.id) || "" : "";
     const displayImage = productImage || cat.image;
 
