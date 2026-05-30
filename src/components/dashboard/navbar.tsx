@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
-import { cn } from "@/lib/utils";
+import { cn, getSignOutRedirectUrl } from "@/lib/utils";
 
 export function Navbar() {
   const pathname = usePathname();
@@ -84,7 +84,7 @@ export function Navbar() {
                 </DropdownMenuItem>
                 <DropdownMenuSeparator className="bg-border/30" />
                 <DropdownMenuItem 
-                    onClick={() => signOut({ callbackUrl: "/auth/login" })}
+                    onClick={() => signOut({ callbackUrl: getSignOutRedirectUrl("/auth/login") })}
                     className="rounded-xl h-11 font-bold gap-3 text-destructive focus:bg-destructive/5"
                 >
                     Log out

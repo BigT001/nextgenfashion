@@ -154,7 +154,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       {/* Navigation Content - Optimized Spacing */}
       <SidebarContent className="px-3 group-data-[collapsible=icon]:px-2 pt-2">
         {data.navMain.map((group) => {
-          const userPermissions = (session?.user as any)?.permissions || [];
+          const rawPermissions = (session?.user as any)?.permissions;
+          const userPermissions = Array.isArray(rawPermissions) && rawPermissions.length > 0
+            ? rawPermissions
+            : userRole === UserRole.STAFF
+              ? ["POS", "PRODUCTS", "INVENTORY", "ORDERS", "CUSTOMERS", "STAFF", "ANALYTICS"]
+              : [];
+
           const visibleItems = group.items.filter(item => {
             if (!item.roles.includes(userRole)) return false;
             if (userRole === "SUPERADMIN" || userRole === "ADMIN") return true;

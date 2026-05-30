@@ -17,6 +17,14 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "NextGen Kiddies OS | Enterprise Retail Ecosystem",
   description: "High-Fidelity Children's Fashion Retail Operating System",
+  icons: {
+    icon: [
+      { url: "/images/logonextgen.png", type: "image/png" },
+      { url: "/images/logonextgen.png", sizes: "any" },
+    ],
+    apple: "/images/logonextgen.png",
+    shortcut: "/images/logonextgen.png",
+  },
 };
 
 export default function RootLayout({

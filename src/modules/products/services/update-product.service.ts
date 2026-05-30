@@ -8,7 +8,6 @@ interface ProductUpdatePayload {
   sellingPrice?: number;
   costPrice?: number;
   tax?: number;
-  images?: unknown;
   variants?: Array<{
     sku?: string;
     size?: string;
@@ -24,42 +23,17 @@ interface ProductUpdatePayload {
  * Layer 3: Business Logic
  */
 export class UpdateProductService {
-  private static normalizeImageUrls(images: unknown): string[] | null {
-    if (images === undefined) return null;
-    if (!Array.isArray(images)) return [];
-
-    return images
-      .map((img: unknown) => {
-        if (typeof img === "string") return img;
-        if (img && typeof img === "object") {
-          const record = img as Record<string, unknown>;
-          if (typeof record.url === "string") return record.url;
-        }
-        return null;
-      })
-      .filter((url: string | null): url is string => {
-        if (!url || typeof url !== "string") return false;
-        if (url.startsWith("blob:") || url.startsWith("data:")) return false;
-        return /^(https?:\/\/|\/)/.test(url);
-      });
-  }
-
   static async execute(id: string, payload: ProductUpdatePayload) {
-    const { name, description, categoryId, sellingPrice, costPrice, tax, images, variants } = payload;
+    const { name, description, categoryId, sellingPrice, costPrice, tax, variants } = payload;
 
     const existingProduct = await prisma.product.findUnique({
       where: { id },
-      select: { images: true },
     });
     if (!existingProduct) {
       throw new Error(`Product with id ${id} not found`);
     }
 
-    const resolvedImages = this.normalizeImageUrls(images);
-    const imageChanges = resolvedImages === null ? [] : resolvedImages.filter((url) => !existingProduct.images.includes(url));
-    const imagesReceivedCount = Array.isArray(images) ? images.length : 0;
-
-    console.log(`[UpdateProduct] id=${id}, images received: ${imagesReceivedCount}, resolved URLs: ${resolvedImages === null ? 0 : resolvedImages.length}`);
+    console.log(`[UpdateProduct] id=${id} updating product metadata without persisting image URLs`);
 
     // 1. Update the parent Product record
     const updateData: Prisma.ProductUpdateInput = {
@@ -73,9 +47,6 @@ export class UpdateProductService {
       updateData.category = { connect: { id: categoryId } };
     }
     // targetAudience removed from schema — no-op
-    if (resolvedImages !== null) {
-      updateData.images = resolvedImages;
-    }
 
     const updatedProduct = await prisma.product.update({
       where: { id },
@@ -85,7 +56,7 @@ export class UpdateProductService {
       }
     });
 
-    console.log(`[UpdateProduct] Persisted images: ${updatedProduct.images.length} URL(s) saved for product ${updatedProduct.name}`);
+    console.log(`[UpdateProduct] Updated product ${updatedProduct.name} without persisting image URLs`);
 
     // 2. Update the variant and inventory if provided
     if (variants && variants.length > 0) {

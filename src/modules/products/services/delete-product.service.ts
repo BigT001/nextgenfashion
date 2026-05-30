@@ -33,7 +33,7 @@ export class DeleteProductService {
         message: "This product has transactional history (sales records) and cannot be hard-deleted to preserve financial records. It has been successfully suspended from your storefront and checkout catalogs instead."
       };
     }
-    
+
     const deleted = await ProductQueries.delete(id);
     return { success: true, data: deleted };
   }

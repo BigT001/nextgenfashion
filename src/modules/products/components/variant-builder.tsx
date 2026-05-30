@@ -187,26 +187,23 @@ export function VariantBuilder({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <h3 className="text-[11px] font-black uppercase tracking-[0.35em] text-brand-navy">
-          Product Variants (Colors & Sizes)
-        </h3>
-        <div className="flex flex-wrap items-center gap-2">
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger
-              className="inline-flex items-center gap-1 rounded-full border border-border bg-white px-2 py-1 text-[10px] font-black uppercase tracking-[0.35em] text-brand-navy shadow-sm transition hover:bg-brand-navy/5"
-              onClick={() => {
-                setEditingId(null);
-                setNewColor("");
-                setNewSize("");
-                setNewPrice(sellingPrice.toString());
-                setNewQuantity("0");
-              }}
-            >
-              <Plus className="h-4 w-4" />
-              Add Variant
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger
+            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-brand-navy to-brand-navy/80 text-white px-5 py-2 text-xs font-extrabold uppercase tracking-[0.25em] shadow-lg hover:from-brand-navy/90 hover:to-brand-navy/80 focus:outline-none focus:ring-2 focus:ring-brand-navy/40 transition-all duration-150"
+            onClick={() => {
+              setEditingId(null);
+              setNewColor("");
+              setNewSize("");
+              setNewPrice(sellingPrice.toString());
+              setNewQuantity("0");
+            }}
+            aria-label="Add Variant"
+          >
+            <Plus className="h-4 w-4" />
+            <span>Add Variant</span>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-md">
               <DialogHeader>
                 <DialogTitle>
                   {editingId ? "Edit" : "Add"} Variant
@@ -288,7 +285,6 @@ export function VariantBuilder({
             </Button>
           )}
         </div>
-      </div>
 
       {variants.length === 0 ? (
         <div className="rounded-lg border-2 border-dashed border-brand-navy/10 p-6 text-center sm:p-4">

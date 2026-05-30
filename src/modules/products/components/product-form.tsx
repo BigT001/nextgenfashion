@@ -129,12 +129,6 @@ export function ProductForm({
   const [isAddingWarehouse, setIsAddingWarehouse] = useState(false);
   const fileInputId = useId();
 
-  useEffect(() => {
-    if (initialData?.images) {
-        setImages(initialData.images.map((url: string) => ({ id: `init-${Math.random().toString(36).slice(2,9)}`, url, publicId: "", status: "uploaded" })));
-    }
-  }, [initialData]);
-
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productSchema) as Resolver<ProductFormValues>,
     defaultValues: initialData ? {
@@ -246,10 +240,6 @@ export function ProductForm({
             toast.error("Cost Price and Selling Price are mandatory");
             return false;
         }
-    }
-    if (tab === "media" && !isEditing && images.length === 0) {
-        toast.error("At least one product image is required");
-        return false;
     }
     return true;
   };
@@ -392,12 +382,6 @@ export function ProductForm({
   async function onSubmit(values: ProductFormValues) {
     setIsSubmitting(true);
     try {
-      if (!isEditing && images.length === 0) {
-        toast.error("At least one product image is required to commit to catalog");
-        setIsSubmitting(false);
-        return;
-      }
-
       if (variants.length === 0) {
         toast.error("Add at least one variant before saving");
         setIsSubmitting(false);
@@ -406,9 +390,6 @@ export function ProductForm({
 
       const uploadingImages = images.filter(img => img.status === "uploading");
       const failedImages = images.filter(img => img.status === "failed");
-      const validImages = images
-        .filter(img => img.status === "uploaded" && typeof img.url === "string" && img.url.length > 0)
-        .map(img => img.url);
 
       if (uploadingImages.length > 0) {
         toast.error("Please wait for all image uploads to finish before saving.");
@@ -418,12 +399,6 @@ export function ProductForm({
 
       if (failedImages.length > 0) {
         toast.error("Please remove or retry failed image uploads before saving.");
-        setIsSubmitting(false);
-        return;
-      }
-
-      if (!isEditing && validImages.length === 0) {
-        toast.error("At least one uploaded product image is required.");
         setIsSubmitting(false);
         return;
       }
@@ -442,10 +417,9 @@ export function ProductForm({
         tax: values.hasTax ? values.tax : 0,
         baseSku: values.sku.split("-")[0] || values.sku,
         variants: variantPayload,
-        images: validImages,
       };
 
-      console.log(`[ProductForm] Submitting ${isEditing ? "UPDATE" : "CREATE"} with ${variants.length} variant(s) and ${validImages.length} image(s):`, payload);
+      console.log(`[ProductForm] Submitting ${isEditing ? "UPDATE" : "CREATE"} with ${variants.length} variant(s):`, payload);
 
       const result = isEditing 
         ? await updateProductAction(initialData.id, payload)

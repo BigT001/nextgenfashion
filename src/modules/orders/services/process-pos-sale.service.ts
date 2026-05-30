@@ -3,7 +3,6 @@ import { DecrementStockService } from "@/modules/inventory/services/decrement-st
 import { prisma } from "@/services/prisma.service";
 import { PaymentMethod } from "@prisma/client";
 import { events, SYSTEM_EVENTS } from "@/lib/events";
-import { NotificationService } from "@/services/notification.service";
 
 /**
  * PROCESS POS SALE SERVICE
@@ -53,34 +52,12 @@ export class ProcessPOSSaleService {
         saleId: sale.id,
         orderNumber: sale.orderNumber,
         totalAmount: sale.totalAmount,
+        customerEmail: sale.customer?.email,
         items: data.items,
         userId: data.userId,
       });
-      
-      // Trigger Background Notification
-      triggerPosNotifications(sale.id).catch(console.error);
 
       return sale;
     });
   }
-}
-
-// Separate helper to trigger notifications without blocking the main flow
-export async function triggerPosNotifications(saleId: string) {
-    try {
-        const sale = await prisma.sale.findUnique({
-            where: { id: saleId },
-            include: { customer: true }
-        });
-
-        if (sale?.customer?.email) {
-            await NotificationService.sendPosCustomerWelcomeEmail({
-                email: sale.customer.email,
-                name: sale.customer.name,
-                orderNumber: sale.orderNumber
-            });
-        }
-    } catch (error) {
-        console.error("POS Notification Error:", error);
-    }
 }

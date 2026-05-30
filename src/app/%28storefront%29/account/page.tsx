@@ -23,7 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { getPatronOrdersAction } from "@/modules/orders/actions/order.actions";
 import { OrderReceipt } from "@/modules/orders/components/order-receipt";
-import { cn } from "@/lib/utils";
+import { cn, getSignOutRedirectUrl } from "@/lib/utils";
 import Image from "next/image";
 
 export default function AccountPage() {
@@ -110,7 +110,7 @@ export default function AccountPage() {
                     <Settings className="mr-2 size-4" />
                     SECURITY SETTINGS
                 </Button>
-                <Button onClick={() => signOut()} className="h-14 px-8 bg-zinc-950 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-2xl shadow-zinc-950/20 active:scale-95 transition-all">
+                <Button onClick={() => signOut({ callbackUrl: getSignOutRedirectUrl("/") })} className="h-14 px-8 bg-zinc-950 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-2xl shadow-zinc-950/20 active:scale-95 transition-all">
                     <LogOut className="mr-2 size-4" />
                     SIGN OUT
                 </Button>

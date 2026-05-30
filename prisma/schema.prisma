@@ -77,7 +77,6 @@ model Product {
   basePrice    Decimal          @db.Decimal(10, 2)
   categoryId   String
   targetGender String?
-  images       String[]
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
   costPrice    Decimal?         @db.Decimal(10, 2)

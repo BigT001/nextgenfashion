@@ -317,12 +317,12 @@ async function run() {
   console.log(`=========================================\n`);
 }
 
-run()
-  .catch(err => {
-    console.error("Fatal Error running seed importer:", err);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-    await pool.end();
-  });
+// run()
+//   .catch(err => {
+//     console.error("Fatal Error running seed importer:", err);
+//     process.exit(1);
+//   })
+//   .finally(async () => {
+//     await prisma.$disconnect();
+//     await pool.end();
+//   });

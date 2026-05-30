@@ -46,7 +46,7 @@ export default async function CollectionsPage() {
                         <Layers className="size-8" />
                     </div>
                     <Badge className="bg-brand-navy/20 text-brand-navy border-none font-black text-[10px] tracking-widest px-4 py-1.5 rounded-full">
-                        {category._count.products} PIECES
+                        {(category as any)._count?.products || 0} PIECES
                     </Badge>
                 </div>
 

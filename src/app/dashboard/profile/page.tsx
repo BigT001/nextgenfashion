@@ -21,7 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { MetricCard } from "@/components/dashboard/metric-card";
 import { getProfileDashboardAction } from "@/modules/users/actions/profile.actions";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { cn } from "@/lib/utils";
+import { cn, getSignOutRedirectUrl } from "@/lib/utils";
 import { signOut } from "next-auth/react";
 
 export default function ProfilePage() {
@@ -62,7 +62,7 @@ export default function ProfilePage() {
             CONFIG
           </Button>
           <Button 
-            onClick={() => signOut()}
+            onClick={() => signOut({ callbackUrl: getSignOutRedirectUrl("/") })}
             variant="ghost" 
             className="text-rose-500 hover:bg-rose-500/5 h-12 px-6 font-black text-xs uppercase tracking-widest"
           >

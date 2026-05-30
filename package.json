@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "postinstall": "prisma generate",
-    "import-products": "ts-node -O '{\"module\":\"commonjs\"}' scratch/bulk-upload/importer.ts"
+    "purge-products": "ts-node -O '{\"module\":\"commonjs\"}' scratch/purge-products-cloudinary.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.2",

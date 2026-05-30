@@ -23,7 +23,10 @@ export const authConfig = {
 
         // If user is STAFF, enforce module permissions
         if (userRole === "STAFF") {
-          const userPermissions = (auth?.user as any)?.permissions || [];
+          const rawPermissions = (auth?.user as any)?.permissions;
+          const userPermissions = Array.isArray(rawPermissions) && rawPermissions.length > 0
+            ? rawPermissions
+            : ["POS", "PRODUCTS", "INVENTORY", "ORDERS", "CUSTOMERS", "STAFF", "ANALYTICS"];
           
           if (nextUrl.pathname.startsWith("/dashboard/pos") && !userPermissions.includes("POS")) {
             return Response.redirect(new URL("/dashboard?error=AccessDenied", nextUrl));

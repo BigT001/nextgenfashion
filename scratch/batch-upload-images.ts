@@ -168,9 +168,9 @@ async function batchUpload() {
   console.log(`   🔹 Unmatched Files: ${unmatchedFiles.length}`);
 }
 
-batchUpload()
-  .catch(console.error)
-  .finally(async () => {
-    await prisma.$disconnect();
-    await pool.end();
-  });
+// batchUpload()
+//   .catch(console.error)
+//   .finally(async () => {
+//     await prisma.$disconnect();
+//     await pool.end();
+//   });

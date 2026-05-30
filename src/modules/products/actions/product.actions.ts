@@ -3,7 +3,8 @@
 import { CreateProductService } from "@/modules/products/services/create-product.service";
 import { UpdateProductService } from "@/modules/products/services/update-product.service";
 import { DeleteProductService } from "@/modules/products/services/delete-product.service";
-import { SyncPosProductsService } from "@/modules/products/services/sync-pos-products.service";
+import { DeleteProductCatalogService } from "@/modules/products/services/delete-product-catalog.service";
+import { CompleteCleanupService } from "@/modules/products/services/complete-cleanup.service";
 import { UpdateStockService } from "@/modules/inventory/services/update-stock.service";
 import { ProductQueries } from "@/modules/products/queries/product.queries";
 import { CloudinaryService } from "@/integrations/cloudinary/cloudinary.service";
@@ -39,21 +40,16 @@ export async function uploadImageAction(formData: FormData) {
 
 export async function createProductAction(data: any) {
   try {
-    const { variants, categoryId, images, ...productData } = data;
+    const { variants, categoryId, ...productData } = data;
     
     // Process basePrice - use the lowest variant price if not provided
     const basePrice = productData.basePrice || Math.min(...variants.map((v: any) => v.price));
-
-    const normalizedImages = Array.isArray(images)
-      ? images.map((img: any) => typeof img === "string" ? img : img?.url).filter((url: any): url is string => typeof url === "string" && url.length > 0)
-      : [];
 
     const product = await CreateProductService.execute(
       { 
         ...productData, 
         basePrice, 
         categoryId,
-        images: normalizedImages
       },
       variants
     );
@@ -221,18 +217,41 @@ export async function toggleSuspendProductAction(productId: string) {
   }
 }
 
-export async function emergencyPurgeAction() {
+type DeleteAllProductsResult =
+  | { success: true }
+  | { success: false; error: string };
+
+export async function emergencyPurgeAction(): Promise<DeleteAllProductsResult> {
+  return deleteAllProductsAction();
+}
+
+export async function deleteAllProductsAction(): Promise<DeleteAllProductsResult> {
   try {
-    const { prisma } = await import("@/services/prisma.service");
-    await prisma.inventory.deleteMany({});
-    await prisma.productVariant.deleteMany({});
-    await prisma.product.deleteMany({});
-    revalidatePath("/dashboard/products");
+    const response = await DeleteProductCatalogService.execute();
+
+    revalidatePath("/dashboard", "layout");
     revalidatePath("/inventory");
-    return { success: true };
+    revalidatePath("/");
+
+    return response;
   } catch (error: any) {
-    console.error("Purge error:", error);
-    return { success: false, error: error.message };
+    console.error("Delete all products error:", error);
+    return { success: false, error: error?.message || "Unknown purge error" };
+  }
+}
+
+export async function completeCleanupAction(): Promise<DeleteAllProductsResult> {
+  try {
+    const response = await CompleteCleanupService.execute();
+
+    revalidatePath("/dashboard", "layout");
+    revalidatePath("/inventory");
+    revalidatePath("/");
+
+    return response;
+  } catch (error: any) {
+    console.error("Complete cleanup error:", error);
+    return { success: false, error: error?.message || "Unknown cleanup error" };
   }
 }
 
@@ -243,7 +262,7 @@ export async function importProductsAction(productsList: any[]) {
     let createdCount = 0;
     
     for (const prod of productsList) {
-      const { productName, description, categoryName, gender: rawGender, basePrice, costPrice, tax, imageUrls, variants: rawVariants } = prod;
+      const { productName, description, categoryName, gender: rawGender, basePrice, costPrice, tax, variants: rawVariants } = prod;
       
       // Ensure we have at least one variant record to prevent "no variants" empty states
       const variants = [...(rawVariants || [])];
@@ -291,7 +310,6 @@ export async function importProductsAction(productsList: any[]) {
             basePrice: basePrice,
             costPrice: costPrice,
             tax: tax,
-            images: imageUrls && imageUrls.length > 0 ? imageUrls : product.images,
             targetGender: gender,
             categoryId: category.id
           }
@@ -304,7 +322,6 @@ export async function importProductsAction(productsList: any[]) {
             basePrice: basePrice,
             costPrice: costPrice,
             tax: tax,
-            images: imageUrls && imageUrls.length > 0 ? imageUrls : ["https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=600"],
             targetGender: gender,
             categoryId: category.id
           }
@@ -377,19 +394,6 @@ export async function importProductsAction(productsList: any[]) {
     return { success: true, count: createdCount };
   } catch (error: any) {
     console.error("Bulk Import action error:", error);
-    return { success: false, error: error.message };
-  }
-}
-
-export async function syncPosProductsAction() {
-  try {
-    const res = await SyncPosProductsService.execute();
-    revalidatePath("/inventory");
-    revalidatePath("/dashboard/products");
-    revalidatePath("/");
-    return res;
-  } catch (error: any) {
-    console.error("POS sync action error:", error);
     return { success: false, error: error.message };
   }
 }

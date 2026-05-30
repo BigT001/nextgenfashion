@@ -54,7 +54,7 @@ const ProductForm = dynamic(
   { ssr: false, loading: () => <LoadingSpinner size="sm" /> }
 );
 import { getInventoryDashboardAction } from "@/modules/inventory/actions/inventory.actions";
-import { deleteProductAction, importProductsAction, uploadImageAction, syncPosProductsAction, getProductByIdAction, matchImageFilenamesAction, linkProductImageAction } from "@/modules/products/actions/product.actions";
+import { deleteProductAction, deleteAllProductsAction, importProductsAction, uploadImageAction, getProductByIdAction, matchImageFilenamesAction, linkProductImageAction } from "@/modules/products/actions/product.actions";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { ColumnDef } from "@tanstack/react-table";
@@ -64,6 +64,7 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [isLoadingProduct, setIsLoadingProduct] = useState(false);
+  const [isPurging, setIsPurging] = useState(false);
   const [showOnlyWithImages, setShowOnlyWithImages] = useState(false);
 
   const handleEditProduct = async (productId: string) => {
@@ -101,9 +102,6 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
   const [isImporting, setIsImporting] = useState(false);
   const [importStep, setImportStep] = useState<string>("");
   const [importProgress, setImportProgress] = useState<number>(0);
-
-  // POS Sync States
-  const [isSyncingPos, setIsSyncingPos] = useState(false);
 
   // Mass Image Upload States
   const [isMassUploadOpen, setIsMassUploadOpen] = useState(false);
@@ -231,34 +229,6 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
     setUploadStatusList([]);
     setMassUploadProgress(0);
     setUploadStep("select");
-  };
-
-  const handleSyncPos = async () => {
-    if (isSyncingPos) return;
-    setIsSyncingPos(true);
-    
-    const promise = syncPosProductsAction();
-    
-    toast.promise(promise, {
-      loading: "Connecting to PHP POS at nextgen.storeapp.com.ng & synchronizing catalogs...",
-      success: (res: any) => {
-        if (res.success) {
-          loadData();
-          return `POS Synchronized successfully! Synced ${res.totalSynced} items (Created: ${res.totalCreated}, Updated: ${res.totalUpdated}).`;
-        } else {
-          throw new Error(res.errors?.[0] || "Sync encountered errors");
-        }
-      },
-      error: (err: any) => `POS Sync failed: ${err.message}`
-    });
-
-    try {
-      await promise;
-    } catch (err) {
-      console.error("POS Sync error:", err);
-    } finally {
-      setIsSyncingPos(false);
-    }
   };
 
   const handleDownloadTemplate = () => {
@@ -463,20 +433,38 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
     }
   };
 
+  const getImageFilename = (url?: string) => {
+    if (!url) return "";
+    const cleanUrl = url.split("?")[0];
+    const parts = cleanUrl.split("/");
+    return parts[parts.length - 1] || "";
+  };
+
+  const escapeCsvValue = (value: any) => {
+    const cell = value ?? "";
+    const stringValue = typeof cell === "string" ? cell : String(cell);
+    return `"${stringValue.replace(/"/g, '""')}"`;
+  };
+
   const handleExport = () => {
     if (!data?.products) return;
     
-    const headers = ["Name", "Category", "SKU", "Selling Price", "Cost Price", "Stock"];
+    const headers = ["Name", "Category", "SKU", "Sizes", "Colors", "Image Name", "Selling Price", "Cost Price", "Stock"];
     const csvData = data.products.map((p: any) => [
       p.name,
       p.category,
       p.sku,
+      p.sizes?.length ? p.sizes.join("; ") : "",
+      p.colors?.length ? p.colors.join("; ") : "",
+      p.imageName || getImageFilename(p.image),
       p.price,
       p.costPrice,
       p.stock
     ]);
     
-    const csvContent = [headers, ...csvData].map(e => e.join(",")).join("\n");
+    const csvContent = [headers, ...csvData]
+      .map(row => row.map(escapeCsvValue).join(","))
+      .join("\n");
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
@@ -487,6 +475,34 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
     link.click();
     document.body.removeChild(link);
     toast.success("Catalog export initiated");
+  };
+
+  const isCssColor = (color: string) => {
+    if (!color) return false;
+    return typeof window !== "undefined" && CSS.supports("color", color.trim());
+  };
+
+  const renderColorChip = (color: string) => {
+    const value = color?.trim();
+    const valid = isCssColor(value);
+
+    return (
+      <span
+        key={value}
+        className="inline-flex items-center justify-center rounded-full border border-border/40 bg-background/80 shadow-sm"
+        style={valid ? { backgroundColor: value, boxShadow: `0 0 0 2px ${value}40` } : undefined}
+        aria-label={value || "No color"}
+        title={value || "No color"}
+      >
+        <span
+          className={cn(
+            "h-5 w-5 rounded-full border border-white/60",
+            valid ? "" : "bg-muted"
+          )}
+          style={valid ? { backgroundColor: value } : undefined}
+        />
+      </span>
+    );
   };
 
   const loadData = async () => {
@@ -524,7 +540,34 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
         <div className="flex flex-col gap-0.5 min-w-0 pr-2">
             <span className="font-black text-sm tracking-tight group-hover:text-brand-navy transition-colors truncate">{row.original.name}</span>
             <span className="text-[10px] text-muted-foreground font-black uppercase tracking-widest truncate">{row.original.category}</span>
+            {row.original.sizes?.length ? (
+              <span className="text-[10px] text-foreground/80 uppercase tracking-[0.18em] font-black mt-1 truncate">
+                Sizes: {row.original.sizes.join(", ")}
+              </span>
+            ) : null}
         </div>
+      ),
+    },
+    {
+      accessorKey: "colors",
+      header: "COLORS",
+      meta: { className: "hidden lg:table-cell" },
+      cell: ({ row }) => (
+        <div className="flex flex-wrap gap-2">
+          {Array.isArray(row.original.colors) && row.original.colors.length > 0 ? (
+            row.original.colors.map((color: string) => renderColorChip(color))
+          ) : (
+            <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground font-black">No colors</span>
+          )}
+        </div>
+      ),
+    },
+    {
+      accessorKey: "sizes",
+      header: "SIZES",
+      meta: { className: "hidden lg:table-cell" },
+      cell: ({ row }) => (
+        <span className="text-[11px] font-black text-muted-foreground">{row.original.sizes?.length ? row.original.sizes.join(", ") : "—"}</span>
       ),
     },
     // ── Desktop-only columns ──────────────────────────────────
@@ -594,21 +637,21 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
     },
     {
       id: "actions",
-      header: () => <div className="text-right pr-2 md:pr-4">CONTROL</div>,
-      size: 60,
+      header: () => <div className="text-right pr-2 md:pr-4 whitespace-nowrap text-[10px] font-black uppercase tracking-[0.24em] text-muted-foreground">CONTROL</div>,
+      size: 96,
       cell: ({ row }) => (
-        <div className="flex items-center justify-end gap-1 pr-1 md:pr-2">
+        <div className="flex items-center justify-end gap-1.5 pr-1 md:pr-2 shrink-0">
           {/* Mobile: compact icon-only edit button */}
           <Button
             size="sm"
             variant="outline"
-            className="h-8 w-8 md:hidden bg-brand-navy/5 text-brand-navy hover:bg-brand-navy hover:text-white border-none rounded-xl active:scale-95 transition-all flex items-center justify-center p-0"
+            className="h-9 w-9 md:hidden bg-brand-navy/5 text-brand-navy hover:bg-brand-navy hover:text-white border-none rounded-2xl active:scale-95 transition-all flex items-center justify-center p-0 shadow-sm"
             onClick={() => handleEditProduct(row.original.id)}
             disabled={isLoadingProduct}
           >
             <Edit className="h-3.5 w-3.5" />
           </Button>
-          <div className={cn("flex items-center justify-center h-8 w-8 rounded-xl md:hidden text-muted-foreground bg-muted/10", row.getIsExpanded() && "bg-brand-navy/10")}> 
+          <div className={cn("flex items-center justify-center h-9 w-9 rounded-2xl md:hidden text-muted-foreground bg-muted/10 shrink-0", row.getIsExpanded() && "bg-brand-navy/10")}> 
             <ChevronDown className={cn("h-4 w-4 transition-transform", row.getIsExpanded() && "-rotate-180")} />
           </div>
 
@@ -616,7 +659,7 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
           <Button
             size="sm"
             variant="outline"
-            className="hidden md:flex h-8 px-3.5 font-black text-[10px] uppercase tracking-widest bg-brand-navy/5 text-brand-navy hover:bg-brand-navy hover:text-white border-none rounded-xl active:scale-95 transition-all items-center gap-1.5"
+            className="hidden md:inline-flex h-9 px-3 font-black text-[10px] uppercase tracking-[0.24em] bg-brand-navy text-white hover:bg-brand-navy/90 border-none rounded-2xl active:scale-95 transition-all items-center gap-1.5 shadow-sm whitespace-nowrap"
             onClick={() => handleEditProduct(row.original.id)}
             disabled={isLoadingProduct}
           >
@@ -624,7 +667,7 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
             Edit
           </Button>
           <DropdownMenu>
-            <DropdownMenuTrigger className="hidden md:inline-flex h-8 w-8 items-center justify-center hover:bg-brand-navy/5 hover:text-brand-navy rounded-xl transition-colors text-muted-foreground focus:outline-none">
+            <DropdownMenuTrigger className="hidden md:inline-flex h-9 w-9 items-center justify-center hover:bg-brand-navy/10 hover:text-brand-navy rounded-2xl transition-colors text-muted-foreground focus:outline-none bg-muted/10 border border-border/30 shrink-0">
               <MoreHorizontal className="h-4 w-4" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-52 glass-card border-none shadow-2xl p-2 rounded-2xl">
@@ -706,6 +749,20 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
             <p className="text-[9px] uppercase tracking-[0.35em] text-muted-foreground font-black">Retail</p>
             <p className="mt-1 font-black">₦{Number(item.retailPrice || 0).toLocaleString()}</p>
           </div>
+          <div className="rounded-3xl border border-border/30 bg-muted/10 p-3">
+            <p className="text-[9px] uppercase tracking-[0.35em] text-muted-foreground font-black">Sizes</p>
+            <p className="mt-1 font-black">{item.sizes?.length ? item.sizes.join(", ") : "—"}</p>
+          </div>
+          <div className="rounded-3xl border border-border/30 bg-muted/10 p-3">
+            <p className="text-[9px] uppercase tracking-[0.35em] text-muted-foreground font-black">Colors</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {Array.isArray(item.colors) && item.colors.length > 0 ? (
+                item.colors.map((color: string) => renderColorChip(color))
+              ) : (
+                <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground font-black">No colors</span>
+              )}
+            </div>
+          </div>
         </div>
         <div className="rounded-3xl border border-border/30 bg-muted/10 p-4">
           <p className="text-[9px] uppercase tracking-[0.35em] text-muted-foreground font-black mb-2">Description</p>
@@ -754,62 +811,40 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
           <div className="space-y-1">
             <h2 className="text-4xl font-black tracking-tight text-gradient">Product Catalog</h2>
           </div>
-          <Button
-            onClick={() => setIsAddProductOpen(true)}
-            className="bg-brand-navy hover:bg-brand-navy/90 text-white h-12 min-w-[11rem] px-6 font-black text-sm uppercase tracking-[0.18em] rounded-[1rem] shadow-xl shadow-brand-navy/15 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer w-full md:w-auto"
-          >
-            <Plus className="h-4 w-4" />
-            <span className="hidden sm:inline">ADD PRODUCT</span>
-            <span className="sm:hidden">ADD</span>
-          </Button>
-        </div>
-
-        <div className="grid w-full grid-cols-2 gap-3 max-w-2xl">
-          <Button 
-            variant="outline" 
-            onClick={handleSyncPos}
-            disabled={isSyncingPos}
-            className="group glass-card border-none h-12 px-5 font-black text-sm uppercase tracking-[0.18em] text-black bg-amber-400 hover:bg-brand-navy hover:text-white transition-all flex items-center justify-center shadow-md shadow-brand-navy/10 cursor-pointer w-full"
-          >
-            {isSyncingPos ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin text-black group-hover:text-white" />
-            ) : (
-              <Zap className="mr-2 h-4 w-4 text-black fill-black group-hover:text-white group-hover:fill-white transition-colors" />
-            )}
-            <span className="hidden sm:inline">{isSyncingPos ? "SYNCING..." : "SYNC FROM POS"}</span>
-            <span className="sm:hidden">{isSyncingPos ? "..." : "SYNC"}</span>
-          </Button>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger className="glass-card border border-border/35 bg-white hover:bg-brand-navy/5 hover:text-brand-navy text-muted-foreground h-12 px-5 font-black text-sm uppercase tracking-[0.18em] rounded-[1rem] flex items-center justify-center gap-2 transition-all outline-none cursor-pointer w-full">
-              <span className="hidden sm:inline">More Actions</span>
-              <span className="sm:hidden">More</span>
-              <ChevronDown className="h-4 w-4" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-52 glass-card border-none shadow-2xl p-2 rounded-2xl">
-              <DropdownMenuGroup>
-                <DropdownMenuItem 
-                  className="rounded-xl h-10 font-bold gap-3 focus:bg-brand-navy/5 focus:text-brand-navy cursor-pointer text-xs uppercase tracking-wider px-3"
-                  onClick={() => setIsImportOpen(true)}
-                >
-                  <Upload className="size-4" /> Import CSV
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  className="rounded-xl h-10 font-bold gap-3 focus:bg-brand-navy/5 focus:text-brand-navy cursor-pointer text-xs uppercase tracking-wider px-3"
-                  onClick={() => setIsMassUploadOpen(true)}
-                >
-                  <ImageIcon className="size-4" /> Mass Upload Images
-                </DropdownMenuItem>
-                <DropdownMenuSeparator className="bg-border/50" />
-                <DropdownMenuItem 
-                  className="rounded-xl h-10 font-bold gap-3 focus:bg-brand-navy/5 focus:text-brand-navy cursor-pointer text-xs uppercase tracking-wider px-3"
-                  onClick={handleExport}
-                >
-                  <Download className="size-4" /> Export Catalog
-                </DropdownMenuItem>
-              </DropdownMenuGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
+            <Button
+              onClick={() => setIsAddProductOpen(true)}
+              className="bg-brand-navy hover:bg-brand-navy/90 text-white h-12 min-w-[11rem] px-6 font-black text-sm uppercase tracking-[0.18em] rounded-[1rem] shadow-xl shadow-brand-navy/15 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto"
+            >
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline">ADD PRODUCT</span>
+              <span className="sm:hidden">ADD</span>
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger className="glass-card border border-border/35 bg-white hover:bg-brand-navy/5 hover:text-brand-navy text-muted-foreground h-12 px-5 font-black text-sm uppercase tracking-[0.18em] rounded-[1rem] flex items-center justify-center gap-2 transition-all outline-none cursor-pointer w-full sm:w-auto">
+                <span className="hidden sm:inline">More Actions</span>
+                <span className="sm:hidden">More</span>
+                <ChevronDown className="h-4 w-4" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52 glass-card border-none shadow-2xl p-2 rounded-2xl">
+                <DropdownMenuGroup>
+                  <DropdownMenuItem 
+                    className="rounded-xl h-10 font-bold gap-3 focus:bg-brand-navy/5 focus:text-brand-navy cursor-pointer text-xs uppercase tracking-wider px-3"
+                    onClick={() => setIsImportOpen(true)}
+                  >
+                    <Upload className="size-4" /> Import CSV
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator className="bg-border/50" />
+                  <DropdownMenuItem 
+                    className="rounded-xl h-10 font-bold gap-3 focus:bg-brand-navy/5 focus:text-brand-navy cursor-pointer text-xs uppercase tracking-wider px-3"
+                    onClick={handleExport}
+                  >
+                    <Download className="size-4" /> Export Catalog
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
 
           {/* Mass Image Upload Dialog */}

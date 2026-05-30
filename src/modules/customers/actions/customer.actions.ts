@@ -266,8 +266,24 @@ export async function updatePatronDetailsAction(data: {
 /**
  * Archive patron account
  */
-export async function archiveCustomerAction(customerId: string) {
+export async function archiveCustomerAction(customerId: string, password?: string) {
   try {
+    // If password is provided, verify it before archiving
+    if (password) {
+      const user = await prisma.user.findUnique({
+        where: { customerId },
+      });
+
+      if (!user || !user.password) {
+        return { success: false, error: "Identity authentication failed." };
+      }
+
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+      if (!isPasswordValid) {
+        return { success: false, error: "Password verification failed. Please try again." };
+      }
+    }
+
     await CustomerQueries.archiveCustomer(customerId);
     return { success: true };
   } catch (error: any) {

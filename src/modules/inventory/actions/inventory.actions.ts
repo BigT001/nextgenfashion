@@ -69,6 +69,10 @@ export async function getInventoryDashboardAction() {
         }
       }
 
+      const sizes = Array.from(new Set(p.variants.map((v) => v.size).filter((value): value is string => Boolean(value))));
+      const colors = Array.from(new Set(p.variants.map((v) => v.color).filter((value): value is string => Boolean(value))));
+      const imageName = "";
+
       return {
         id: p.id,
         name: p.name,
@@ -81,8 +85,11 @@ export async function getInventoryDashboardAction() {
         costPrice: Number(p.costPrice || 0),
         wholesalePrice: Number(p.costPrice || 0),
         retailPrice: Number(p.basePrice || 0),
-        images: p.images,
-        image: p.images?.[0] || null,
+        images: [],
+        image: null,
+        imageName,
+        sizes,
+        colors,
         isSuspended: p.isSuspended,
         status,
         lastMovement
@@ -92,7 +99,7 @@ export async function getInventoryDashboardAction() {
     // Calculate Executive KPIs
     const totalInventoryValue = processedProducts.reduce((acc, p) => acc + (p.price * p.stock), 0);
     const stockAlerts = processedProducts.filter(p => p.status !== "In Stock").length;
-    const productsWithImages = processedProducts.filter(p => p.images && p.images.length > 0).length;
+    const productsWithImages = 0;
 
     return {
       success: true,

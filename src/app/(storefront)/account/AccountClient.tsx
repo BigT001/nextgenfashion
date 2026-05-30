@@ -24,7 +24,7 @@ import { getPatronOrdersAction } from "@/modules/orders/actions/order.actions";
 import { OrderReceipt } from "@/modules/orders/components/order-receipt";
 import { updatePatronDetailsAction, getCustomerDetailAction } from "@/modules/customers/actions/customer.actions";
 import { PatronSettingsModal } from "@/modules/customers/components/patron-settings-modal";
-import { cn } from "@/lib/utils";
+import { cn, getSignOutRedirectUrl } from "@/lib/utils";
 import NextImage from "next/image";
 import { toast } from "sonner";
 
@@ -191,30 +191,32 @@ export default function AccountClient({ initialPatronData, initialOrders }: Acco
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 pt-8 md:pt-12 pb-40 relative">
-      <div className="absolute top-0 left-0 w-full h-[400px] bg-brand-mesh opacity-5 pointer-events-none" />
+    <div className="min-h-screen bg-zinc-50 pt-4 sm:pt-8 md:pt-12 pb-32 sm:pb-40 relative">
+      <div className="absolute top-0 left-0 w-full h-[300px] sm:h-[400px] bg-brand-mesh opacity-5 pointer-events-none" />
       
-      <div className="container mx-auto px-6 relative z-10">
-        <div className="max-w-6xl mx-auto space-y-10">
+      <div className="container mx-auto px-4 sm:px-6 relative z-10">
+        <div className="max-w-6xl mx-auto space-y-6 sm:space-y-10">
           
-          {/* Refined Profile Header */}
-          <div className="bg-white/95 border border-zinc-200 rounded-[2.5rem] shadow-[0_30px_80px_-38px_rgba(15,23,42,0.35)] p-5 sm:p-6 backdrop-blur-xl">
-            <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-4">
+          {/* Refined Profile Header - Mobile Optimized */}
+          <div className="bg-white/95 border border-zinc-200 rounded-2xl sm:rounded-[2.5rem] shadow-[0_30px_80px_-38px_rgba(15,23,42,0.35)] p-4 sm:p-6 backdrop-blur-xl">
+            <div className="flex flex-col gap-4 sm:gap-0">
+              {/* Profile Info Section - Horizontal Layout */}
+              <div className="flex items-center gap-4 sm:gap-6">
+                {/* Avatar */}
                 <div className="relative shrink-0 cursor-pointer" onClick={() => fileInputRef.current?.click()}>
-                  <div className="size-22 sm:size-24 bg-slate-50 rounded-[2.5rem] shadow-xl flex items-center justify-center text-brand-navy ring-4 ring-white/80 overflow-hidden">
+                  <div className="size-20 sm:size-24 bg-slate-50 rounded-2xl sm:rounded-[2.5rem] shadow-xl flex items-center justify-center text-brand-navy ring-4 ring-white/80 overflow-hidden">
                     {patronData?.image || session?.user?.image ? (
                       <NextImage src={patronData?.image || session?.user?.image} alt="Profile" fill className="object-cover" />
                     ) : (
-                      <User className="size-10" />
+                      <User className="size-8 sm:size-10" />
                     )}
                   </div>
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="absolute -bottom-2 -right-2 size-9 bg-brand-navy text-white rounded-full flex items-center justify-center shadow-lg border-4 border-white hover:scale-110 active:scale-95 transition-all"
+                    className="absolute -bottom-1 -right-1 size-7 sm:size-9 bg-brand-navy text-white rounded-full flex items-center justify-center shadow-lg border-4 border-white hover:scale-110 active:scale-95 transition-all"
                   >
-                    <Camera className="size-4" />
+                    <Camera className="size-3 sm:size-4" />
                   </button>
                   <input
                     ref={fileInputRef}
@@ -225,52 +227,48 @@ export default function AccountClient({ initialPatronData, initialOrders }: Acco
                   />
                 </div>
 
-                <div className="space-y-1">
-                  <h1 className="text-3xl sm:text-4xl font-black tracking-tight leading-none">{session?.user?.name || "Customer"}</h1>
-                  <p className="text-sm text-muted-foreground max-w-md">Welcome back! Manage your account, keep your profile secure, and review your orders below.</p>
+                {/* Name and Description */}
+                <div className="space-y-1 flex-1 min-w-0">
+                  <h1 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight leading-none">{session?.user?.name || "Customer"}</h1>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Welcome back! Manage your profile and orders.</p>
                 </div>
               </div>
 
-              <div className="flex flex-row flex-wrap items-center justify-center gap-3">
+              {/* Button Section - Always Horizontal */}
+              <div className="flex flex-row flex-nowrap items-center gap-2 sm:gap-3 justify-end">
                 <Button
                   onClick={() => setIsSettingsOpen(true)}
                   variant="outline"
-                  className="min-w-[44%] sm:min-w-[auto] h-14 px-6 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all hover:bg-zinc-50 active:scale-95"
+                  className="flex-1 min-w-[135px] h-11 sm:h-12 px-4 sm:px-6 rounded-xl sm:rounded-2xl font-black text-[9px] sm:text-[10px] uppercase tracking-widest transition-all hover:bg-zinc-50 active:scale-95"
                 >
-                  <Settings className="mr-2 size-4" />
+                  <Settings className="mr-2 size-3 sm:size-4" />
                   SETTINGS
                 </Button>
                 <Button
-                  onClick={() => signOut({ callbackUrl: "/" })}
-                  className="min-w-[44%] sm:min-w-[auto] h-14 px-6 bg-zinc-950 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-zinc-950/20 active:scale-95 transition-all"
+                  onClick={() => signOut({ callbackUrl: getSignOutRedirectUrl("/") })}
+                  className="flex-1 min-w-[135px] h-11 sm:h-12 px-4 sm:px-6 bg-zinc-950 text-white rounded-xl sm:rounded-2xl font-black text-[9px] sm:text-[10px] uppercase tracking-widest shadow-xl shadow-zinc-950/20 active:scale-95 transition-all"
                 >
-                  <LogOut className="mr-2 size-4" />
+                  <LogOut className="mr-2 size-3 sm:size-4" />
                   LOG OUT
                 </Button>
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 lg:gap-12 items-start">
             {/* Left: Order History */}
-            <div className="lg:col-span-8 space-y-8">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                    <h2 className="text-2xl font-black tracking-tight">Orders</h2>
-                    <p className="text-[9px] text-muted-foreground font-black uppercase tracking-widest">Your order history in one place</p>
-                </div>
-                <Button variant="ghost" className="text-brand-navy font-black text-[9px] uppercase tracking-widest gap-2">
-                    <Clock className="size-4" />
-                    FILTER RECENT
-                </Button>
+            <div className="lg:col-span-8 space-y-6 sm:space-y-8">
+              <div className="space-y-0.5">
+                  <h2 className="text-xl sm:text-2xl font-black tracking-tight">Orders</h2>
+                  <p className="text-[8px] sm:text-[9px] text-muted-foreground font-black uppercase tracking-widest">Your order history in one place</p>
               </div>
 
               <div className="space-y-4">
                 {orders.length === 0 ? (
-                  <div className="glass-card p-16 text-center rounded-[2.5rem] border-none shadow-sm bg-white/50">
-                    <ShoppingBag className="size-12 mx-auto text-muted-foreground/20 mb-4" />
-                    <p className="text-lg font-bold text-foreground/50 italic mb-6">No orders recorded yet.</p>
-                    <Button onClick={() => router.push("/shop")} className="h-14 px-10 bg-brand-navy text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-brand-navy/20">
+                  <div className="glass-card p-8 sm:p-12 md:p-16 text-center rounded-2xl sm:rounded-[2.5rem] border-none shadow-sm bg-white/50">
+                    <ShoppingBag className="size-10 sm:size-12 mx-auto text-muted-foreground/20 mb-4" />
+                    <p className="text-base sm:text-lg font-bold text-foreground/50 italic mb-6">No orders recorded yet.</p>
+                    <Button onClick={() => router.push("/shop")} className="h-11 sm:h-12 md:h-14 px-6 sm:px-10 bg-brand-navy text-white rounded-xl sm:rounded-2xl font-black text-[9px] sm:text-[10px] uppercase tracking-widest shadow-xl shadow-brand-navy/20">
                         START YOUR COLLECTION
                     </Button>
                   </div>
@@ -278,33 +276,24 @@ export default function AccountClient({ initialPatronData, initialOrders }: Acco
                   orders.map((order) => {
                     const isExpanded = expandedOrderId === order.id;
                     return (
-                      <div key={order.id} className="glass-card overflow-hidden rounded-[2rem] border-none shadow-sm group hover:shadow-xl hover:shadow-brand-navy/5 transition-all duration-500 bg-white">
-                        <div className="p-6 md:p-8 flex flex-col md:flex-row items-start justify-between gap-6">
-                          <div className="flex items-start gap-5 flex-1">
-                              <div className="size-14 bg-zinc-50 rounded-xl flex items-center justify-center text-brand-navy group-hover:rotate-12 transition-transform shadow-inner border border-border/10">
-                                  <Zap className="size-6" />
+                      <div key={order.id} className="glass-card overflow-hidden rounded-2xl sm:rounded-[2rem] border-none shadow-sm group hover:shadow-xl hover:shadow-brand-navy/5 transition-all duration-500 bg-white">
+                        <div className="p-4 sm:p-6 md:p-8 flex flex-col gap-4">
+                          {/* Top Row: Order ID + Status/Amount */}
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="min-w-0 flex-1 space-y-2">
+                              <div>
+                                <p className="text-[8px] sm:text-[9px] font-black uppercase tracking-widest text-muted-foreground opacity-60">ORDER ID</p>
+                                <h3 className="text-base sm:text-lg font-black tracking-tighter break-words">{order.orderNumber}</h3>
                               </div>
-                              <div className="space-y-3">
-                                  <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 gap-2">
-                                    <div>
-                                      <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground opacity-60">ORDER ID</p>
-                                      <h3 className="text-lg font-black tracking-tighter">{order.orderNumber}</h3>
-                                    </div>
-                                    <div className="rounded-full bg-zinc-100 px-3 py-1 text-[9px] uppercase tracking-[0.28em] font-black text-muted-foreground">
-                                      {order.items?.length || 0} items
-                                    </div>
-                                  </div>
-                                  <div className="flex flex-wrap items-center gap-3 text-[10px] text-muted-foreground">
-                                      <span>{new Date(order.createdAt).toLocaleDateString()}</span>
-                                      <span className="h-1 w-1 rounded-full bg-border" />
-                                      <span>{order.paymentMethod || "CARD"}</span>
-                                  </div>
+                              <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-[8px] sm:text-[10px] text-muted-foreground">
+                                  <span>{new Date(order.createdAt).toLocaleDateString()}</span>
+                                  <span className="h-1 w-1 rounded-full bg-border" />
+                                  <span>{order.paymentMethod || "CARD"}</span>
                               </div>
-                          </div>
-
-                          <div className="flex flex-col items-start md:items-end gap-4">
+                            </div>
+                            <div className="flex flex-col items-end gap-2">
                               <Badge className={cn(
-                                  "font-black text-[9px] px-2 py-0.5 uppercase tracking-widest border-none shadow-sm",
+                                  "font-black text-[8px] sm:text-[9px] px-2 py-0.5 uppercase tracking-widest border-none shadow-sm",
                                   order.status === "COMPLETED" ? "bg-emerald-500/10 text-emerald-600" :
                                   order.status === "PENDING" ? "bg-amber-500/10 text-amber-600" :
                                   order.status === "PROCESSING" ? "bg-blue-500/10 text-blue-600" :
@@ -313,104 +302,48 @@ export default function AccountClient({ initialPatronData, initialOrders }: Acco
                               )}>
                                   {order.status}
                               </Badge>
-                              <div className="text-right space-y-0.5">
-                                  <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground opacity-60">ORDER VALUE</p>
-                                  <p className="text-lg font-black tracking-tighter">₦{Number(order.totalAmount).toLocaleString()}</p>
+                              <div className="space-y-0.5 text-right">
+                                  <p className="text-[8px] sm:text-[9px] font-black uppercase tracking-widest text-muted-foreground opacity-60">ORDER VALUE</p>
+                                  <p className="text-base sm:text-lg font-black tracking-tighter">₦{Number(order.totalAmount).toLocaleString()}</p>
                               </div>
-                              <Button
-                                onClick={() => setExpandedOrderId(isExpanded ? null : order.id)}
-                                variant="link"
-                                className="p-0 h-auto text-[9px] font-black uppercase tracking-widest text-brand-navy hover:no-underline flex items-center gap-1.5"
-                              >
-                                {isExpanded ? "HIDE DETAILS" : "VIEW DETAILS"}
-                                <ChevronRight className={cn("size-3 transition-transform", isExpanded && "rotate-90")} />
-                              </Button>
+                            </div>
+                          </div>
+
+                          {/* Bottom Row: Items Count + View Details */}
+                          <div className="flex items-center justify-between gap-4">
+                            <div className="text-[8px] sm:text-[9px] uppercase tracking-[0.28em] font-black text-muted-foreground">
+                              {order.items?.length || 0} items
+                            </div>
+                            <Button
+                              onClick={() => setExpandedOrderId(isExpanded ? null : order.id)}
+                              variant="link"
+                              className="p-0 h-auto text-[8px] sm:text-[9px] font-black uppercase tracking-widest text-brand-navy hover:no-underline flex items-center gap-1"
+                            >
+                              {isExpanded ? "HIDE" : "VIEW"}
+                              <ChevronRight className={cn("size-3 transition-transform", isExpanded && "rotate-90")} />
+                            </Button>
                           </div>
                         </div>
 
+
                         {isExpanded && (
-                          <div className="border-t border-border/10 bg-zinc-50/70 p-6 md:p-8 space-y-6">
-                            <div className="grid gap-4 lg:grid-cols-3">
-                              <div className="rounded-[1.75rem] bg-white p-5 border border-border/10 shadow-sm">
-                                <p className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground">Order ID</p>
-                                <p className="mt-2 font-black text-sm break-all">{order.orderNumber}</p>
-                              </div>
-                              <div className="rounded-[1.75rem] bg-white p-5 border border-border/10 shadow-sm">
-                                <p className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground">Customer</p>
-                                <p className="mt-2 font-black text-sm">{order.customer?.name || patronData?.name || session?.user?.name || "You"}</p>
-                              </div>
-                              <div className="rounded-[1.75rem] bg-white p-5 border border-border/10 shadow-sm">
-                                <p className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground">Status</p>
-                                <p className="mt-2 font-black text-sm">{order.status}</p>
-                              </div>
-                            </div>
-
-                            <div className="grid gap-4 lg:grid-cols-2">
-                              <div className="rounded-[1.75rem] bg-white p-5 border border-border/10 shadow-sm">
-                                <p className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground">Payment Method</p>
-                                <p className="mt-2 font-black text-sm">{order.paymentMethod || "CARD"}</p>
-                              </div>
-                              <div className="rounded-[1.75rem] bg-white p-5 border border-border/10 shadow-sm">
-                                <p className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground">Order Date</p>
-                                <p className="mt-2 font-black text-sm">{new Date(order.createdAt).toLocaleDateString()}</p>
-                              </div>
-                            </div>
-
-                            {order.shippingInfo?.address && (
-                              <div className="rounded-[1.75rem] bg-white p-5 border border-border/10 shadow-sm">
-                                <p className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground">Shipping Address</p>
-                                <p className="mt-2 text-sm font-medium leading-relaxed text-zinc-700">{order.shippingInfo.address}</p>
-                              </div>
-                            )}
-
-                            {!order.userId && !order.orderNumber.includes("POS") && order.status !== "CANCELLED" && order.status !== "REFUNDED" && (
-                              <div className="space-y-5 rounded-[1.75rem] bg-white p-5 border border-border/10 shadow-sm">
-                                <div className="flex items-center justify-between gap-4">
-                                  <p className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground">Logistics Progress</p>
-                                  <Badge className={cn(
-                                      "font-black text-[9px] px-2 py-0.5 uppercase tracking-widest border-none shadow-sm",
-                                      order.status === "COMPLETED" ? "bg-emerald-500/10 text-emerald-600" :
-                                      order.status === "SHIPPED" ? "bg-violet-500/10 text-violet-600" :
-                                      order.status === "PROCESSING" ? "bg-blue-500/10 text-blue-600" :
-                                      order.status === "PENDING" ? "bg-amber-500/10 text-amber-600" :
-                                      "bg-rose-500/10 text-rose-600"
-                                  )}>
-                                      {order.status}
-                                  </Badge>
+                          <div className="border-t border-border/10 bg-zinc-50/70 p-4 sm:p-6 md:p-8">
+                            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 sm:gap-3 md:gap-4">
+                              {order.items?.map((item: any, idx: number) => (
+                                <div key={idx} className="flex flex-col items-center gap-2 sm:gap-3">
+                                  <div className="w-full aspect-square rounded-lg sm:rounded-2xl bg-white border border-border/10 relative overflow-hidden shadow-sm flex items-center justify-center">
+                                    {item.variant?.product?.images?.[0] ? (
+                                      <NextImage src={item.variant.product.images[0]} alt="" fill className="object-cover" />
+                                    ) : (
+                                      <div className="flex items-center justify-center h-full opacity-10"><Package className="size-4 sm:size-6" /></div>
+                                    )}
+                                  </div>
+                                  <div className="text-center">
+                                    <p className="text-[7px] sm:text-[10px] font-black text-muted-foreground uppercase tracking-widest">Qty</p>
+                                    <p className="text-sm sm:text-lg font-black tracking-tighter">{item.quantity || 1}</p>
+                                  </div>
                                 </div>
-                                <div className="h-1 rounded-full bg-zinc-200 overflow-hidden">
-                                  <div className="h-full bg-brand-navy transition-all duration-1000" style={{ width: order.status === "PENDING" ? "0%" : order.status === "PROCESSING" ? "33%" : order.status === "SHIPPED" ? "66%" : "100%" }} />
-                                </div>
-                                <div className="grid grid-cols-4 gap-3 text-[9px] uppercase tracking-[0.3em] text-muted-foreground">
-                                  <span className={cn("text-center", ["PENDING", "PROCESSING", "SHIPPED", "COMPLETED"].includes(order.status) ? "text-brand-navy" : "text-zinc-400")}>Placed</span>
-                                  <span className={cn("text-center", ["PROCESSING", "SHIPPED", "COMPLETED"].includes(order.status) ? "text-brand-navy" : "text-zinc-400")}>Preparing</span>
-                                  <span className={cn("text-center", ["SHIPPED", "COMPLETED"].includes(order.status) ? "text-brand-navy" : "text-zinc-400")}>Shipped</span>
-                                  <span className={cn("text-center", ["COMPLETED"].includes(order.status) ? "text-brand-navy" : "text-zinc-400")}>Delivered</span>
-                                </div>
-                              </div>
-                            )}
-
-                            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                              <p className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground">Items included</p>
-                              <Button
-                                onClick={() => setSelectedOrderId(order.id)}
-                                variant="outline"
-                                className="h-12 px-5 rounded-2xl text-[9px] font-black uppercase tracking-widest"
-                              >
-                                View Receipt
-                              </Button>
-                            </div>
-
-                            <div className="bg-zinc-50/50 p-3 px-6 border-t border-border/30 flex gap-3 overflow-x-auto scrollbar-hide">
-                                {order.items?.map((item: any, idx: number) => (
-                                    <div key={idx} className="size-10 rounded-lg bg-white border border-border/10 relative overflow-hidden flex-shrink-0 shadow-sm">
-                                        {item.variant?.product?.images?.[0] ? (
-                                            <NextImage src={item.variant.product.images[0]} alt="" fill className="object-cover" />
-                                        ) : (
-                                            <div className="flex items-center justify-center h-full opacity-10"><Package className="size-3" /></div>
-                                        )}
-                                    </div>
-                                ))}
+                              ))}
                             </div>
                           </div>
                         )}
@@ -421,9 +354,9 @@ export default function AccountClient({ initialPatronData, initialOrders }: Acco
               </div>
             </div>
 
-            {/* Right: Metrics */}
-            <div className="lg:col-span-4 space-y-8 lg:sticky lg:top-[120px]">
-                <div className="glass-card p-8 rounded-[2.5rem] border-none shadow-2xl space-y-8 relative overflow-hidden bg-white">
+            {/* Right: Metrics - Mobile Responsive */}
+            <div className="lg:col-span-4 space-y-6 sm:space-y-8">
+                <div className="glass-card p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border-none shadow-2xl space-y-6 sm:space-y-8 relative overflow-hidden bg-white lg:sticky lg:top-[120px]">
                     <div className="absolute inset-0 bg-brand-mesh opacity-5 pointer-events-none" />
                     
                     <div className="space-y-4 relative z-10">
@@ -433,7 +366,7 @@ export default function AccountClient({ initialPatronData, initialOrders }: Acco
                             </div>
                             <h3 className="font-black text-base tracking-tight">Active Address</h3>
                         </div>
-                        <p className="text-[11px] font-bold leading-relaxed text-muted-foreground italic bg-zinc-50 p-5 rounded-2xl border border-border/10">
+                        <p className="text-[10px] sm:text-[11px] font-bold leading-relaxed text-muted-foreground italic bg-zinc-50 p-4 sm:p-5 rounded-xl sm:rounded-2xl border border-border/10 break-words">
                             {patronData?.address || "No active address recorded."}
                         </p>
                     </div>
@@ -446,18 +379,18 @@ export default function AccountClient({ initialPatronData, initialOrders }: Acco
                             <h3 className="font-black text-base tracking-tight">Fulfillment Pulse</h3>
                         </div>
                         <div className="grid grid-cols-2 gap-3">
-                            <div className="bg-zinc-50 p-5 rounded-[1.5rem] space-y-0.5 border border-border/10 text-center">
+                            <div className="bg-zinc-50 p-4 sm:p-5 rounded-xl sm:rounded-[1.5rem] space-y-0.5 border border-border/10 text-center">
                                 <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Orders</p>
-                                <p className="text-lg font-black tracking-tighter">{orders.length}</p>
+                                <p className="text-base sm:text-lg font-black tracking-tighter">{orders.length}</p>
                             </div>
-                            <div className="bg-zinc-50 p-5 rounded-[1.5rem] space-y-0.5 border border-border/10 text-center">
+                            <div className="bg-zinc-50 p-4 sm:p-5 rounded-xl sm:rounded-[1.5rem] space-y-0.5 border border-border/10 text-center">
                                 <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Investment</p>
-                                <p className="text-lg font-black tracking-tighter">₦{orders.reduce((acc, o) => acc + Number(o.totalAmount), 0).toLocaleString()}</p>
+                                <p className="text-base sm:text-lg font-black tracking-tighter">₦{orders.reduce((acc, o) => acc + Number(o.totalAmount), 0).toLocaleString()}</p>
                             </div>
                         </div>
                     </div>
 
-                    <div className="pt-2 flex items-center justify-center gap-2 text-[8px] font-black text-muted-foreground/30 uppercase tracking-[0.3em]">
+                    <div className="pt-2 flex items-center justify-center gap-2 text-[7px] sm:text-[8px] font-black text-muted-foreground/30 uppercase tracking-[0.3em]">
                         <ShieldCheck className="size-3" />
                         SECURED ECOSYSTEM
                     </div>
