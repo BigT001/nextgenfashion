@@ -15,7 +15,7 @@ export async function getCustomerDashboardAction() {
     const kpis = await CustomerQueries.getCRMKPIs();
 
     const processedCustomers = customers.map(customer => {
-      const totalSpent = customer.sales.reduce((sum, sale) => sum + Number(sale.totalAmount), 0);
+      const totalSpent = customer.sales.reduce((sum: number, sale: any) => sum + Number(sale.totalAmount), 0);
       const sortedSales = [...customer.sales].sort(
         (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );

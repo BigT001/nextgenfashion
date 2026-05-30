@@ -12,7 +12,7 @@ export class OrderQueries {
     return await client.sale.create({
       data,
       include: {
-        items: true,
+        SaleItem: true,
       },
     });
   }
@@ -21,17 +21,17 @@ export class OrderQueries {
     return await prisma.sale.findUnique({
       where: { id },
       include: {
-        items: {
+        SaleItem: {
           include: {
-            variant: {
+            ProductVariant: {
               include: {
-                product: true,
+                Product: true,
               },
             },
           },
         },
-        customer: true,
-        user: true, // Staff member
+        Customer: true,
+        User: true, // Staff member
       },
     });
   }
@@ -43,19 +43,19 @@ export class OrderQueries {
     return await prisma.sale.findMany({
       orderBy: { createdAt: "desc" },
       include: {
-        customer: true,
-        user: {
+        Customer: true,
+        User: {
           select: {
             id: true,
             name: true,
             role: true
           }
         },
-        items: {
+        SaleItem: {
           include: {
-            variant: {
+            ProductVariant: {
               include: {
-                product: {
+                Product: {
                   select: { name: true }
                 }
               }
@@ -73,7 +73,7 @@ export class OrderQueries {
     return await prisma.sale.update({
       where: { id },
       data: { status },
-      include: { customer: true }
+      include: { Customer: true }
     });
   }
 
@@ -85,10 +85,10 @@ export class OrderQueries {
       where: { customerId },
       orderBy: { createdAt: "desc" },
       include: {
-        items: {
+        SaleItem: {
           include: {
-            variant: {
-              include: { product: { select: { name: true } } }
+            ProductVariant: {
+              include: { Product: { select: { name: true } } }
             }
           }
         }

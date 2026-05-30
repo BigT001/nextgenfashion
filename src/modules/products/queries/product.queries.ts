@@ -26,7 +26,7 @@ export class ProductQueries {
         ...(params.categoryId && {
           OR: [
             { categoryId: params.categoryId },
-            { category: { name: { equals: params.categoryId, mode: "insensitive" } } }
+            { Category: { name: { equals: params.categoryId, mode: "insensitive" } } }
           ]
         }),
         ...(params.search && {
@@ -40,8 +40,8 @@ export class ProductQueries {
         }),
       },
       include: {
-        category: true,
-        variants: params.includeVariants ?? true,
+        Category: true,
+        ProductVariant: params.includeVariants ?? true,
       },
       orderBy: { createdAt: "desc" },
     });
@@ -58,8 +58,8 @@ export class ProductQueries {
         },
         take: limit,
         include: {
-          category: true,
-          variants: true,
+          Category: true,
+          ProductVariant: true,
         },
         orderBy: { createdAt: "desc" },
       });
@@ -75,8 +75,8 @@ export class ProductQueries {
             },
             take: limit,
             include: {
-              category: true,
-              variants: true,
+              Category: true,
+              ProductVariant: true,
             },
           });
         } catch (fallbackError) {
@@ -92,10 +92,10 @@ export class ProductQueries {
     return await prisma.product.findUnique({
       where: { id },
       include: {
-        category: true,
-        variants: {
+        Category: true,
+        ProductVariant: {
           include: {
-            inventory: true,
+            Inventory: true,
           },
         },
       },
@@ -112,7 +112,7 @@ export class ProductQueries {
 
     return await prisma.category.findMany({
       where: targetGender ? {
-        products: {
+        Product: {
           some: genderFilter
         }
       } : undefined,
@@ -120,10 +120,10 @@ export class ProductQueries {
       include: {
         _count: {
           select: {
-            products: true,
+            Product: true,
           },
         },
-        products: {
+        Product: {
           where: genderFilter,
           take: 1,
         },
@@ -137,9 +137,9 @@ export class ProductQueries {
         ...data,
       },
       include: {
-        variants: {
+        ProductVariant: {
           include: {
-            inventory: true,
+            Inventory: true,
           },
         },
       },
@@ -151,7 +151,7 @@ export class ProductQueries {
       where: { id },
       data,
       include: {
-        variants: true,
+        ProductVariant: true,
       },
     });
   }
@@ -174,7 +174,7 @@ export class ProductQueries {
         ]
       },
       include: {
-        product: true
+        Product: true
       }
     });
   }

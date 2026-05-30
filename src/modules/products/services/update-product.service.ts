@@ -8,6 +8,7 @@ interface ProductUpdatePayload {
   sellingPrice?: number;
   costPrice?: number;
   tax?: number;
+  images?: string[];
   variants?: Array<{
     sku?: string;
     size?: string;
@@ -24,7 +25,7 @@ interface ProductUpdatePayload {
  */
 export class UpdateProductService {
   static async execute(id: string, payload: ProductUpdatePayload) {
-    const { name, description, categoryId, sellingPrice, costPrice, tax, variants } = payload;
+    const { name, description, categoryId, sellingPrice, costPrice, tax, images, variants } = payload;
 
     const existingProduct = await prisma.product.findUnique({
       where: { id },
@@ -43,8 +44,13 @@ export class UpdateProductService {
       costPrice,
       tax,
     };
+    // Persist uploaded image URLs — replace the stored list for this product
+    if (images !== undefined) {
+      // Deduplicate and enforce max 5
+      updateData.images = [...new Set(images)].slice(0, 5);
+    }
     if (categoryId !== undefined && categoryId !== null) {
-      updateData.category = { connect: { id: categoryId } };
+      updateData.Category = { connect: { id: categoryId } };
     }
     // targetAudience removed from schema — no-op
 
@@ -52,7 +58,8 @@ export class UpdateProductService {
       where: { id },
       data: updateData,
       include: {
-        variants: true
+        ProductVariant: true,
+        Category: true,
       }
     });
 

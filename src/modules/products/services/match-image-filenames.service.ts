@@ -22,16 +22,18 @@ export class MatchImageFilenamesService {
 
     const baseNames = fileMapping.map(m => m.baseName);
 
-    // 2. Query database for matching variants
+    // 2. Query database for matching variants and product names
     const variants = await ProductQueries.findVariantsByIdentifiers(baseNames);
 
-    // Create lookup maps for SKU and Barcode (case-insensitive keys)
+    // Build lookup maps for SKU, barcode, and product name (case‑insensitive)
     const skuMap = new Map<string, any>();
     const barcodeMap = new Map<string, any>();
+    const nameMap = new Map<string, any>();
 
     variants.forEach(v => {
       if (v.sku) skuMap.set(v.sku.toLowerCase().trim(), v);
       if (v.barcode) barcodeMap.set(v.barcode.toLowerCase().trim(), v);
+      if (v.Product && v.Product.name) nameMap.set(v.Product.name.toLowerCase().trim(), v);
     });
 
     // 3. Match each filename
@@ -51,12 +53,15 @@ export class MatchImageFilenamesService {
       if (!matchedVariant) {
         matchedVariant = barcodeMap.get(searchKey);
       }
+      if (!matchedVariant) {
+        matchedVariant = nameMap.get(searchKey);
+      }
 
       if (matchedVariant) {
         matched.push({
           filename,
           productId: matchedVariant.productId,
-          productName: matchedVariant.product.name,
+          productName: matchedVariant.Product.name,
           sku: matchedVariant.sku,
           barcode: matchedVariant.barcode
         });

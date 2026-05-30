@@ -9,10 +9,10 @@ export async function getInventoryDashboardAction() {
   try {
     const products = await prisma.product.findMany({
       include: {
-        category: true,
-        variants: {
+        Category: true,
+        ProductVariant: {
           include: {
-            inventory: true
+            Inventory: true
           }
         }
       },
@@ -21,7 +21,7 @@ export async function getInventoryDashboardAction() {
 
     // Fetch latest movement log for all main variants in a single bulk query
     const mainVariantIds = products
-      .map((p) => p.variants[0]?.id)
+      .map((p) => p.ProductVariant[0]?.id)
       .filter((id): id is string => typeof id === "string");
 
     const latestLogs = await prisma.auditLog.findMany({
@@ -44,11 +44,11 @@ export async function getInventoryDashboardAction() {
 
     // Process data for dashboard view
     const processedProducts = products.map(p => {
-      const totalStock = p.variants.reduce((acc, v) => acc + (v.inventory?.quantity || 0), 0);
-      const isLowStock = p.variants.some(v => (v.inventory?.quantity || 0) <= (v.inventory?.lowStockThreshold || 5));
+      const totalStock = p.ProductVariant.reduce((acc, v) => acc + (v.Inventory?.quantity || 0), 0);
+      const isLowStock = p.ProductVariant.some(v => (v.Inventory?.quantity || 0) <= (v.Inventory?.lowStockThreshold || 5));
       const status = totalStock === 0 ? "Out of Stock" : isLowStock ? "Low Stock" : "In Stock";
 
-      const mainVariantId = p.variants[0]?.id;
+      const mainVariantId = p.ProductVariant[0]?.id;
       let lastMovement = "No movements logged";
 
       if (mainVariantId) {
@@ -69,17 +69,17 @@ export async function getInventoryDashboardAction() {
         }
       }
 
-      const sizes = Array.from(new Set(p.variants.map((v) => v.size).filter((value): value is string => Boolean(value))));
-      const colors = Array.from(new Set(p.variants.map((v) => v.color).filter((value): value is string => Boolean(value))));
+      const sizes = Array.from(new Set(p.ProductVariant.map((v) => v.size).filter((value): value is string => Boolean(value))));
+      const colors = Array.from(new Set(p.ProductVariant.map((v) => v.color).filter((value): value is string => Boolean(value))));
       const imageName = "";
 
       return {
         id: p.id,
         name: p.name,
-        category: p.category.name,
+        category: p.Category?.name || "",
         categoryId: p.categoryId,
-        sku: p.variants[0]?.sku || "N/A",
-        variantId: p.variants[0]?.id || null,
+        sku: p.ProductVariant[0]?.sku || "N/A",
+        variantId: p.ProductVariant[0]?.id || null,
         stock: totalStock,
         price: Number(p.basePrice),
         costPrice: Number(p.costPrice || 0),

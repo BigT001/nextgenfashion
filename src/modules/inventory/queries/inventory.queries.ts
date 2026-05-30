@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { prisma } from "@/services/prisma.service";
 
 /**
@@ -30,7 +31,10 @@ export class InventoryQueries {
   }, tx?: any) {
     const client = tx || prisma;
     return await client.auditLog.create({
-      data,
+      data: {
+        id: randomUUID(),
+        ...data,
+      },
     });
   }
 
@@ -42,9 +46,9 @@ export class InventoryQueries {
         },
       },
       include: {
-        variant: {
+        ProductVariant: {
           include: {
-            product: true,
+            Product: true,
           },
         },
       },

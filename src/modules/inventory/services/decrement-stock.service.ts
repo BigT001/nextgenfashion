@@ -23,7 +23,7 @@ export class DecrementStockService {
     // 3. Log the audit record
     const variant = await tx.productVariant.findUnique({
       where: { id: variantId },
-      include: { product: true },
+      include: { Product: true },
     });
 
     await InventoryQueries.createAuditLog({

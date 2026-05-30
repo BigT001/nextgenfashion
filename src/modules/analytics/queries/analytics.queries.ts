@@ -76,9 +76,9 @@ export const AnalyticsQueries = {
     // Calculates the worth of goods left in stock based on product selling price
     const inventories = await prisma.inventory.findMany({
       include: {
-        variant: {
+        ProductVariant: {
           include: {
-            product: { select: { basePrice: true } }
+            Product: { select: { basePrice: true } }
           }
         }
       }
@@ -86,7 +86,7 @@ export const AnalyticsQueries = {
 
     const totalInventoryValue = inventories.reduce((sum, inv) => {
       // Prioritize variant price, fallback to base product price
-      const price = inv.variant.price ? Number(inv.variant.price) : Number(inv.variant.product.basePrice);
+      const price = inv.ProductVariant.price ? Number(inv.ProductVariant.price) : Number(inv.ProductVariant.Product.basePrice);
       return sum + (price * inv.quantity);
     }, 0);
 
@@ -156,10 +156,10 @@ export const AnalyticsQueries = {
       topItems.map(async (item) => {
         const variant = await prisma.productVariant.findUnique({
           where: { id: item.variantId },
-          include: { product: true }
+          include: { Product: true }
         });
         return {
-          name: variant?.product.name || "Unknown Product",
+          name: variant?.Product.name || "Unknown Product",
           quantity: item._sum.quantity || 0,
           revenue: Number(item._sum.price || 0) * (item._sum.quantity || 0)
         };
@@ -180,8 +180,8 @@ export const AnalyticsQueries = {
       ],
       take: 5,
       include: {
-        customer: true,
-        user: {
+        Customer: true,
+        User: {
           select: { name: true }
         }
       }
@@ -200,9 +200,9 @@ export const AnalyticsQueries = {
       },
       take: 5,
       include: {
-        variant: {
+        ProductVariant: {
           include: {
-            product: true
+            Product: true
           }
         }
       }
@@ -215,11 +215,11 @@ export const AnalyticsQueries = {
   async getCategoryPerformance() {
     const categories = await prisma.category.findMany({
       include: {
-        products: {
+        Product: {
           include: {
-            variants: {
+            ProductVariant: {
               include: {
-                saleItems: true
+                SaleItem: true
               }
             }
           }
@@ -231,9 +231,9 @@ export const AnalyticsQueries = {
       let unitsSold = 0;
       let revenue = 0;
 
-      cat.products.forEach(product => {
-        product.variants.forEach(variant => {
-          variant.saleItems.forEach(item => {
+      cat.Product.forEach(product => {
+        product.ProductVariant.forEach(variant => {
+          variant.SaleItem.forEach(item => {
             unitsSold += item.quantity;
             revenue += (Number(item.price) * item.quantity);
           });
@@ -282,7 +282,7 @@ export const AnalyticsQueries = {
         email: true,
         createdAt: true,
         _count: {
-          select: { sales: true }
+          select: { Sale: true }
         }
       }
     });

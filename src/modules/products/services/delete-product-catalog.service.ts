@@ -18,7 +18,7 @@ export class DeleteProductCatalogService {
         where: { variantId: { in: variantIds } }
       });
       await prisma.sale.deleteMany({
-        where: { items: { none: {} } }
+        where: { SaleItem: { none: {} } }
       });
     }
 

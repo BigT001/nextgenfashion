@@ -140,12 +140,12 @@ export async function getProductBySkuAction(sku: string) {
         ]
       },
       include: {
-        product: {
+        Product: {
           include: {
-            category: true
+            Category: true
           }
         },
-        inventory: true
+        Inventory: true
       }
     });
     
@@ -175,7 +175,7 @@ export async function toggleSuspendProductAction(productId: string) {
 
     const product = await prisma.product.findUnique({
       where: { id: productId },
-      include: { variants: true }
+      include: { ProductVariant: true }
     });
 
     if (!product) throw new Error("Product not found");
@@ -192,7 +192,7 @@ export async function toggleSuspendProductAction(productId: string) {
     const actor = session?.user?.name || session?.user?.email || "System Admin";
 
     // Log the suspension event for all variants so it shows in their history
-    for (const variant of product.variants) {
+    for (const variant of product.ProductVariant) {
       await InventoryQueries.createAuditLog({
         userId: actor,
         action: newSuspendedState ? "PRODUCT_SUSPENDED" : "PRODUCT_ACTIVATED",

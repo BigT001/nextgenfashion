@@ -17,7 +17,7 @@ export const SearchQueries = {
           ]
         },
         take: 5,
-        include: { category: true }
+        include: { Category: true }
       }),
       // Search Categories
       prisma.category.findMany({
@@ -28,7 +28,7 @@ export const SearchQueries = {
       prisma.sale.findMany({
         where: { orderNumber: { contains: query, mode: 'insensitive' } },
         take: 5,
-        include: { customer: true }
+        include: { Customer: true }
       })
     ]);
 

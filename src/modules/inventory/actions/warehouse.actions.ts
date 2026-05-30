@@ -8,7 +8,7 @@ export async function getWarehousesAction() {
     const warehouses = await prisma.warehouse.findMany({
       include: {
         _count: {
-          select: { inventories: true }
+          select: { Inventory: true }
         }
       },
       orderBy: { createdAt: "desc" }

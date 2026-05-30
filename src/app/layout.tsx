@@ -1,18 +1,11 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { CommandPalette } from "@/components/ui/command-palette";
 import { Providers } from "@/providers/providers";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+// Using system font fallbacks to avoid remote Google font fetch during builds
+const geistSans = { variable: "--font-geist-sans", className: "font-sans" };
+const geistMono = { variable: "--font-geist-mono", className: "font-mono" };
 
 export const metadata: Metadata = {
   title: "NextGen Kiddies OS | Enterprise Retail Ecosystem",
@@ -33,11 +26,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-      suppressHydrationWarning
-    >
+    <html lang="en" className={`h-full antialiased`} suppressHydrationWarning>
       <body className="min-h-full flex flex-col bg-background selection:bg-brand-navy/30">
         <Providers>
           <CommandPalette />

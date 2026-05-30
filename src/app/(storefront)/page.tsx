@@ -19,8 +19,8 @@ type CategoryProductRow = {
   id: string;
   name: string;
   categoryId?: string | null;
-  category?: { name?: string | null } | null;
-  variants?: Array<{
+  Category?: { name?: string | null } | null;
+  ProductVariant?: Array<{
     sku?: string | null;
     barcode?: string | null;
   }> | null;
@@ -43,15 +43,15 @@ export default async function LandingPage() {
   }
 
   const categoryProducts: ProductWithVariants[] = dbCategories.flatMap((cat) => {
-    const rawProducts = (cat.products ?? []) as unknown as CategoryProductRow[];
+    const rawProducts = (cat.Product ?? []) as unknown as CategoryProductRow[];
 
     return rawProducts.map((product) => ({
       id: product.id,
       name: product.name,
       images: [],
       categoryId: product.categoryId ?? null,
-      category: product.category ? { name: product.category.name } : null,
-      variants: (product.variants ?? []).map((variant) => ({
+      category: product.Category ? { name: product.Category.name } : null,
+      variants: (product.ProductVariant ?? []).map((variant) => ({
         sku: variant.sku ?? null,
         barcode: variant.barcode ?? null,
       })),
@@ -62,7 +62,7 @@ export default async function LandingPage() {
   const resolvedCategoryImageMap = new Map(resolvedCategoryProducts.map((item) => [item.id, item.resolvedImage]));
 
   const categories = dbCategories.map(cat => {
-    const rawProducts = (cat.products ?? []) as unknown as Array<{ id: string }>;
+    const rawProducts = (cat.Product ?? []) as unknown as Array<{ id: string }>;
     const firstProduct = rawProducts[0];
     const productImage = firstProduct ? resolvedCategoryImageMap.get(firstProduct.id) || "" : "";
     const displayImage = productImage || cat.image;
@@ -142,7 +142,7 @@ export default async function LandingPage() {
     .slice(0, 4);
 
   const discoverCards = discoverProducts.map((product) => ({
-    name: product.category?.name || product.name,
+    name: product.Category?.name || product.name,
     img: product.resolvedImage,
     link: product.categoryId ? `/shop?category=${product.categoryId}` : "/shop"
   }));

@@ -19,6 +19,12 @@ export class CloudinaryService {
       }
 
       const result = await cloudinary.uploader.upload(fileUri, uploadOptions);
+      // Log the returned Cloudinary identifiers for debugging image ownership
+      try {
+        // eslint-disable-next-line no-console
+        console.log(`[CloudinaryService] Uploaded asset: public_id=${result.public_id} secure_url=${result.secure_url}`);
+      } catch (e) {}
+
       return {
         url: result.secure_url,
         publicId: result.public_id,

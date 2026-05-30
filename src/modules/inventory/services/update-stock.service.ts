@@ -18,7 +18,7 @@ export class UpdateStockService {
 
       const variant = await tx.productVariant.findUnique({
         where: { id: variantId },
-        include: { product: true },
+        include: { Product: true },
       });
 
       await InventoryQueries.createAuditLog({
@@ -30,7 +30,7 @@ export class UpdateStockService {
           change: quantityChange,
           reason,
           newQuantity: updatedInventory.quantity,
-          productName: variant ? `${variant.product.name} (${variant.size || ""}${variant.color ? ` / ${variant.color}` : ""})` : variantId,
+          productName: variant ? `${variant.Product.name} (${variant.size || ""}${variant.color ? ` / ${variant.color}` : ""})` : variantId,
         },
       }, tx);
 

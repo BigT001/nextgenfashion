@@ -20,6 +20,7 @@ async function main() {
     where: { email: "admin@nextgenfashion.com" },
     update: {},
     create: {
+      id: "admin-001",
       email: "admin@nextgenfashion.com",
       name: "System Admin",
       password: "$2b$12$OcWmGIT0gYOleJ23RSA1D.U9XnFDXB.85Zh.BmlaHmJ4e7QRQWxzO", // admin123
@@ -30,18 +31,18 @@ async function main() {
 
   // 2. Create Categories
   const categoryData = [
-    { name: "Tops", description: "Shirts, tees, and blouses" },
-    { name: "Bottoms", description: "Pants, shorts, and skirts" },
-    { name: "Dresses", description: "Elegant and casual dresses" },
-    { name: "Footwear", description: "Shoes, boots, and sandals" },
-    { name: "Accessories", description: "Hats, belts, and more" },
+    { id: "cat-001", name: "Tops", description: "Shirts, tees, and blouses" },
+    { id: "cat-002", name: "Bottoms", description: "Pants, shorts, and skirts" },
+    { id: "cat-003", name: "Dresses", description: "Elegant and casual dresses" },
+    { id: "cat-004", name: "Footwear", description: "Shoes, boots, and sandals" },
+    { id: "cat-005", name: "Accessories", description: "Hats, belts, and more" },
   ];
 
   for (const cat of categoryData) {
     await prisma.category.upsert({
       where: { name: cat.name },
       update: {},
-      create: cat,
+      create: { ...cat, updatedAt: new Date() },
     });
   }
   console.log("✅ Categories created.");

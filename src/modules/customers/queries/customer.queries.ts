@@ -1,16 +1,23 @@
 import { prisma } from "@/services/prisma.service";
 import { Prisma } from "@prisma/client";
 
+const normalizeCustomer = (customer: any) => ({
+  ...customer,
+  sales: customer.Sale ?? [],
+});
+
+const normalizeCustomers = (customers: any[]) => customers.map(normalizeCustomer);
+
 export const CustomerQueries = {
   /**
    * Fetch all customers with their orders for the CRM dashboard
    */
   async getAllCustomers() {
-    return await prisma.customer.findMany({
+    const customers = await prisma.customer.findMany({
       where: { isArchived: false },
       orderBy: { createdAt: "desc" },
       include: {
-        sales: {
+        Sale: {
           select: {
             id: true,
             orderNumber: true,
@@ -21,6 +28,8 @@ export const CustomerQueries = {
         }
       }
     });
+
+    return normalizeCustomers(customers);
   },
 
   /**
@@ -67,14 +76,14 @@ export const CustomerQueries = {
     const customer = await prisma.customer.findUnique({
       where: { id: customerId },
       include: {
-        sales: {
+        Sale: {
           orderBy: { createdAt: 'desc' },
           include: {
-            items: {
+            SaleItem: {
               include: {
-                variant: {
+                ProductVariant: {
                   include: {
-                    product: true
+                    Product: true
                   }
                 }
               }
@@ -86,16 +95,18 @@ export const CustomerQueries = {
 
     if (!customer) return null;
 
+    const normalizedCustomer = normalizeCustomer(customer);
+
     // Calculate Extended Metrics from ALL sales data
-    const totalSpent = customer.sales.reduce((sum, s) => sum + Number(s.totalAmount), 0);
-    const orderCount = customer.sales.length;
+    const totalSpent = normalizedCustomer.sales.reduce((sum: number, s: any) => sum + Number(s.totalAmount), 0);
+    const orderCount = normalizedCustomer.sales.length;
     const aov = orderCount > 0 ? totalSpent / orderCount : 0;
 
     // Analyze Behavior: Top Categories or Products
     const productFrequency: Record<string, number> = {};
-    customer.sales.forEach(sale => {
-      sale.items.forEach(item => {
-        const name = item.variant.product.name;
+    normalizedCustomer.sales.forEach((sale: any) => {
+      sale.items.forEach((item: any) => {
+        const name = item.ProductVariant.Product.name;
         productFrequency[name] = (productFrequency[name] || 0) + item.quantity;
       });
     });
@@ -110,26 +121,26 @@ export const CustomerQueries = {
       const d = new Date();
       d.setMonth(d.getMonth() - (5 - i));
       const monthStr = d.toLocaleString('default', { month: 'short' });
-      const monthSales = customer.sales.filter(s => {
+      const monthSales = normalizedCustomer.sales.filter((s: any) => {
         const sd = new Date(s.createdAt);
         return sd.getMonth() === d.getMonth() && sd.getFullYear() === d.getFullYear();
       });
       return {
         month: monthStr,
-        spent: monthSales.reduce((sum, s) => sum + Number(s.totalAmount), 0)
+        spent: monthSales.reduce((sum: number, s: any) => sum + Number(s.totalAmount), 0)
       };
     });
 
     return {
-      ...customer,
-      email: customer.email || "",
-      phone: customer.phone || "",
-      sales: customer.sales.slice(0, 10), // Only return last 10 for UI performance
+      ...normalizedCustomer,
+      email: normalizedCustomer.email || "",
+      phone: normalizedCustomer.phone || "",
+      sales: normalizedCustomer.sales.slice(0, 10), // Only return last 10 for UI performance
       metrics: {
         ltv: totalSpent,
         orderCount,
         aov,
-        lastActive: customer.sales[0]?.createdAt || customer.createdAt,
+        lastActive: normalizedCustomer.sales[0]?.createdAt || normalizedCustomer.createdAt,
         topProducts
       },
       trend
@@ -160,11 +171,11 @@ export const CustomerQueries = {
    * Fetch all archived customers
    */
   async getArchivedCustomers() {
-    return await prisma.customer.findMany({
+    const customers = await prisma.customer.findMany({
       where: { isArchived: true },
       orderBy: { updatedAt: "desc" },
       include: {
-        sales: {
+        Sale: {
           select: {
             id: true,
             orderNumber: true,
@@ -175,6 +186,8 @@ export const CustomerQueries = {
         }
       }
     });
+
+    return normalizeCustomers(customers);
   },
 
   /**

@@ -20,11 +20,11 @@ export async function validateCartItemsAction(items: ValidateCartItemPayload[]) 
     const product = item.productId
       ? await prisma.product.findUnique({
           where: { id: item.productId },
-          include: { variants: true },
+          include: { ProductVariant: true },
         })
       : null;
 
-    if (product && product.variants.length > 0) continue;
+    if (product && product.ProductVariant.length > 0) continue;
 
     invalidItems.push(item);
   }

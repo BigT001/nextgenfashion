@@ -67,6 +67,17 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
   const [isPurging, setIsPurging] = useState(false);
   const [showOnlyWithImages, setShowOnlyWithImages] = useState(false);
 
+  const handleAddProductOpenChange = (open: boolean, eventDetails?: any) => {
+    // Prevent the dialog from closing when the native file picker steals focus.
+    if (!open && eventDetails?.reason === "focusOut") return;
+    setIsAddProductOpen(open);
+  };
+
+  const handleEditProductOpenChange = (open: boolean, eventDetails?: any) => {
+    if (!open && eventDetails?.reason === "focusOut") return;
+    if (!open) setEditingProduct(null);
+  };
+
   const handleEditProduct = async (productId: string) => {
     if (isLoadingProduct) return;
     setIsLoadingProduct(true);
@@ -1206,7 +1217,7 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
             </DialogContent>
           </Dialog>
           
-          <Dialog open={isAddProductOpen} onOpenChange={setIsAddProductOpen} disablePointerDismissal>
+          <Dialog open={isAddProductOpen} onOpenChange={handleAddProductOpenChange} disablePointerDismissal>
             <DialogContent className="max-w-5xl glass-card border-none p-0 overflow-hidden rounded-[2.5rem] shadow-2xl">
               <div className="px-10 py-6 bg-brand-mesh border-b border-border/10 relative overflow-hidden">
                 <div className="absolute inset-0 bg-brand-navy/5" />
@@ -1223,7 +1234,7 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
             </DialogContent>
           </Dialog>
 
-          <Dialog open={!!editingProduct} onOpenChange={(open) => !open && setEditingProduct(null)} disablePointerDismissal>
+          <Dialog open={!!editingProduct} onOpenChange={handleEditProductOpenChange} disablePointerDismissal>
             <DialogContent className="max-w-5xl glass-card border-none p-0 overflow-hidden rounded-[2.5rem] shadow-2xl">
               <div className="px-10 py-6 bg-brand-mesh border-b border-border/10 relative overflow-hidden">
                 <div className="absolute inset-0 bg-brand-navy/5" />

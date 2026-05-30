@@ -48,6 +48,8 @@ export type ProductWithVariants = {
   images?: string[] | null;
   categoryId?: string | null;
   category?: { name?: string | null } | null;
+  // Prisma relation alias
+  Category?: { name?: string | null } | null;
   variants?: Array<{
     sku?: string | null;
     barcode?: string | null;
@@ -219,87 +221,40 @@ export class ResolveProductImagesService {
         ? product.images.filter((image): image is string => Boolean(image && image.trim() !== ""))
         : [];
 
-      const candidateKeys = new Set<string>();
-      if (product.name) candidateKeys.add(normalizeIdentifier(product.name));
-      if (product.category?.name) candidateKeys.add(normalizeIdentifier(product.category.name));
-      for (const variant of product.variants || []) {
-        if (variant.sku) candidateKeys.add(normalizeIdentifier(variant.sku));
-        if (variant.barcode) candidateKeys.add(normalizeIdentifier(variant.barcode));
+      // If the product already has persisted images in the database, prefer
+      // those as the source of truth. This avoids the Cloudinary heuristic
+      // matching selecting assets that belong to other products and prevents
+      // images from leaking across products.
+      const dbImages = sanitizeImageSources(fallbackImages);
+      if (dbImages.length > 0) {
+        const resolvedImage = dbImages[0] || PRODUCT_PLACEHOLDER_IMAGE;
+        // Debug trace to help diagnose image assignment issues in production.
+        try {
+          // eslint-disable-next-line no-console
+          console.log(`[ResolveProductImagesService] Using DB images for product ${product.id}: ${resolvedImage}`);
+        } catch (e) {}
+
+        return {
+          ...product,
+          resolvedImage,
+          images: dbImages,
+        } as ResolvedProduct<T>;
       }
 
-      let matchedAssets: Array<{ publicId: string; secureUrl: string; slug: string; timestamp: number; tokens: string[] }> = [];
-      for (const key of candidateKeys) {
-        const exactGroup = assetGroups.get(key);
-        if (exactGroup && exactGroup.length > 0) {
-          matchedAssets = exactGroup.slice().sort((a, b) => b.timestamp - a.timestamp);
-          break;
-        }
-      }
-
-      if (matchedAssets.length === 0) {
-        const hintTokens = new Map<string, number>();
-        for (const key of candidateKeys) {
-          const tokens = tokenizeIdentifier(key);
-          for (const token of tokens) {
-            hintTokens.set(token, (hintTokens.get(token) || 0) + 1);
-          }
-        }
-
-        let bestGroup: Array<{ publicId: string; secureUrl: string; slug: string; timestamp: number; tokens: string[] }> | null = null;
-        let bestScore = -1;
-        let bestTokenCount = 0;
-
-        for (const assetGroup of assetGroups.values()) {
-          const representative = assetGroup[0];
-          let score = 0;
-          let matchedTokenCount = 0;
-
-          for (const token of representative.tokens) {
-            if (hintTokens.has(token)) {
-              const rarityWeight = 1 / (globalTokenFrequency.get(token) || 1);
-              const tokenStrength = token.length >= 6 ? 6 : token.length >= 4 ? 4 : 2;
-              score += tokenStrength * rarityWeight * hintTokens.get(token)!;
-              matchedTokenCount += 1;
-            }
-          }
-
-          if (
-            (matchedTokenCount > bestTokenCount && matchedTokenCount >= 2) ||
-            (matchedTokenCount === bestTokenCount && score > bestScore && matchedTokenCount >= 2)
-          ) {
-            bestScore = score;
-            bestGroup = assetGroup.slice().sort((a, b) => b.timestamp - a.timestamp);
-            bestTokenCount = matchedTokenCount;
-          }
-        }
-
-        if (bestTokenCount >= 2 && bestScore > 0 && bestGroup) {
-          matchedAssets = bestGroup;
-        }
-      }
-
-      const selectedAssets = matchedAssets.length > 0
-        ? selectUniqueAssets(matchedAssets)
-        : selectUniqueAssets(assetPool.filter((asset) => asset.slug.length > 0));
-
-      const selectedAsset = selectedAssets[0];
-      const sanitizedFallbackImages = sanitizeImageSources(fallbackImages);
-      const selectedImage = selectedAsset && isValidImageSource(selectedAsset.secureUrl)
-        ? selectedAsset.secureUrl
-        : undefined;
-      const resolvedImages = selectedImage
-        ? [selectedImage]
-        : sanitizedFallbackImages.length > 0
-          ? sanitizedFallbackImages
-          : [PRODUCT_PLACEHOLDER_IMAGE];
-      const sanitizedResolvedImages = sanitizeImageSources(resolvedImages);
-      const resolvedImage = sanitizedResolvedImages[0] || PRODUCT_PLACEHOLDER_IMAGE;
+      // Heuristic Cloudinary matching has been disabled to prevent accidental
+      // assignment of assets belonging to other products. If a product has no
+      // persisted images, we return the placeholder image only. This ensures
+      // that images are only shown when explicitly linked to the product.
+      try {
+        // eslint-disable-next-line no-console
+        console.log(`[ResolveProductImagesService] No DB images for product ${product.id}; using placeholder`);
+      } catch (e) {}
 
       return {
         ...product,
-        resolvedImage,
-        images: sanitizedResolvedImages,
-      };
+        resolvedImage: PRODUCT_PLACEHOLDER_IMAGE,
+        images: [PRODUCT_PLACEHOLDER_IMAGE],
+      } as ResolvedProduct<T>;
     });
   }
 }

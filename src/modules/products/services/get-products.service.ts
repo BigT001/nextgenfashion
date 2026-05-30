@@ -10,6 +10,23 @@ import { ResolveProductImagesService } from "@/modules/media/services/resolve-pr
  * objects into plain JS values safe for the Server→Client boundary.
  */
 export class GetProductsService {
+  private static normalizeProduct(product: any) {
+    if (!product) return product;
+
+    const variants = (product.ProductVariant ?? []).map((variant: any) => ({
+      ...variant,
+    }));
+
+    return {
+      ...product,
+      variants,
+    };
+  }
+
+  private static normalizeProducts(products: any[]) {
+    return products.map((product) => this.normalizeProduct(product));
+  }
+
   static async execute(params?: {
     categoryId?: string;
     targetGender?: string;
@@ -26,7 +43,8 @@ export class GetProductsService {
         includeVariants: params?.includeVariants,
       };
       const result = await ProductQueries.findAll(searchParams);
-      const resolved = await ResolveProductImagesService.resolve(result);
+      const normalized = this.normalizeProducts(result);
+      const resolved = await ResolveProductImagesService.resolve(normalized);
       return serialize(resolved);
     } catch (error) {
       console.error("[GetProductsService.execute] Failed to load products:", error);
@@ -40,7 +58,8 @@ export class GetProductsService {
     try {
       const result = await ProductQueries.findById(id);
       if (!result) return null;
-      const [resolved] = await ResolveProductImagesService.resolve([result]);
+      const normalized = this.normalizeProduct(result);
+      const [resolved] = await ResolveProductImagesService.resolve([normalized]);
       return serialize(resolved);
     } catch (error) {
       console.error(`[GetProductsService.byId] Failed to load product ${id}:`, error);
@@ -51,7 +70,8 @@ export class GetProductsService {
   static async findFeatured(limit = 8) {
     try {
       const result = await ProductQueries.findFeatured(limit);
-      const resolved = await ResolveProductImagesService.resolve(result);
+      const normalized = this.normalizeProducts(result);
+      const resolved = await ResolveProductImagesService.resolve(normalized);
       return serialize(resolved);
     } catch (error) {
       console.error("[GetProductsService.findFeatured] Failed to load featured products:", error);

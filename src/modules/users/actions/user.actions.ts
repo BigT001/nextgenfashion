@@ -14,8 +14,8 @@ export async function getStaffDashboardAction() {
 
     // Process staff to calculate revenue contribution
     const processedStaff = staff.map(user => {
-      const revenueGenerated = user.sales.reduce((sum, sale) => sum + Number(sale.totalAmount), 0);
-      const saleCount = user.sales.length;
+      const revenueGenerated = user.Sale.reduce((sum, sale) => sum + Number(sale.totalAmount), 0);
+      const saleCount = user.Sale.length;
 
       return {
         ...user,

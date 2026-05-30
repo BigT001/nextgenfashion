@@ -77,6 +77,7 @@ function TabsTrigger({ value, className, children, disabled }: TabsTriggerProps)
 
   return (
     <button
+      type="button"
       role="tab"
       aria-selected={isActive}
       disabled={disabled}

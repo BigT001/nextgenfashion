@@ -10,16 +10,16 @@ export const POSProductQueries = {
       where: {
         OR: [
           { name: { contains: query, mode: "insensitive" } },
-          { variants: { some: { sku: { contains: query, mode: "insensitive" } } } },
+          { ProductVariant: { some: { sku: { contains: query, mode: "insensitive" } } } },
         ],
       },
       include: {
-        variants: {
+        ProductVariant: {
           include: {
-            inventory: true,
+            Inventory: true,
           },
         },
-        category: true,
+        Category: true,
       },
       orderBy: {
         name: "asc",

@@ -34,9 +34,9 @@ export class ProcessPOSSaleService {
         orderNumber,
         totalAmount: data.totalAmount,
         paymentMethod: data.paymentMethod,
-        customer: data.customerId ? { connect: { id: data.customerId } } : undefined,
-        user: { connect: { id: data.userId } },
-        items: {
+        Customer: data.customerId ? { connect: { id: data.customerId } } : undefined,
+        User: { connect: { id: data.userId } },
+        SaleItem: {
           create: data.items.map((item) => ({
             variantId: item.variantId,
             quantity: item.quantity,
@@ -52,7 +52,7 @@ export class ProcessPOSSaleService {
         saleId: sale.id,
         orderNumber: sale.orderNumber,
         totalAmount: sale.totalAmount,
-        customerEmail: sale.customer?.email,
+        customerEmail: sale.Customer?.email,
         items: data.items,
         userId: data.userId,
       });

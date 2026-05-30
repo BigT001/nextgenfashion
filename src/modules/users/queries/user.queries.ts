@@ -7,7 +7,7 @@ export const UserQueries = {
   async getAllStaff() {
     return prisma.user.findMany({
       include: {
-        sales: {
+        Sale: {
           select: {
             totalAmount: true,
             createdAt: true
@@ -27,9 +27,9 @@ export const UserQueries = {
     return prisma.user.findUnique({
       where: { id },
       include: {
-        sales: true,
-        sessions: true,
-        accounts: true
+        Sale: true,
+        Session: true,
+        Account: true
       }
     });
   },

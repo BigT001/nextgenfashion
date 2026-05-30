@@ -13,12 +13,12 @@ export class DeleteProductService {
       where: { productId: id },
       include: {
         _count: {
-          select: { saleItems: true }
+          select: { SaleItem: true }
         }
       }
     });
 
-    const hasSales = variants.some(v => v._count.saleItems > 0);
+    const hasSales = variants.some(v => v._count.SaleItem > 0);
 
     if (hasSales) {
       // Soft delete: suspend the product from storefront/checkout catalogs instead of breaking constraints

@@ -91,7 +91,10 @@ export function ProductForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
 
-  const [images, setImages] = useState<{ id: string; url: string; publicId: string; status?: "idle" | "uploading" | "uploaded" | "failed" }[]>([]);
+  const [images, setImages] = useState<{ id: string; url: string; publicId: string; status?: "idle" | "uploading" | "uploaded" | "failed" }[]>(
+    // Pre-populate with existing images when editing
+    initialData?.images?.map((url: string) => ({ id: url, url, publicId: url, status: "uploaded" as const })) ?? []
+  );
   const [isUploading, setIsUploading] = useState(false);
   const [activeTab, setActiveTab] = useState("product");
   const [isScanMode, setIsScanMode] = useState(false);
@@ -135,7 +138,7 @@ export function ProductForm({
       name: initialData.name,
       description: initialData.description || "",
       categoryId: initialData.categoryId,
-      sku: initialData.sku || initialData.variants?.[0]?.sku || "",
+      sku: initialData.sku || initialData.variants?.[0]?.sku || initialData.ProductVariant?.[0]?.sku || "",
       tags: initialData.tags || "",
       costPrice: initialData.costPrice || 0,
       sellingPrice: initialData.basePrice || initialData.price || 0,
@@ -143,7 +146,7 @@ export function ProductForm({
       discount: initialData.discount || 0,
       tax: initialData.tax || 7.5,
       hasTax: !!initialData.tax && initialData.tax > 0,
-      warehouseId: initialData.variants?.[0]?.inventory?.warehouseId || "",
+      warehouseId: initialData.variants?.[0]?.inventory?.warehouseId || initialData.ProductVariant?.[0]?.Inventory?.warehouseId || "",
     } : {
       name: "",
       description: "",
@@ -162,14 +165,15 @@ export function ProductForm({
 
   // Initialize variants from existing data
   useEffect(() => {
-    if (initialData?.variants && initialData.variants.length > 0) {
-      const initialVariants: Variant[] = initialData.variants.map((v: any, idx: number) => ({
+    const rawVariants = initialData?.variants ?? initialData?.ProductVariant ?? [];
+    if (rawVariants && rawVariants.length > 0) {
+      const initialVariants: Variant[] = rawVariants.map((v: any, idx: number) => ({
         id: v.id || `var-${idx}`,
         color: v.color || "",
         size: v.size || "",
         sku: v.sku,
         price: Number(v.price || form.getValues("sellingPrice")),
-        quantity: v.inventory?.quantity || 0,
+        quantity: v.inventory?.quantity || v.Inventory?.quantity || 0,
       }));
       setVariants(initialVariants);
     }
@@ -296,6 +300,13 @@ export function ProductForm({
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // Enforce max 5 images per product
+    if (images.length >= 5) {
+      toast.error("Maximum 5 images per product.");
+      return;
+    }
+
     // Non-blocking upload: create local preview and start background upload
     const id = `img-${Date.now()}-${Math.random().toString(36).slice(2,6)}`;
     const previewUrl = URL.createObjectURL(file);
@@ -380,6 +391,7 @@ export function ProductForm({
   };
 
   async function onSubmit(values: ProductFormValues) {
+    console.log("[ProductForm] onSubmit triggered", { isEditing, variantsLength: variants.length, imageCount: images.length });
     setIsSubmitting(true);
     try {
       if (variants.length === 0) {
@@ -412,11 +424,17 @@ export function ProductForm({
         stock: v.quantity,
       }));
 
+      // Only include successfully uploaded image URLs (filter out previews/failures)
+      const uploadedImageUrls = images
+        .filter(img => img.status === "uploaded" && img.url.startsWith("http"))
+        .map(img => img.url);
+
       const payload = {
         ...values,
         tax: values.hasTax ? values.tax : 0,
         baseSku: values.sku.split("-")[0] || values.sku,
         variants: variantPayload,
+        images: uploadedImageUrls,
       };
 
       console.log(`[ProductForm] Submitting ${isEditing ? "UPDATE" : "CREATE"} with ${variants.length} variant(s):`, payload);
@@ -432,6 +450,7 @@ export function ProductForm({
         toast.error(result.error);
       }
     } catch (error) {
+      console.error("[ProductForm] onSubmit error:", error);
       toast.error("Unexpected error occurred");
     } finally {
       setIsSubmitting(false);
@@ -440,14 +459,7 @@ export function ProductForm({
 
   return (
     <Form {...form}>
-      <form onSubmit={(e) => {
-        // Only allow form submission if explicitly triggered by save button
-        if (e.nativeEvent?.submitter?.getAttribute('data-action') !== 'save') {
-          e.preventDefault();
-          return;
-        }
-        form.handleSubmit(onSubmit)(e);
-      }} className="space-y-6">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
           <TabsList className="flex w-full bg-brand-navy/[0.04] p-1.5 rounded-2xl h-12 border border-brand-navy/10 mb-6 overflow-x-auto scrollbar-hide">
             <TabsTrigger value="product" className="flex-1 rounded-xl font-black text-[11px] uppercase tracking-widest gap-2 data-[state=active]:bg-brand-navy data-[state=active]:text-white transition-all shadow-sm">
@@ -771,12 +783,13 @@ export function ProductForm({
                         <div className="absolute bottom-0 inset-x-0 h-1/3 bg-gradient-to-t from-brand-navy/20 to-transparent opacity-0 group-hover:opacity-100 transition-all" />
                       </div>
                     ))}
-                    {images.length < 4 && (
+                    {images.length < 5 && (
                       <label
                         htmlFor={fileInputId}
                         className="relative aspect-[3/4] border-2 border-dashed border-brand-navy/10 rounded-[2rem] flex flex-col items-center justify-center gap-6 text-brand-navy/20 hover:bg-brand-navy/[0.02] hover:border-brand-navy/30 transition-all cursor-pointer group shadow-inner"
                         onClick={(event) => event.stopPropagation()}
                         onPointerDown={(event) => event.stopPropagation()}
+                        onPointerUp={(event) => event.stopPropagation()}
                       >
                         {isUploading ? ( <div className="animate-spin rounded-full h-10 w-10 border-4 border-brand-navy border-t-transparent" /> ) : (
                           <>
@@ -785,7 +798,7 @@ export function ProductForm({
                             </div>
                             <div className="text-center space-y-1">
                                 <span className="block text-[11px] font-black uppercase tracking-widest text-brand-navy">Add Media</span>
-                                <span className="text-[9px] font-black opacity-30 uppercase tracking-widest">Max 4 Units</span>
+                                <span className="text-[9px] font-black opacity-30 uppercase tracking-widest">Max 5 Images</span>
                             </div>
                           </>
                         )}
@@ -798,6 +811,7 @@ export function ProductForm({
                           disabled={isUploading}
                           onClick={(event) => event.stopPropagation()}
                           onPointerDown={(event) => event.stopPropagation()}
+                          onPointerUp={(event) => event.stopPropagation()}
                         />
                       </label>
                     )}
@@ -819,27 +833,16 @@ export function ProductForm({
             <Button variant="ghost" onClick={onClose} type="button" className="flex-1 sm:flex-none text-xs font-black uppercase tracking-[0.3em] h-12 px-4 sm:px-8 rounded-xl hover:bg-rose-500/5 text-rose-600 transition-all">CANCEL</Button>
             {activeTab !== "pricing" ? (
                 <Button
-                  type="button"
-                  onClick={() => {
-                    if (isEditing) {
-                      // For edit mode: submit the form with save action
-                      form.handleSubmit(onSubmit)();
-                    } else {
-                      // For create mode: navigate to next tab
-                      const order = ["product", "media", "pricing"];
-                      handleTabChange(order[order.indexOf(activeTab) + 1]);
-                    }
-                  }}
+                  type="submit"
+                  disabled={isSubmitting}
                   className="flex-1 sm:flex-none bg-brand-navy text-white font-black text-xs uppercase tracking-[0.3em] h-12 px-10 rounded-xl shadow-lg shadow-brand-navy/20 active:scale-95 transition-all"
                 >
-                  {isEditing ? "SAVE" : "CONTINUE"}
+                  SAVE
                 </Button>
             ) : (
                 <Button 
-                  type="button" 
+                  type="submit" 
                   disabled={isSubmitting}
-                  onClick={() => form.handleSubmit(onSubmit)()}
-                  data-action="save"
                   className="flex-1 sm:flex-none bg-brand-navy text-white font-black text-xs uppercase tracking-[0.4em] h-12 px-12 rounded-xl shadow-[0_0_20px_rgba(var(--brand-navy-rgb),0.5)] active:scale-95 transition-all"
                 >
                   {isSubmitting ? "SAVING..." : "SAVE"}

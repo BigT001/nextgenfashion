@@ -1,5 +1,6 @@
 "use server";
 
+import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { GetStaffService } from "../services/get-staff.service";
 import { CreateStaffService, CreateStaffDTO } from "../services/create-staff.service";
@@ -28,6 +29,7 @@ export async function createStaffAction(data: CreateStaffDTO) {
     const { prisma } = await import("@/services/prisma.service");
     await prisma.auditLog.create({
       data: {
+        id: randomUUID(),
         userId: actorId,
         action: "STAFF_INVITED",
         entity: "User",
@@ -61,6 +63,7 @@ export async function updateStaffAction(id: string, data: UpdateStaffDTO) {
     const { prisma } = await import("@/services/prisma.service");
     await prisma.auditLog.create({
       data: {
+        id: randomUUID(),
         userId: actorId,
         action: data.isSuspended !== undefined ? (data.isSuspended ? "STAFF_SUSPENDED" : "STAFF_ACTIVATED") : "STAFF_UPDATED",
         entity: "User",
@@ -97,6 +100,7 @@ export async function deleteStaffAction(id: string) {
     if (staff) {
       await prisma.auditLog.create({
         data: {
+          id: randomUUID(),
           userId: actorId,
           action: "STAFF_DELETED",
           entity: "User",
@@ -144,7 +148,7 @@ export async function getStaffLogsAction(staffId: string, staffName?: string, st
 
     const variants = await prisma.productVariant.findMany({
       where: { id: { in: possibleVariantIds } },
-      include: { product: true }
+      include: { Product: true }
     });
 
     const variantMap = new Map(variants.map(v => [v.id, v]));
@@ -166,10 +170,10 @@ export async function getStaffLogsAction(staffId: string, staffName?: string, st
     const sales = await prisma.sale.findMany({
       where: { id: { in: saleIds } },
       include: {
-        items: {
+        SaleItem: {
           include: {
-            variant: {
-              include: { product: true }
+            ProductVariant: {
+              include: { Product: true }
             }
           }
         }
@@ -184,7 +188,7 @@ export async function getStaffLogsAction(staffId: string, staffName?: string, st
       if (["STOCK_DECREMENT", "STOCK_INCREMENT", "LOW_STOCK_ALERT"].includes(log.action)) {
         const variant = variantMap.get(log.entityId);
         if (variant) {
-          details.productName = `${variant.product.name} (${variant.size || ""}${variant.color ? ` / ${variant.color}` : ""})`;
+          details.productName = `${variant.Product.name} (${variant.size || ""}${variant.color ? ` / ${variant.color}` : ""})`;
           details.sku = variant.sku;
         }
       }
@@ -199,11 +203,11 @@ export async function getStaffLogsAction(staffId: string, staffName?: string, st
       if (log.action === "SALE_COMPLETED" && (!details.items || details.items.length === 0)) {
         const sale = saleMap.get(log.entityId);
         if (sale) {
-          details.items = sale.items.map(item => ({
-            productName: item.variant.product.name,
-            sku: item.variant.sku,
-            size: item.variant.size,
-            color: item.variant.color,
+          details.items = sale.SaleItem.map(item => ({
+            productName: item.ProductVariant.Product.name,
+            sku: item.ProductVariant.sku,
+            size: item.ProductVariant.size,
+            color: item.ProductVariant.color,
             quantity: item.quantity,
             price: Number(item.price),
           }));

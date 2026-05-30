@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { events, SYSTEM_EVENTS } from "./events";
 import { NotificationService } from "@/services/notification.service";
 import { prisma } from "@/services/prisma.service";
@@ -26,11 +27,11 @@ events.on(SYSTEM_EVENTS.SALE.CREATED, async (data) => {
       for (const item of data.items) {
         const variant = await prisma.productVariant.findUnique({
           where: { id: item.variantId },
-          include: { product: true },
+          include: { Product: true },
         });
         if (variant) {
           itemsWithDetails.push({
-            productName: variant.product.name,
+            productName: variant.Product.name,
             sku: variant.sku,
             size: variant.size,
             color: variant.color,
@@ -43,6 +44,7 @@ events.on(SYSTEM_EVENTS.SALE.CREATED, async (data) => {
 
     await prisma.auditLog.create({
       data: {
+        id: randomUUID(),
         userId: data.userId,
         action: "SALE_COMPLETED",
         entity: "Sale",
@@ -74,6 +76,7 @@ events.on(SYSTEM_EVENTS.INVENTORY.LOW_STOCK, async (data) => {
     // Reaction: Log the alert
     await prisma.auditLog.create({
       data: {
+        id: randomUUID(),
         userId: "system",
         action: "LOW_STOCK_ALERT",
         entity: "Inventory",

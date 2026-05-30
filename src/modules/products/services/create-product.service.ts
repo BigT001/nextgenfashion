@@ -10,6 +10,7 @@ export class CreateProductService {
   static async execute(
     productData: Omit<Prisma.ProductCreateInput, "category" | "images"> & {
       categoryId: string;
+      images?: string[];
     },
     variants: (Prisma.ProductVariantCreateWithoutProductInput & {
       stock: number;
@@ -80,6 +81,8 @@ export class CreateProductService {
       basePrice: productData.basePrice,
       costPrice: (productData as any).costPrice,
       tax: (productData as any).tax,
+      // Persist uploaded image URLs — unique to this product
+      images: (productData as any).images ?? [],
       category: { connect: { id: productData.categoryId } },
     };
 

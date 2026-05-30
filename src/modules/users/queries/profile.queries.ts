@@ -8,11 +8,11 @@ export const ProfileQueries = {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       include: {
-        sales: {
+        Sale: {
           orderBy: { createdAt: "desc" },
           take: 10,
           include: {
-            customer: true
+            Customer: true
           }
         },
       }

@@ -17,10 +17,10 @@ export async function validateCartItemsAction(items: { productId?: string; varia
 
     const product = item.productId ? await prisma.product.findUnique({
       where: { id: item.productId },
-      include: { variants: true },
+      include: { ProductVariant: true },
     }) : null;
 
-    if (product && product.variants.length > 0) continue;
+    if (product && product.ProductVariant.length > 0) continue;
 
     invalidItems.push(item);
   }
@@ -173,13 +173,13 @@ export async function createOrderAction(data: CreateOrderActionPayload) {
       let fallbackVariant = null as null | { id: string };
       let product = await prisma.product.findUnique({
         where: { id: productId },
-        include: { variants: true },
+        include: { ProductVariant: true },
       });
       console.log("[createOrderAction] product lookup for fallback", {
         productId,
         productFound: Boolean(product),
-        variantCount: product?.variants?.length ?? 0,
-        variants: product?.variants?.map((v) => ({ id: v.id, sku: v.sku, size: v.size, color: v.color })) ?? [],
+        variantCount: product?.ProductVariant?.length ?? 0,
+        variants: product?.ProductVariant?.map((v) => ({ id: v.id, sku: v.sku, size: v.size, color: v.color })) ?? [],
       });
 
       if (!product) {
@@ -195,17 +195,17 @@ export async function createOrderAction(data: CreateOrderActionPayload) {
           fallbackVariant = productVariantCandidate;
           product = await prisma.product.findUnique({
             where: { id: productVariantCandidate.productId },
-            include: { variants: true },
+            include: { ProductVariant: true },
           });
           console.log("[createOrderAction] resolved product from variant candidate", {
             resolvedProductId: product?.id,
-            variantCount: product?.variants?.length ?? 0,
+            variantCount: product?.ProductVariant?.length ?? 0,
           });
         }
       }
 
       if (!fallbackVariant) {
-        fallbackVariant = product?.variants?.[0] ?? null;
+        fallbackVariant = product?.ProductVariant?.[0] ?? null;
       }
 
       console.log("[createOrderAction] chosen fallbackVariant", {
@@ -275,8 +275,8 @@ export async function createOrderAction(data: CreateOrderActionPayload) {
         status: data.status || "PENDING",
         paymentMethod: data.paymentMethod,
         paymentRef: data.paymentRef,
-        customer: { connect: { id: customer.id } },
-        items: {
+        Customer: { connect: { id: customer.id } },
+        SaleItem: {
           create: sanitizedItems.map(item => ({
             variantId: item.variantId,
             quantity: item.quantity,
