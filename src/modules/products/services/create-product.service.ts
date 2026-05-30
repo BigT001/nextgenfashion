@@ -78,21 +78,21 @@ export class CreateProductService {
     const createInput: any = {
       name: productData.name,
       description: productData.description,
-      basePrice: productData.basePrice,
+      ...(productData.basePrice !== undefined ? { basePrice: productData.basePrice } : {}),
       costPrice: (productData as any).costPrice,
       tax: (productData as any).tax,
       // Persist uploaded image URLs — unique to this product
       images: (productData as any).images ?? [],
-      category: { connect: { id: productData.categoryId } },
+      Category: { connect: { id: productData.categoryId } },
     };
 
     // targetAudience removed from schema — no-op
 
-    createInput.variants = {
+    createInput.ProductVariant = {
       create: variants.map(({ stock, ...v }, i) => ({
         ...v,
         sku: finalSkus[i],
-        inventory: {
+        Inventory: {
           create: {
             quantity: stock,
             warehouseId: (productData as any).warehouseId || null,

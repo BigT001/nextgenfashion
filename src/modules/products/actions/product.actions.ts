@@ -42,8 +42,13 @@ export async function createProductAction(data: any) {
   try {
     const { variants, categoryId, ...productData } = data;
     
-    // Process basePrice - use the lowest variant price if not provided
-    const basePrice = productData.basePrice || Math.min(...variants.map((v: any) => v.price));
+    const variantPrices = variants
+      .map((v: any) => typeof v.price === "number" ? v.price : NaN)
+      .filter((price: number) => !Number.isNaN(price));
+
+    const basePrice = productData.basePrice ?? productData.sellingPrice ?? (
+      variantPrices.length > 0 ? Math.min(...variantPrices) : 0
+    );
 
     const product = await CreateProductService.execute(
       { 

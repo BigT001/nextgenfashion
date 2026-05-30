@@ -83,7 +83,7 @@ model Product {
   id             String           @id @default(uuid())
   name           String
   description    String?
-  basePrice      Decimal          @db.Decimal(10, 2)
+  basePrice      Decimal?         @db.Decimal(10, 2)
   categoryId     String
   targetGender   String?
   createdAt      DateTime         @default(now())
@@ -187,6 +187,17 @@ model Warehouse {
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
   Inventory Inventory[]
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model Settings {
+  id                 String   @id @default(uuid())
+  key                String   @unique
+  value              String
+  description        String?
+  dataType           String   @default("boolean") // boolean, string, number, json
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 }
 
 enum PaymentMethod {

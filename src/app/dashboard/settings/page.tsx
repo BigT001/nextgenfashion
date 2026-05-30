@@ -17,6 +17,7 @@ import {
   Palette,
   Cloud
 } from "lucide-react";
+import { getProductPriceRequirement, setProductPriceRequirement } from "@/lib/product-settings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -38,6 +39,7 @@ import { cn } from "@/lib/utils";
 export default function SettingsPage() {
   const [data, setData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [priceFieldsRequired, setPriceFieldsRequired] = useState(true);
 
   useEffect(() => {
     async function loadData() {
@@ -49,6 +51,16 @@ export default function SettingsPage() {
     }
     loadData();
   }, []);
+
+  useEffect(() => {
+    setPriceFieldsRequired(getProductPriceRequirement());
+  }, []);
+
+  const handlePriceToggle = () => {
+    const nextValue = !priceFieldsRequired;
+    setPriceFieldsRequired(nextValue);
+    setProductPriceRequirement(nextValue);
+  };
 
   if (isLoading) {
     return (
@@ -205,6 +217,46 @@ export default function SettingsPage() {
                     </Card>
                 ))}
             </div>
+            <Card className="glass-card border-none shadow-sm hover:shadow-xl transition-all p-10 rounded-[2.5rem] group">
+              <div className="flex items-start justify-between mb-8">
+                <div className="size-16 rounded-3xl bg-brand-navy/10 flex items-center justify-center text-brand-navy transition-all duration-500">
+                  <SettingsIcon className="size-8" />
+                </div>
+                <Badge className={cn(
+                  "border-none font-black text-[9px] px-3 uppercase tracking-widest",
+                  priceFieldsRequired ? "bg-emerald-500/10 text-emerald-500" : "bg-slate-400/10 text-slate-700"
+                )}>
+                  {priceFieldsRequired ? "MANDATORY" : "OPTIONAL"}
+                </Badge>
+              </div>
+
+              <div className="space-y-4">
+                <h4 className="text-2xl font-black tracking-tight">Product Upload Price Rules</h4>
+                <p className="text-muted-foreground font-medium leading-relaxed">Toggle whether product upload must include Cost Price and Selling Price. This persists across sessions and keeps existing product data intact.</p>
+
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 rounded-3xl bg-brand-navy/5 border border-border/30">
+                  <div>
+                    <p className="text-sm font-black uppercase tracking-[0.3em] text-brand-navy">Require Price Fields</p>
+                    <p className="text-xs text-muted-foreground">When enabled, Cost Price and Selling Price are required during product creation.</p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handlePriceToggle}
+                    className={cn(
+                      "relative inline-flex h-12 w-20 rounded-full transition-colors duration-300 focus:outline-none",
+                      priceFieldsRequired ? "bg-emerald-500" : "bg-slate-300"
+                    )}
+                  >
+                    <span className={cn(
+                      "absolute left-1 top-1 h-10 w-10 rounded-full bg-white shadow-sm transition-transform duration-300",
+                      priceFieldsRequired ? "translate-x-8" : "translate-x-0"
+                    )} />
+                    <span className="sr-only">Toggle product price requirement</span>
+                  </button>
+                </div>
+              </div>
+            </Card>
         </TabsContent>
       </Tabs>
     </div>

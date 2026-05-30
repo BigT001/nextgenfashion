@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useId } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { getProductPriceRequirement } from "@/lib/product-settings";
 import { useForm, Resolver } from "react-hook-form";
 import * as z from "zod";
 import { 
@@ -69,8 +70,8 @@ const productSchema = z.object({
   categoryId: z.string().min(1, "Category is required"),
   sku: z.string().min(1, "Product ID is required"),
   tags: z.string().optional(),
-  costPrice: z.coerce.number().min(1, "Cost Price is required"),
-  sellingPrice: z.coerce.number().min(1, "Selling Price is required"),
+  costPrice: z.coerce.number().optional(),
+  sellingPrice: z.coerce.number().optional(),
   promoPrice: z.coerce.number().optional(),
   discount: z.coerce.number().optional(),
   tax: z.coerce.number().optional(),
@@ -89,6 +90,7 @@ export function ProductForm({
 }) {
   const isEditing = !!initialData;
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [priceFieldsRequired, setPriceFieldsRequired] = useState(true);
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
 
   const [images, setImages] = useState<{ id: string; url: string; publicId: string; status?: "idle" | "uploading" | "uploaded" | "failed" }[]>(
@@ -123,6 +125,7 @@ export function ProductForm({
       }
     }
     fetchData();
+    setPriceFieldsRequired(getProductPriceRequirement());
   }, []);
 
   const [warehouses, setWarehouses] = useState<any[]>([]);
@@ -153,10 +156,10 @@ export function ProductForm({
       categoryId: "",
       sku: "",
       tags: "",
-      costPrice: 0,
-      sellingPrice: 0,
-      promoPrice: 0,
-      discount: 0,
+      costPrice: undefined,
+      sellingPrice: undefined,
+      promoPrice: undefined,
+      discount: undefined,
       tax: 7.5,
       hasTax: false,
       warehouseId: "",
@@ -172,7 +175,7 @@ export function ProductForm({
         color: v.color || "",
         size: v.size || "",
         sku: v.sku,
-        price: Number(v.price || form.getValues("sellingPrice")),
+        price: v.price !== undefined ? Number(v.price) : undefined,
         quantity: v.inventory?.quantity || v.Inventory?.quantity || 0,
       }));
       setVariants(initialVariants);
@@ -224,6 +227,34 @@ export function ProductForm({
     }
   };
 
+  const validatePricingFields = async () => {
+    form.clearErrors(["costPrice", "sellingPrice"]);
+
+    if (!priceFieldsRequired) {
+      return true;
+    }
+
+    const costPrice = form.getValues("costPrice");
+    const sellingPrice = form.getValues("sellingPrice");
+    let valid = true;
+
+    if (costPrice === undefined || costPrice === null || Number(costPrice) <= 0) {
+      form.setError("costPrice", { type: "manual", message: "Cost Price is required" });
+      valid = false;
+    }
+
+    if (sellingPrice === undefined || sellingPrice === null || Number(sellingPrice) <= 0) {
+      form.setError("sellingPrice", { type: "manual", message: "Selling Price is required" });
+      valid = false;
+    }
+
+    if (!valid) {
+      toast.error("Cost Price and Selling Price are mandatory");
+    }
+
+    return valid;
+  };
+
   const validateTab = async (tab: string) => {
     if (tab === "product") {
         const fields: (keyof ProductFormValues)[] = ["name", "categoryId"];
@@ -238,12 +269,7 @@ export function ProductForm({
         }
     }
     if (tab === "pricing") {
-        const fields: (keyof ProductFormValues)[] = ["costPrice", "sellingPrice"];
-        const result = await form.trigger(fields);
-        if (!result) {
-            toast.error("Cost Price and Selling Price are mandatory");
-            return false;
-        }
+        return await validatePricingFields();
     }
     return true;
   };
@@ -400,6 +426,14 @@ export function ProductForm({
         return;
       }
 
+      if (priceFieldsRequired) {
+        const pricingValid = await validatePricingFields();
+        if (!pricingValid) {
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
       const uploadingImages = images.filter(img => img.status === "uploading");
       const failedImages = images.filter(img => img.status === "failed");
 
@@ -431,6 +465,8 @@ export function ProductForm({
 
       const payload = {
         ...values,
+        costPrice: values.costPrice && Number(values.costPrice) > 0 ? values.costPrice : undefined,
+        sellingPrice: values.sellingPrice && Number(values.sellingPrice) > 0 ? values.sellingPrice : undefined,
         tax: values.hasTax ? values.tax : 0,
         baseSku: values.sku.split("-")[0] || values.sku,
         variants: variantPayload,
@@ -615,14 +651,26 @@ export function ProductForm({
               <div className="space-y-4 p-6 bg-brand-navy/[0.02] border border-brand-navy/10 rounded-3xl shadow-inner">
                 <FormField control={form.control} name="costPrice" render={({ field }) => (
                   <FormItem className="space-y-2">
-                    <FormLabel className="text-[11px] font-black uppercase tracking-widest text-brand-navy">Cost Price (₦)</FormLabel>
-                    <FormControl><Input type="number" className="h-12 bg-white border-2 border-brand-navy/5 rounded-xl font-black text-brand-navy text-xl" {...field} /></FormControl>
+                    <div className="flex items-center justify-between gap-3">
+                      <FormLabel className="text-[11px] font-black uppercase tracking-widest text-brand-navy">Cost Price (₦)</FormLabel>
+                      {!priceFieldsRequired && (
+                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Optional</span>
+                      )}
+                    </div>
+                    <FormControl><Input type="number" placeholder={priceFieldsRequired ? "Required" : "Optional"} className="h-12 bg-white border-2 border-brand-navy/5 rounded-xl font-black text-brand-navy text-xl" {...field} /></FormControl>
+                    <FormMessage />
                   </FormItem>
                 )} />
                 <FormField control={form.control} name="sellingPrice" render={({ field }) => (
                   <FormItem className="space-y-2">
-                    <FormLabel className="text-[11px] font-black uppercase tracking-widest text-brand-navy">Selling Price (₦)</FormLabel>
-                    <FormControl><Input type="number" className="h-12 bg-white border-2 border-brand-navy/20 rounded-xl font-black text-brand-navy text-xl shadow-sm focus:border-brand-navy transition-all" {...field} /></FormControl>
+                    <div className="flex items-center justify-between gap-3">
+                      <FormLabel className="text-[11px] font-black uppercase tracking-widest text-brand-navy">Selling Price (₦)</FormLabel>
+                      {!priceFieldsRequired && (
+                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Optional</span>
+                      )}
+                    </div>
+                    <FormControl><Input type="number" placeholder={priceFieldsRequired ? "Required" : "Optional"} className="h-12 bg-white border-2 border-brand-navy/20 rounded-xl font-black text-brand-navy text-xl shadow-sm focus:border-brand-navy transition-all" {...field} /></FormControl>
+                    <FormMessage />
                   </FormItem>
                 )} />
               </div>

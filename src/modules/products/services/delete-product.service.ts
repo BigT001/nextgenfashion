@@ -35,6 +35,6 @@ export class DeleteProductService {
     }
 
     const deleted = await ProductQueries.delete(id);
-    return { success: true, data: deleted };
+    return { success: true, data: JSON.parse(JSON.stringify(deleted)) };
   }
 }

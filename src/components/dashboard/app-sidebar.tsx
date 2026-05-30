@@ -102,6 +102,12 @@ const data = {
           icon: BarChart3,
           roles: [UserRole.SUPERADMIN, UserRole.ADMIN],
         },
+        {
+          title: "Settings",
+          url: "/dashboard/settings",
+          icon: Settings,
+          roles: [UserRole.SUPERADMIN, UserRole.ADMIN],
+        },
       ],
     },
   ],

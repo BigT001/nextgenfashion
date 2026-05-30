@@ -28,7 +28,7 @@ export interface Variant {
   color: string;
   size: string;
   sku: string;
-  price: number;
+  price?: number;
   quantity: number;
 }
 
@@ -50,7 +50,6 @@ export function VariantBuilder({
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newColor, setNewColor] = useState("");
   const [newSize, setNewSize] = useState("");
-  const [newPrice, setNewPrice] = useState(sellingPrice.toString());
   const [newQuantity, setNewQuantity] = useState("0");
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -70,10 +69,6 @@ export function VariantBuilder({
     }
     if (!newSize.trim()) {
       toast.error("Size is required");
-      return;
-    }
-    if (Number(newPrice) <= 0) {
-      toast.error("Price must be greater than 0");
       return;
     }
     if (Number(newQuantity) < 0) {
@@ -103,7 +98,6 @@ export function VariantBuilder({
                 ...v,
                 color: newColor,
                 size: newSize,
-                price: Number(newPrice),
                 quantity: Number(newQuantity),
               }
             : v
@@ -120,17 +114,14 @@ export function VariantBuilder({
           color: newColor,
           size: newSize,
           sku,
-          price: Number(newPrice),
           quantity: Number(newQuantity),
         },
       ]);
       toast.success("Variant added");
     }
 
-    // Reset form
     setNewColor("");
     setNewSize("");
-    setNewPrice(sellingPrice.toString());
     setNewQuantity("0");
     setEditingId(null);
     setIsDialogOpen(false);
@@ -145,7 +136,6 @@ export function VariantBuilder({
     setEditingId(variant.id);
     setNewColor(variant.color);
     setNewSize(variant.size);
-    setNewPrice(variant.price.toString());
     setNewQuantity(variant.quantity.toString());
     setIsDialogOpen(true);
   };
@@ -169,7 +159,6 @@ export function VariantBuilder({
             color,
             size,
             sku,
-            price: sellingPrice,
             quantity: 0,
           });
         }
@@ -195,7 +184,6 @@ export function VariantBuilder({
               setEditingId(null);
               setNewColor("");
               setNewSize("");
-              setNewPrice(sellingPrice.toString());
               setNewQuantity("0");
             }}
             aria-label="Add Variant"
@@ -229,18 +217,6 @@ export function VariantBuilder({
                     placeholder="e.g. S, M, L, XL"
                     value={newSize}
                     onChange={(e) => setNewSize(e.target.value)}
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-bold uppercase tracking-widest">
-                    Price (₦)
-                  </label>
-                  <Input
-                    type="number"
-                    placeholder="Enter price"
-                    value={newPrice}
-                    onChange={(e) => setNewPrice(e.target.value)}
                     className="mt-1"
                   />
                 </div>
@@ -307,9 +283,6 @@ export function VariantBuilder({
                   SKU
                 </TableHead>
                 <TableHead className="text-[10px] font-black uppercase tracking-[0.35em] text-right">
-                  Price
-                </TableHead>
-                <TableHead className="text-[10px] font-black uppercase tracking-[0.35em] text-right">
                   Qty
                 </TableHead>
                 <TableHead className="text-[10px] font-black uppercase tracking-[0.35em]">
@@ -324,9 +297,6 @@ export function VariantBuilder({
                   <TableCell className="font-medium text-[11px]">{variant.size}</TableCell>
                   <TableCell className="text-[10px] text-brand-navy/60">
                     {variant.sku}
-                  </TableCell>
-                  <TableCell className="text-right font-medium text-[11px]">
-                    ₦{variant.price.toLocaleString()}
                   </TableCell>
                   <TableCell className="text-right">
                     <span
