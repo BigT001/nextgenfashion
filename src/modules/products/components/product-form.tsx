@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useId } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { getProductPriceRequirement } from "@/lib/product-settings";
 import { useForm, Resolver } from "react-hook-form";
+import { getProductPriceRequirementSetting } from "@/modules/settings/actions/settings.actions";
 import * as z from "zod";
 import { 
   Plus, 
@@ -123,9 +123,11 @@ export function ProductForm({
         const whResult = await getWarehousesAction();
         if (whResult.success) setWarehouses(whResult.data || []);
       }
+
+      const enabled = await getProductPriceRequirementSetting();
+      setPriceFieldsRequired(enabled);
     }
     fetchData();
-    setPriceFieldsRequired(getProductPriceRequirement());
   }, []);
 
   const [warehouses, setWarehouses] = useState<any[]>([]);
@@ -426,7 +428,7 @@ export function ProductForm({
         return;
       }
 
-      const effectivePriceRequirement = getProductPriceRequirement();
+      const effectivePriceRequirement = await getProductPriceRequirementSetting();
       if (effectivePriceRequirement) {
         const pricingValid = await validatePricingFields();
         if (!pricingValid) {

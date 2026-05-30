@@ -17,11 +17,11 @@ import {
   Palette,
   Cloud
 } from "lucide-react";
-import { getProductPriceRequirement, setProductPriceRequirement } from "@/lib/product-settings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { getProductPriceRequirementSetting, setProductPriceRequirementSetting } from "@/modules/settings/actions/settings.actions";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -53,13 +53,17 @@ export default function SettingsPage() {
   }, []);
 
   useEffect(() => {
-    setPriceFieldsRequired(getProductPriceRequirement());
+    async function loadSettings() {
+      const enabled = await getProductPriceRequirementSetting();
+      setPriceFieldsRequired(enabled);
+    }
+    loadSettings();
   }, []);
 
-  const handlePriceToggle = () => {
+  const handlePriceToggle = async () => {
     const nextValue = !priceFieldsRequired;
-    setPriceFieldsRequired(nextValue);
-    setProductPriceRequirement(nextValue);
+    const result = await setProductPriceRequirementSetting(nextValue);
+    setPriceFieldsRequired(result.value);
   };
 
   if (isLoading) {
