@@ -426,7 +426,8 @@ export function ProductForm({
         return;
       }
 
-      if (priceFieldsRequired) {
+      const effectivePriceRequirement = getProductPriceRequirement();
+      if (effectivePriceRequirement) {
         const pricingValid = await validatePricingFields();
         if (!pricingValid) {
           setIsSubmitting(false);
