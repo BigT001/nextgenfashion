@@ -15,6 +15,7 @@ export class GetProductsService {
 
     const variants = (product.ProductVariant ?? []).map((variant: any) => ({
       ...variant,
+      inventory: variant.Inventory ?? variant.inventory,
     }));
 
     return {

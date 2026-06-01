@@ -41,7 +41,9 @@ export class ProductQueries {
       },
       include: {
         Category: true,
-        ProductVariant: params.includeVariants ?? true,
+        ProductVariant: params.includeVariants ?? true
+          ? { include: { Inventory: true } }
+          : false,
       },
       orderBy: { createdAt: "desc" },
     });
@@ -59,7 +61,9 @@ export class ProductQueries {
         take: limit,
         include: {
           Category: true,
-          ProductVariant: true,
+          ProductVariant: {
+            include: { Inventory: true }
+          },
         },
         orderBy: { createdAt: "desc" },
       });
