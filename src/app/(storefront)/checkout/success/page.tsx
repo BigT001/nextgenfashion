@@ -1,12 +1,17 @@
 "use client";
 
 import Link from "next/link";
+import { Suspense, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { CheckCircle2, Package, ArrowRight, ShoppingBag, Sparkles, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useEffect } from "react";
 import confetti from "canvas-confetti";
 
-export default function OrderSuccessPage() {
+function OrderSuccessClient() {
+  const searchParams = useSearchParams();
+  const orderNumber = searchParams.get("orderNumber");
+  const totalAmount = searchParams.get("totalAmount");
+
   useEffect(() => {
     // Fire celebratory confetti
     const duration = 3 * 1000;
@@ -37,62 +42,55 @@ export default function OrderSuccessPage() {
       <div className="absolute inset-0 bg-brand-mesh opacity-5" />
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 size-[800px] bg-brand-navy/5 rounded-full blur-[120px] -z-10" />
 
-      <div className="max-w-2xl w-full text-center space-y-12 animate-slow-fade relative z-10">
-        <div className="relative inline-block">
-            <div className="absolute inset-0 bg-brand-navy/20 blur-3xl rounded-full animate-pulse" />
-            <div className="relative size-32 bg-brand-navy rounded-[2.5rem] flex items-center justify-center text-white shadow-2xl shadow-brand-navy/40 animate-in zoom-in duration-700">
-                <CheckCircle2 className="size-16" />
-            </div>
+      <div className="max-w-4xl w-full text-center space-y-12 animate-slow-fade relative z-10">
+        <div className="inline-flex items-center justify-center gap-5 rounded-full bg-brand-navy/5 px-6 py-4 shadow-lg shadow-brand-navy/10 mx-auto">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-navy text-white shadow-sm">
+            <CheckCircle2 className="size-6" />
+          </div>
+          <span className="text-xs font-black uppercase tracking-[0.45em] text-brand-navy">ORDER CONFIRMED</span>
         </div>
 
         <div className="space-y-6">
-          <h1 className="text-5xl md:text-7xl font-black tracking-tighter leading-none">
-            CONGRATULATIONS <span className="text-gradient">🎉</span>
+          <h1 className="text-5xl md:text-6xl font-black tracking-tight leading-none text-slate-950">
+            CONGRATULATIONS <span className="text-brand-navy">🎉</span>
           </h1>
-          <p className="text-xl text-muted-foreground font-medium max-w-lg mx-auto leading-relaxed">
-            Your payment was successful and your order is confirmed. Thank you for shopping with NextGen Fashion — your order details are now available in your dashboard.
+          <p className="mx-auto max-w-2xl text-lg text-slate-600 font-medium leading-8">
+            Your payment was successful and your order is confirmed. We’ve emailed your receipt and delivery details — you can track the status anytime from your dashboard.
           </p>
         </div>
 
-        <div className="glass-card p-10 rounded-[3rem] border-none shadow-2xl space-y-8 max-w-md mx-auto relative overflow-hidden">
-            <div className="absolute inset-0 bg-brand-mesh opacity-5" />
-            <div className="flex items-center justify-center gap-4 text-brand-navy">
-                <Sparkles className="size-5" />
-                <span className="text-[10px] font-black uppercase tracking-[0.4em]">NextGen Integrity Standard</span>
-            </div>
-            
-            <div className="space-y-4">
-                <div className="flex justify-between items-center px-4">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Order Status</span>
-                    <Badge className="bg-emerald-500/10 text-emerald-600 border-none font-black text-[10px] px-3 py-1">VERIFIED</Badge>
-                </div>
-                <div className="flex justify-between items-center px-4">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Logistics</span>
-                    <span className="text-xs font-black tracking-widest uppercase">EXPRESS READY</span>
-                </div>
+        <div className="relative overflow-hidden rounded-[3rem] border border-slate-200/80 bg-white/95 shadow-[0_40px_120px_rgba(15,23,42,0.08)] p-8 sm:p-10">
+          <div className="absolute top-0 right-0 h-32 w-32 rounded-full bg-brand-navy/10 blur-3xl opacity-70" />
+          <div className="relative space-y-8">
+            <div className="rounded-3xl border border-slate-200/70 bg-slate-900/5 p-6 text-left">
+              <p className="text-sm uppercase tracking-[0.35em] text-slate-500">What happens next</p>
+              <ul className="mt-4 space-y-3 text-sm leading-7 text-slate-700">
+                <li>• Confirmation email delivered to your inbox.</li>
+                <li>• Order progress will appear in your account.</li>
+                <li>• Our logistics team starts processing immediately.</li>
+              </ul>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Link href="/dashboard/orders" className="block w-full">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Link href="/account" className="block w-full">
                 <Button className="w-full h-16 bg-brand-navy text-white rounded-2xl font-black text-xs uppercase tracking-[0.3em] shadow-2xl group transition-all active:scale-95">
-                    VIEW DASHBOARD
-                    <ArrowRight className="ml-3 size-4 group-hover:translate-x-1 transition-transform" />
+                  VIEW ACCOUNT
+                  <ArrowRight className="ml-3 size-4 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </Link>
               <Link href="/shop" className="block w-full">
                 <Button variant="outline" className="w-full h-16 border-2 border-brand-navy text-brand-navy rounded-2xl font-black text-xs uppercase tracking-[0.3em] shadow-none group transition-all active:scale-95">
-                    CONTINUE SHOPPING
-                    <ArrowRight className="ml-3 size-4 group-hover:translate-x-1 transition-transform" />
+                  CONTINUE SHOPPING
+                  <ArrowRight className="ml-3 size-4 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </Link>
             </div>
+          </div>
         </div>
 
-        <div className="flex items-center justify-center gap-8 opacity-40">
-            {[Package, ShoppingBag, Zap].map((Icon, i) => (
-                <Icon key={i} className="size-6" />
-            ))}
-        </div>
+        <p className="text-sm uppercase tracking-[0.35em] text-slate-400">
+          Need help? Contact support at <a href="tel:+234800NEXTGEN" className="font-semibold text-brand-navy">+234 800 NEXTGEN</a>
+        </p>
       </div>
     </div>
   );
@@ -108,4 +106,12 @@ function Badge({ className, children }: { className?: string; children: React.Re
 
 function cn(...inputs: Array<string | number | boolean | undefined | null>) {
     return inputs.filter(Boolean).join(" ");
+}
+
+export default function OrderSuccessPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+      <OrderSuccessClient />
+    </Suspense>
+  );
 }
