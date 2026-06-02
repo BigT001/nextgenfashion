@@ -93,6 +93,47 @@ export default function CheckoutPage() {
     city: "",
     zip: "",
   });
+  const [formErrors, setFormErrors] = useState<{ fullName?: string; email?: string; phone?: string }>({});
+
+  const validateEmail = (value: string) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+  };
+
+  const populateUserDetails = (profile: any | null, user: any | null, current: typeof shippingInfo) => ({
+    fullName: profile?.name || user?.name || current.fullName,
+    email: profile?.email || user?.email || current.email,
+    phone: profile?.phone || current.phone,
+    address: profile?.address || current.address,
+    city: current.city,
+    zip: current.zip,
+  });
+
+  const validateIdentityStep = () => {
+    const errors: typeof formErrors = {};
+
+    if (!shippingInfo.fullName.trim()) {
+      errors.fullName = "Full name is required.";
+    }
+
+    if (!shippingInfo.email.trim()) {
+      errors.email = "Email is required.";
+    } else if (!validateEmail(shippingInfo.email)) {
+      errors.email = "Enter a valid email address.";
+    }
+
+    if (!shippingInfo.phone.trim()) {
+      errors.phone = "Phone number is required.";
+    } else if (!/^\d+$/.test(shippingInfo.phone)) {
+      errors.phone = "Phone must contain only numbers.";
+    } else if (shippingInfo.phone.length > 11) {
+      errors.phone = "Phone number cannot exceed 11 digits.";
+    } else if (shippingInfo.phone.length < 7) {
+      errors.phone = "Phone number must have at least 7 digits.";
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   // Financial Orchestration
   const subtotal = getTotal();
@@ -126,17 +167,9 @@ export default function CheckoutPage() {
   }, [customerId, status]);
 
   useEffect(() => {
-    if (!customerProfile) return;
-
-    setShippingInfo((current) => ({
-      fullName: customerProfile.name || current.fullName,
-      email: customerProfile.email || current.email,
-      phone: customerProfile.phone || current.phone,
-      address: customerProfile.address || current.address,
-      city: current.city,
-      zip: current.zip,
-    }));
-  }, [customerProfile]);
+    if (status !== "authenticated") return;
+    setShippingInfo((current) => populateUserDetails(customerProfile, session?.user as any, current));
+  }, [customerProfile, session?.user, status]);
 
   const fwConfig = useMemo(
     () => ({
@@ -191,6 +224,9 @@ export default function CheckoutPage() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (step === "IDENTITY") {
+      if (!validateIdentityStep()) {
+        return;
+      }
       setStep("LOGISTICS");
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
@@ -352,14 +388,17 @@ export default function CheckoutPage() {
             <form id="checkout-form" onSubmit={handleSubmit} className="lg:col-span-7 space-y-10">
               
               {/* Persistent step tabs for consistent navigation */}
-              <div className="mb-6 grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:gap-4">
+              <div className="mb-6 grid grid-cols-1 gap-3 md:grid-cols-2">
                 {steps.map((s) => (
                   <button
                     key={s.id}
                     type="button"
-                    onClick={() => setStep(s.id)}
+                    onClick={() => {
+                      if (s.id === "LOGISTICS" && step === "IDENTITY" && !validateIdentityStep()) return;
+                      setStep(s.id);
+                    }}
                     className={cn(
-                      "flex items-center justify-center gap-2 rounded-[1.75rem] py-3 px-3 text-[11px] font-black uppercase tracking-[0.3em] transition-all shadow-sm min-h-[52px]",
+                      "flex w-full items-center justify-center gap-2 rounded-[1.75rem] py-3 px-4 text-[11px] font-black uppercase tracking-[0.3em] transition-all shadow-sm min-h-[52px]",
                       step === s.id
                         ? "bg-brand-navy text-white"
                         : "bg-white text-zinc-600 border border-zinc-200 hover:border-brand-navy/80"
@@ -390,18 +429,22 @@ export default function CheckoutPage() {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
                         <div className="space-y-3 md:col-span-2">
                             <Label htmlFor="fullName" className="text-[10px] font-black uppercase tracking-[0.2em] ml-2 opacity-60">Full Legal Name</Label>
                             <Input 
                                 id="fullName" 
                                 name="fullName" 
                                 value={shippingInfo.fullName}
-                                onChange={(e) => setShippingInfo({ ...shippingInfo, fullName: e.target.value })}
-                                placeholder="ENTER FULL NAME" 
+                                onChange={(e) => {
+                                  setShippingInfo({ ...shippingInfo, fullName: e.target.value });
+                                  if (formErrors.fullName) setFormErrors((current) => ({ ...current, fullName: undefined }));
+                                }}
+                                placeholder="Enter full name" 
                                 required 
-                                className="h-20 rounded-3xl glass-card border-none bg-zinc-50/50 focus-visible:ring-brand-navy font-bold text-lg px-8" 
+                                className="h-16 sm:h-20 rounded-3xl glass-card border-none bg-zinc-50/50 focus-visible:ring-brand-navy font-bold text-lg px-6" 
                             />
+                            {formErrors.fullName && <p className="text-xs text-rose-600 mt-1 ml-2">{formErrors.fullName}</p>}
                         </div>
                         <div className="space-y-3">
                             <Label htmlFor="email" className="text-[10px] font-black uppercase tracking-[0.2em] ml-2 opacity-60">Digital Contact (Email)</Label>
@@ -409,17 +452,39 @@ export default function CheckoutPage() {
                                 id="email" 
                                 name="email" 
                                 type="email" 
+                                inputMode="email"
+                                autoComplete="email"
                                 value={shippingInfo.email}
-                                onChange={(e) => setShippingInfo({ ...shippingInfo, email: e.target.value })}
-                                readOnly
-                                placeholder="NAME@DOMAIN.COM" 
+                                onChange={(e) => {
+                                  setShippingInfo({ ...shippingInfo, email: e.target.value });
+                                  if (formErrors.email) setFormErrors((current) => ({ ...current, email: undefined }));
+                                }}
+                                placeholder="name@domain.com" 
                                 required 
-                                className="h-20 rounded-3xl glass-card border-none bg-zinc-200/50 cursor-not-allowed font-bold text-lg px-8" 
+                                className="h-16 sm:h-20 rounded-3xl glass-card border-none bg-zinc-50/50 focus-visible:ring-brand-navy font-bold text-lg px-6" 
                             />
+                            {formErrors.email && <p className="text-xs text-rose-600 mt-1 ml-2">{formErrors.email}</p>}
                         </div>
                         <div className="space-y-3">
                             <Label htmlFor="phone" className="text-[10px] font-black uppercase tracking-[0.2em] ml-2 opacity-60">Secure Communications (Phone)</Label>
-                            <Input id="phone" name="phone" type="tel" value={shippingInfo.phone} onChange={(e) => setShippingInfo({ ...shippingInfo, phone: e.target.value })} placeholder="+234 ..." required className="h-20 rounded-3xl glass-card border-none bg-zinc-50/50 focus-visible:ring-brand-navy font-bold text-lg px-8" />
+                            <Input
+                                id="phone"
+                                name="phone"
+                                type="tel"
+                                inputMode="numeric"
+                                pattern="\d*"
+                                maxLength={11}
+                                value={shippingInfo.phone}
+                                onChange={(e) => {
+                                  const digits = e.target.value.replace(/\D/g, "").slice(0, 11);
+                                  setShippingInfo({ ...shippingInfo, phone: digits });
+                                  if (formErrors.phone) setFormErrors((current) => ({ ...current, phone: undefined }));
+                                }}
+                                placeholder="08012345678"
+                                required
+                                className="h-16 sm:h-20 rounded-3xl glass-card border-none bg-zinc-50/50 focus-visible:ring-brand-navy font-bold text-lg px-6" 
+                            />
+                            {formErrors.phone && <p className="text-xs text-rose-600 mt-1 ml-2">{formErrors.phone}</p>}
                         </div>
                     </div>
 
