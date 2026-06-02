@@ -61,9 +61,7 @@ export function ProductCard({ product, className }: ProductCardProps) {
     e.preventDefault();
     const variant = product.variants?.[0];
     const variantId = typeof variant?.id === "string" ? variant.id : null;
-    const price = typeof variant?.price === "number" || typeof variant?.price === "string"
-      ? Number(variant.price)
-      : Number(product.basePrice || 0);
+    const price = Number(variant?.price ?? product.basePrice) || 0;
     const stock = typeof variant?.inventory?.quantity === "number"
       ? variant.inventory.quantity
       : 0;

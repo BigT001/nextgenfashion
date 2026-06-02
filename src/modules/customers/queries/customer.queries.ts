@@ -96,18 +96,22 @@ export const CustomerQueries = {
     if (!customer) return null;
 
     const normalizedCustomer = normalizeCustomer(customer);
+    const salesWithItems = normalizedCustomer.sales.map((sale: any) => ({
+      ...sale,
+      items: sale.SaleItem ?? [],
+    }));
 
     // Calculate Extended Metrics from ALL sales data
-    const totalSpent = normalizedCustomer.sales.reduce((sum: number, s: any) => sum + Number(s.totalAmount), 0);
-    const orderCount = normalizedCustomer.sales.length;
+    const totalSpent = salesWithItems.reduce((sum: number, s: any) => sum + Number(s.totalAmount), 0);
+    const orderCount = salesWithItems.length;
     const aov = orderCount > 0 ? totalSpent / orderCount : 0;
 
     // Analyze Behavior: Top Categories or Products
     const productFrequency: Record<string, number> = {};
-    normalizedCustomer.sales.forEach((sale: any) => {
-      sale.items.forEach((item: any) => {
-        const name = item.ProductVariant.Product.name;
-        productFrequency[name] = (productFrequency[name] || 0) + item.quantity;
+    salesWithItems.forEach((sale: any) => {
+      (sale.items ?? []).forEach((item: any) => {
+        const name = item?.ProductVariant?.Product?.name || "Unknown product";
+        productFrequency[name] = (productFrequency[name] || 0) + (item?.quantity || 0);
       });
     });
 
@@ -121,7 +125,7 @@ export const CustomerQueries = {
       const d = new Date();
       d.setMonth(d.getMonth() - (5 - i));
       const monthStr = d.toLocaleString('default', { month: 'short' });
-      const monthSales = normalizedCustomer.sales.filter((s: any) => {
+      const monthSales = salesWithItems.filter((s: any) => {
         const sd = new Date(s.createdAt);
         return sd.getMonth() === d.getMonth() && sd.getFullYear() === d.getFullYear();
       });
@@ -135,12 +139,12 @@ export const CustomerQueries = {
       ...normalizedCustomer,
       email: normalizedCustomer.email || "",
       phone: normalizedCustomer.phone || "",
-      sales: normalizedCustomer.sales.slice(0, 10), // Only return last 10 for UI performance
+      sales: salesWithItems.slice(0, 10), // Only return last 10 for UI performance
       metrics: {
         ltv: totalSpent,
         orderCount,
         aov,
-        lastActive: normalizedCustomer.sales[0]?.createdAt || normalizedCustomer.createdAt,
+        lastActive: salesWithItems[0]?.createdAt || normalizedCustomer.createdAt,
         topProducts
       },
       trend

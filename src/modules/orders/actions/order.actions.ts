@@ -3,7 +3,9 @@
 import { OrderQueries } from "../queries/order.queries";
 import { CustomerQueries } from "../../customers/queries/customer.queries";
 import { prisma } from "@/services/prisma.service";
-import { SaleStatus } from "@prisma/client";
+import { PaymentService } from "@/services/payment.service";
+import { events, SYSTEM_EVENTS } from "@/lib/events";
+import { SaleStatus, PaymentMethod } from "@prisma/client";
 
 export async function validateCartItemsAction(items: { productId?: string; variantId: string }[]) {
   const invalidItems: Array<{ productId?: string; variantId: string }> = [];
@@ -103,6 +105,7 @@ export type CreateOrderActionPayload = {
   };
   paymentMethod: "CASH" | "CARD" | "TRANSFER" | "POS";
   paymentRef?: string;
+  paymentProviderData?: any;
   status?: import("@prisma/client").SaleStatus;
   customerId?: string;
 };
@@ -227,81 +230,221 @@ export async function createOrderAction(data: CreateOrderActionPayload) {
 
     console.log("[createOrderAction] sanitizedItems before transaction", sanitizedItems);
 
-    const result = await prisma.$transaction(async (tx) => {
-      // 1. Create or Connect Customer
-      const email = data.shippingInfo.email;
-      const address = `${data.shippingInfo.address}, ${data.shippingInfo.city}`;
-      let customer;
+    // Ensure status value is acceptable by Prisma enum - sanitize unknown values (e.g. 'PAID')
+    const KNOWN_STATUSES = [
+      "PENDING",
+      "PAID",
+      "COMPLETED",
+      "CANCELLED",
+      "REFUNDED",
+      "PROCESSING",
+      "SHIPPED",
+    ];
 
-      if (data.customerId) {
-        console.log("[createOrderAction] updating existing customer by customerId", data.customerId);
-        customer = await tx.customer.update({
-          where: { id: data.customerId },
-          data: {
-            name: data.shippingInfo.fullName,
-            email,
-            phone: data.shippingInfo.phone,
-            address,
-          },
-        });
-      } else {
-        console.log("[createOrderAction] looking up customer by email", email);
-        customer = await CustomerQueries.findByEmail(email, tx);
-        console.log("[createOrderAction] customer lookup result", { found: Boolean(customer), customerId: customer?.id });
-        if (customer) {
+    const requestedStatus = String(data.status || "PENDING").toUpperCase();
+    const statusValue = KNOWN_STATUSES.includes(requestedStatus) ? requestedStatus : "PENDING";
+
+    let customer: { id: string; email?: string | null } | null = null;
+    // Try the transaction; if the database enum isn't migrated yet and rejects
+    // the 'PAID' value, retry once with 'PENDING' as a safe fallback.
+    let result: any;
+    try {
+      result = await prisma.$transaction(async (tx) => {
+        // 1. Create or Connect Customer
+        const email = data.shippingInfo.email;
+        const address = `${data.shippingInfo.address}, ${data.shippingInfo.city}`;
+
+        if (data.customerId) {
+          console.log("[createOrderAction] updating existing customer by customerId", data.customerId);
           customer = await tx.customer.update({
-            where: { id: customer.id },
+            where: { id: data.customerId },
             data: {
               name: data.shippingInfo.fullName,
+              email,
               phone: data.shippingInfo.phone,
               address,
             },
           });
         } else {
-          customer = await CustomerQueries.create({
-            email,
-            name: data.shippingInfo.fullName,
-            phone: data.shippingInfo.phone,
-            address,
-          }, tx);
+          console.log("[createOrderAction] looking up customer by email", email);
+          customer = await CustomerQueries.findByEmail(email, tx);
+          console.log("[createOrderAction] customer lookup result", { found: Boolean(customer), customerId: customer?.id });
+          if (customer) {
+            customer = await tx.customer.update({
+              where: { id: customer.id },
+              data: {
+                name: data.shippingInfo.fullName,
+                phone: data.shippingInfo.phone,
+                address,
+              },
+            });
+          } else {
+            customer = await CustomerQueries.create({
+              email,
+              name: data.shippingInfo.fullName,
+              phone: data.shippingInfo.phone,
+              address,
+            }, tx);
+          }
         }
-      }
 
-      // 2. Create Sale
-      console.log("[createOrderAction] creating sale for customer", { customerId: customer.id, totalAmount: data.totalAmount, itemCount: sanitizedItems.length });
-      const sale = await OrderQueries.createSale({
-        orderNumber: `NG-${Date.now().toString(36).toUpperCase()}`,
-        totalAmount: data.totalAmount,
-        status: data.status || "PENDING",
-        paymentMethod: data.paymentMethod,
-        paymentRef: data.paymentRef,
-        Customer: { connect: { id: customer.id } },
-        SaleItem: {
-          create: sanitizedItems.map(item => ({
-            variantId: item.variantId,
-            quantity: item.quantity,
-            price: item.price,
-          })),
-        },
-      }, tx);
+            // 2. Create Sale
+        let verifiedPaymentMethod: PaymentMethod = data.paymentMethod;
+        let providerPayload = data.paymentProviderData ?? null;
 
-      // 3. Update inventory stock levels
-      for (const item of sanitizedItems) {
-        await tx.inventory.updateMany({
-          where: { variantId: item.variantId },
-          data: {
-            quantity: { decrement: item.quantity },
+        if (data.paymentRef) {
+          try {
+            const verified = await PaymentService.verifyTransaction(data.paymentRef);
+            if (verified) {
+              verifiedPaymentMethod = PaymentService.resolvePaymentMethod(verified);
+              providerPayload = verified;
+              console.log("[createOrderAction] verified payment method from provider", { verifiedPaymentMethod, reference: data.paymentRef });
+            }
+          } catch (verifyError) {
+            console.warn("[createOrderAction] unable to verify payment method with provider, falling back to provider payload or provided value", {
+              error: verifyError,
+              providedMethod: data.paymentMethod,
+              paymentRef: data.paymentRef,
+            });
+          }
+        }
+
+        if (providerPayload) {
+          const fallbackMethod = PaymentService.resolvePaymentMethod(providerPayload);
+          if (fallbackMethod !== "CARD" || data.paymentMethod === "TRANSFER") {
+            verifiedPaymentMethod = fallbackMethod;
+          }
+        }
+
+        console.log("[createOrderAction] creating sale for customer", { customerId: customer.id, totalAmount: data.totalAmount, itemCount: sanitizedItems.length, paymentMethod: verifiedPaymentMethod });
+        const sale = await OrderQueries.createSale({
+          orderNumber: `NG-${Date.now().toString(36).toUpperCase()}`,
+          totalAmount: data.totalAmount,
+          status: statusValue as any,
+          paymentMethod: verifiedPaymentMethod,
+          paymentRef: data.paymentRef,
+          Customer: { connect: { id: customer.id } },
+          SaleItem: {
+            create: sanitizedItems.map(item => ({
+              variantId: item.variantId,
+              quantity: item.quantity,
+              price: item.price,
+            })),
           },
+        }, tx);
+
+        // 3. Update inventory stock levels
+        for (const item of sanitizedItems) {
+          await tx.inventory.updateMany({
+            where: { variantId: item.variantId },
+            data: {
+              quantity: { decrement: item.quantity },
+            },
+          });
+        }
+
+        return sale;
+      });
+    } catch (err: any) {
+      const msg = String(err?.message || err);
+      if (msg.includes("Invalid value for argument `status`") || msg.includes("invalid value")) {
+        console.warn("[createOrderAction] database rejected status value, retrying with PENDING", { statusValue });
+        // retry with PENDING
+        result = await prisma.$transaction(async (tx) => {
+          // create/connect customer (same logic as above)
+          const email = data.shippingInfo.email;
+          const address = `${data.shippingInfo.address}, ${data.shippingInfo.city}`;
+
+          if (data.customerId) {
+            customer = await tx.customer.update({
+              where: { id: data.customerId },
+              data: {
+                name: data.shippingInfo.fullName,
+                email,
+                phone: data.shippingInfo.phone,
+                address,
+              },
+            });
+          } else {
+            customer = await CustomerQueries.findByEmail(email, tx);
+            if (customer) {
+              customer = await tx.customer.update({
+                where: { id: customer.id },
+                data: {
+                  name: data.shippingInfo.fullName,
+                  phone: data.shippingInfo.phone,
+                  address,
+                },
+              });
+            } else {
+              customer = await CustomerQueries.create({
+                email,
+                name: data.shippingInfo.fullName,
+                phone: data.shippingInfo.phone,
+                address,
+              }, tx);
+            }
+          }
+
+          let retryPaymentMethod: PaymentMethod = data.paymentMethod;
+          if (data.paymentRef) {
+            try {
+              const verified = await PaymentService.verifyTransaction(data.paymentRef);
+              retryPaymentMethod = PaymentService.resolvePaymentMethod(verified);
+              console.log("[createOrderAction] verified payment method on retry", { retryPaymentMethod, reference: data.paymentRef });
+            } catch {
+              console.warn("[createOrderAction] cannot verify payment method on retry, using provided value", {
+                providedMethod: data.paymentMethod,
+                paymentRef: data.paymentRef,
+              });
+            }
+          }
+
+          const sale = await OrderQueries.createSale({
+            orderNumber: `NG-${Date.now().toString(36).toUpperCase()}`,
+            totalAmount: data.totalAmount,
+            status: "PENDING",
+            paymentMethod: retryPaymentMethod,
+            paymentRef: data.paymentRef,
+            Customer: { connect: { id: customer.id } },
+            SaleItem: {
+              create: sanitizedItems.map(item => ({
+                variantId: item.variantId,
+                quantity: item.quantity,
+                price: item.price,
+              })),
+            },
+          }, tx);
+
+          for (const item of sanitizedItems) {
+            await tx.inventory.updateMany({
+              where: { variantId: item.variantId },
+              data: { quantity: { decrement: item.quantity } },
+            });
+          }
+
+          return sale;
         });
+      } else {
+        throw err;
       }
+    }
 
-      return sale;
-    });
-
-    return {
+    const successResult = {
       success: true,
       data: JSON.parse(JSON.stringify(result)),
     };
+
+    events.emit(SYSTEM_EVENTS.SALE.CREATED, {
+      saleId: result.id,
+      orderNumber: result.orderNumber,
+      totalAmount: Number(result.totalAmount),
+      customerEmail: data.shippingInfo.email || null,
+      items: sanitizedItems,
+      userId: data.customerId || "guest",
+    });
+
+    return successResult;
   } catch (error: any) {
     console.error("[createOrderAction] error creating order", {
       error: error?.message ?? error,

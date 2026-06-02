@@ -73,6 +73,10 @@ export async function getInventoryDashboardAction() {
       const colors = Array.from(new Set(p.ProductVariant.map((v) => v.color).filter((value): value is string => Boolean(value))));
       const imageName = "";
 
+      const normalizedImages = Array.isArray(p.images)
+        ? p.images.filter((image): image is string => Boolean(image && image.trim() !== ""))
+        : [];
+
       return {
         id: p.id,
         name: p.name,
@@ -85,8 +89,8 @@ export async function getInventoryDashboardAction() {
         costPrice: Number(p.costPrice || 0),
         wholesalePrice: Number(p.costPrice || 0),
         retailPrice: Number(p.basePrice || 0),
-        images: [],
-        image: null,
+        images: normalizedImages,
+        image: normalizedImages[0] || null,
         imageName,
         sizes,
         colors,
@@ -99,7 +103,7 @@ export async function getInventoryDashboardAction() {
     // Calculate Executive KPIs
     const totalInventoryValue = processedProducts.reduce((acc, p) => acc + (p.price * p.stock), 0);
     const stockAlerts = processedProducts.filter(p => p.status !== "In Stock").length;
-    const productsWithImages = 0;
+    const productsWithImages = processedProducts.filter((p) => Array.isArray(p.images) && p.images.length > 0).length;
 
     return {
       success: true,

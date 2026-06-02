@@ -172,7 +172,7 @@ export default function OrdersClient({ initialData }: { initialData: any[] }) {
           <Badge 
             className={cn(
               "font-black text-[10px] px-3 uppercase tracking-widest border-none shadow-sm",
-              status === "COMPLETED" ? "bg-emerald-500/10 text-emerald-600" :
+              (status === "COMPLETED" || status === "PAID") ? "bg-emerald-500/10 text-emerald-600" :
               status === "PENDING" ? "bg-amber-500/10 text-amber-600" :
               status === "PROCESSING" ? "bg-blue-500/10 text-blue-600" :
               status === "SHIPPED" ? "bg-violet-500/10 text-violet-600" :
@@ -290,7 +290,7 @@ export default function OrdersClient({ initialData }: { initialData: any[] }) {
         />
         <MetricCard
           title="Completed"
-          value={data.filter((o: any) => o.status === 'COMPLETED').length}
+            value={data.filter((o: any) => o.status === 'COMPLETED' || o.status === 'PAID').length}
           icon={CheckCircle2}
           description="Fulfillment complete"
           variant="emerald"

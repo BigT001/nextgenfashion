@@ -67,6 +67,12 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
   const [isPurging, setIsPurging] = useState(false);
   const [showOnlyWithImages, setShowOnlyWithImages] = useState(false);
 
+  const getProductThumbnail = (item: any) => {
+    const imageArray = Array.isArray(item.images) ? item.images : [];
+    const normalizedImages = imageArray.filter((image: any) => typeof image === "string" && image.trim().length > 0);
+    return normalizedImages[0] || item.resolvedImage || item.image || null;
+  };
+
   const handleAddProductOpenChange = (open: boolean, eventDetails?: any) => {
     // Prevent the dialog from closing when the native file picker steals focus.
     if (!open && eventDetails?.reason === "focusOut") return;
@@ -493,13 +499,13 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
     return typeof window !== "undefined" && CSS.supports("color", color.trim());
   };
 
-  const renderColorChip = (color: string) => {
+  const renderColorChip = (color: string, index: number) => {
     const value = color?.trim();
     const valid = isCssColor(value);
 
     return (
       <span
-        key={value}
+        key={`${value}-${index}`}
         className="inline-flex items-center justify-center rounded-full border border-border/40 bg-background/80 shadow-sm"
         style={valid ? { backgroundColor: value, boxShadow: `0 0 0 2px ${value}40` } : undefined}
         aria-label={value || "No color"}
@@ -528,33 +534,40 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
       accessorKey: "images",
       header: "IMAGE",
       size: 64,
-      cell: ({ row }) => (
-        <div className="size-12 md:size-14 rounded-2xl bg-muted/30 flex items-center justify-center shrink-0 border border-border/20 overflow-hidden shadow-sm">
-            {row.original.images?.[0] ? (
-                <Image 
-                    src={row.original.images[0]} 
-                    alt={row.original.name} 
-                    width={56} 
-                    height={56} 
-                    className="object-cover w-full h-full"
-                />
+      cell: ({ row }) => {
+        const thumbnail = getProductThumbnail(row.original);
+        return (
+          <div className="size-12 md:size-14 rounded-2xl bg-muted/30 flex items-center justify-center shrink-0 border border-border/20 overflow-hidden shadow-sm">
+            {thumbnail ? (
+              <Image
+                src={thumbnail}
+                alt={row.original.name}
+                width={56}
+                height={56}
+                className="object-cover w-full h-full"
+              />
             ) : (
-                <ImageIcon className="size-5 md:size-6 text-muted-foreground/30" />
+              <ImageIcon className="size-5 md:size-6 text-muted-foreground/30" />
             )}
-        </div>
-      ),
+          </div>
+        );
+      },
     },
     {
       accessorKey: "name",
       header: "PRODUCT",
       cell: ({ row }) => (
-        <div className="flex flex-col gap-0.5 min-w-0 pr-2">
+        <div className="flex flex-col gap-0.5 min-w-0">
             <span className="font-black text-sm tracking-tight group-hover:text-brand-navy transition-colors truncate">{row.original.name}</span>
             <span className="text-[10px] text-muted-foreground font-black uppercase tracking-widest truncate">{row.original.category}</span>
             {row.original.sizes?.length ? (
-              <span className="text-[10px] text-foreground/80 uppercase tracking-[0.18em] font-black mt-1 truncate">
-                Sizes: {row.original.sizes.join(", ")}
-              </span>
+              <div className="flex flex-wrap gap-1 mt-1">
+                {row.original.sizes.map((size: string) => (
+                  <span key={`size-${size}`} className="inline-block text-[9px] text-foreground/70 bg-muted/40 rounded px-1.5 py-0.5 whitespace-nowrap font-black">
+                    {size}
+                  </span>
+                ))}
+              </div>
             ) : null}
         </div>
       ),
@@ -566,7 +579,7 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
       cell: ({ row }) => (
         <div className="flex flex-wrap gap-2">
           {Array.isArray(row.original.colors) && row.original.colors.length > 0 ? (
-            row.original.colors.map((color: string) => renderColorChip(color))
+            row.original.colors.map((color: string, index: number) => renderColorChip(color, index))
           ) : (
             <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground font-black">No colors</span>
           )}
@@ -576,9 +589,18 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
     {
       accessorKey: "sizes",
       header: "SIZES",
-      meta: { className: "hidden lg:table-cell" },
       cell: ({ row }) => (
-        <span className="text-[11px] font-black text-muted-foreground">{row.original.sizes?.length ? row.original.sizes.join(", ") : "—"}</span>
+        <div className="flex flex-wrap gap-1 max-w-xs">
+          {row.original.sizes?.length ? (
+            row.original.sizes.map((size: string) => (
+              <span key={size} className="inline-block text-[10px] font-black text-foreground bg-muted/50 rounded-md px-2 py-1 whitespace-nowrap">
+                {size}
+              </span>
+            ))
+          ) : (
+            <span className="text-[11px] font-black text-muted-foreground">—</span>
+          )}
+        </div>
       ),
     },
     // ── Desktop-only columns ──────────────────────────────────
@@ -723,8 +745,8 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
       <div className="space-y-4 p-4 bg-white/95 rounded-3xl shadow-inner sm:hidden">
         <div className="flex items-start gap-3">
           <div className="size-16 rounded-3xl bg-muted/10 overflow-hidden border border-border/20">
-            {item.images?.[0] ? (
-              <Image src={item.images[0]} alt={item.name} width={84} height={84} className="object-cover w-full h-full" />
+            {getProductThumbnail(item) ? (
+              <Image src={getProductThumbnail(item)!} alt={item.name} width={84} height={84} className="object-cover w-full h-full" />
             ) : (
               <div className="flex h-full w-full items-center justify-center text-muted-foreground"><ImageIcon className="size-6" /></div>
             )}
@@ -768,7 +790,7 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
             <p className="text-[9px] uppercase tracking-[0.35em] text-muted-foreground font-black">Colors</p>
             <div className="mt-2 flex flex-wrap gap-2">
               {Array.isArray(item.colors) && item.colors.length > 0 ? (
-                item.colors.map((color: string) => renderColorChip(color))
+                item.colors.map((color: string, index: number) => renderColorChip(color, index))
               ) : (
                 <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground font-black">No colors</span>
               )}

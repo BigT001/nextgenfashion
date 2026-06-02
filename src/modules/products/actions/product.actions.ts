@@ -134,6 +134,37 @@ export async function createCategoryAction(name: string) {
   }
 }
 
+export async function deleteCategoryAction(categoryId: string) {
+  try {
+    const { prisma } = await import("@/services/prisma.service");
+    const { auth } = await import("@/services/auth.service");
+
+    const session = await auth();
+    const role = session?.user?.role;
+    if (!(role === "ADMIN" || role === "SUPERADMIN")) {
+      return { success: false, error: "Unauthorized: only admins can delete categories" };
+    }
+
+    // Prevent deletion when products are still assigned to this category
+    const productCount = await prisma.product.count({ where: { categoryId } });
+    if (productCount > 0) {
+      return { success: false, error: "Cannot delete category with assigned products. Reassign or remove products first." };
+    }
+
+    await prisma.category.delete({ where: { id: categoryId } });
+
+    // Revalidate pages that depend on categories/products
+    revalidatePath("/dashboard/products");
+    revalidatePath("/inventory");
+    revalidatePath("/");
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("Delete category error:", error);
+    return { success: false, error: error?.message || "Failed to delete category" };
+  }
+}
+
 export async function getProductBySkuAction(sku: string) {
   try {
     const { prisma } = await import("@/services/prisma.service");

@@ -1,6 +1,6 @@
 "use client";
 
-import { ShoppingBag, Plus, Minus, Trash2, ArrowRight, Zap, ShieldCheck } from "lucide-react";
+import { ShoppingBag, Plus, Minus, Trash2, ArrowRight, Zap, ShieldCheck, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -29,104 +29,127 @@ export function CartDrawer({ open, onOpenChange }: { open: boolean, onOpenChange
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-md flex flex-col p-0 glass-card border-none backdrop-blur-2xl bg-white/70 dark:bg-zinc-950/70 shadow-2xl">
-        <SheetHeader className="p-6 border-b border-border/20">
-          <SheetTitle className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="size-10 bg-brand-navy/10 rounded-xl flex items-center justify-center text-brand-navy shadow-inner">
-                <ShoppingBag className="size-5" />
+      <SheetContent className="w-screen h-screen p-0 border-none bg-white dark:bg-zinc-950 shadow-none rounded-none flex flex-col">
+        <SheetHeader className="sticky top-0 z-40 bg-gradient-to-b from-white via-white to-white/95 dark:from-zinc-950 dark:via-zinc-950 dark:to-zinc-950/95 px-6 py-5 border-b border-border/10 shadow-sm">
+          <div className="flex items-center justify-between w-full gap-4">
+            <div className="flex items-center gap-3 flex-1">
+              <div className="size-12 bg-gradient-to-br from-brand-navy to-brand-navy/80 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-brand-navy/20 flex-shrink-0">
+                <ShoppingBag className="size-6" />
               </div>
-              <div className="flex flex-col text-left">
-                <span className="text-xl font-black tracking-tighter">Your Bag</span>
-                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">{itemCount} {itemCount === 1 ? 'ITEM' : 'ITEMS'}</span>
+              <div className="flex flex-col text-left min-w-0">
+                <SheetTitle className="text-2xl font-black tracking-tighter text-foreground">Your Bag</SheetTitle>
+                <span className="text-xs font-black uppercase tracking-widest text-muted-foreground/70">{itemCount} {itemCount === 1 ? 'ITEM' : 'ITEMS'}</span>
               </div>
             </div>
-          </SheetTitle>
+            <button
+              onClick={() => onOpenChange(false)}
+              className="size-10 rounded-xl bg-muted/50 hover:bg-muted/80 flex items-center justify-center transition-colors text-muted-foreground hover:text-foreground flex-shrink-0"
+            >
+              <X className="size-5" />
+            </button>
+          </div>
         </SheetHeader>
 
-        <div className="flex-1 overflow-y-auto scrollbar-hide">
+        <div className="flex-1 overflow-y-auto scrollbar-hide pb-36 md:pb-40">
           {items.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center p-12 text-center space-y-8 relative overflow-hidden">
-              <div className="absolute inset-0 bg-brand-mesh opacity-5 -z-10" />
-              <div className="size-24 bg-muted/50 rounded-[2rem] flex items-center justify-center shadow-inner group">
-                <ShoppingBag className="size-10 text-muted-foreground/30 group-hover:scale-110 transition-transform" />
+            <div className="h-full flex flex-col items-center justify-center px-6 py-12 text-center space-y-6 relative overflow-hidden">
+              <div className="absolute inset-0 bg-brand-mesh opacity-3 -z-10" />
+              <div className="size-28 bg-gradient-to-br from-muted/30 to-muted/10 rounded-3xl flex items-center justify-center shadow-lg group">
+                <ShoppingBag className="size-14 text-muted-foreground/20 group-hover:scale-110 transition-transform duration-500" />
               </div>
-              <div className="space-y-2">
-                <h4 className="font-black text-2xl tracking-tight">Your bag is empty</h4>
-                <p className="text-sm font-medium text-muted-foreground max-w-[200px] mx-auto leading-relaxed">
-                  Start curating your nextgen kiddies collection today.
+              <div className="space-y-3 max-w-xs">
+                <h4 className="font-black text-2xl tracking-tight text-foreground">Your bag is empty</h4>
+                <p className="text-sm font-medium text-muted-foreground/80 leading-relaxed">
+                  Explore our collection and start building your style today.
                 </p>
               </div>
               <Button 
                 onClick={() => onOpenChange(false)}
-                className="bg-brand-navy hover:bg-brand-navy/90 text-white rounded-2xl h-14 px-10 font-black text-xs uppercase tracking-widest shadow-xl shadow-brand-navy/20 transition-all active:scale-95"
+                className="bg-brand-navy hover:bg-brand-navy/90 text-white rounded-2xl h-12 px-10 font-black text-xs uppercase tracking-widest shadow-xl shadow-brand-navy/20 transition-all active:scale-95"
               >
                 BROWSE CATALOGUE
               </Button>
             </div>
           ) : (
-            <div className="divide-y divide-border/20">
-              {items.map((item) => (
-                <div key={item.variantId} className="p-6 flex gap-6 group hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors">
-                  <div className="relative size-24 rounded-2xl overflow-hidden glass-card border-none shadow-sm flex-shrink-0 group-hover:scale-105 transition-transform duration-500">
-                    {item.image ? (
-                      <Image src={item.image} alt={item.name} fill className="object-cover" />
-                    ) : (
-                      <div className="flex items-center justify-center h-full opacity-10">
-                        <Zap className="size-8" />
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex-1 flex flex-col justify-between py-0.5">
-                    <div className="space-y-1">
-                      <div className="flex justify-between items-start gap-2">
-                        <h4 className="font-black text-sm tracking-tight line-clamp-2 group-hover:text-brand-navy transition-colors leading-tight">{item.name}</h4>
-                        <button 
-                          onClick={() => removeItem(item.variantId)}
-                          className="text-muted-foreground/30 hover:text-rose-500 p-1 transition-colors flex-shrink-0"
-                        >
-                          <Trash2 className="size-4" />
-                        </button>
-                      </div>
-                      <div className="flex flex-wrap gap-1.5">
-                        {item.size && <Badge className="text-[8px] font-black uppercase tracking-tighter border-border/50 bg-zinc-100 dark:bg-zinc-800">SIZE: {item.size}</Badge>}
-                        {item.color && <Badge className="text-[8px] font-black uppercase tracking-tighter border-border/50 bg-zinc-100 dark:bg-zinc-800">EDITION: {item.color}</Badge>}
-                      </div>
+            <div className="px-4 py-4 space-y-3">
+              {items.map((item, idx) => (
+                <div 
+                  key={item.variantId} 
+                  className="group bg-white dark:bg-zinc-900/50 rounded-xl p-3 border border-border/20 hover:border-border/40 transition-all duration-300 hover:shadow-md animate-in fade-in slide-in-from-bottom-4 duration-500"
+                  style={{ animationDelay: `${idx * 30}ms` }}
+                >
+                  <div className="flex gap-3">
+                    {/* Product Image */}
+                    <div className="relative w-18 h-18 rounded-lg overflow-hidden bg-gradient-to-br from-muted/30 to-muted/10 flex-shrink-0 shadow-sm group-hover:shadow-md transition-all duration-300">
+                      {item.image ? (
+                        <Image src={item.image} alt={item.name} fill className="object-cover group-hover:scale-110 transition-transform duration-500" />
+                      ) : (
+                        <div className="flex items-center justify-center h-full">
+                          <Zap className="size-6 text-muted-foreground/20" />
+                        </div>
+                      )}
                     </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3 bg-muted/50 rounded-xl px-1.5 py-0.5">
-                        <button 
-                          onClick={() => updateQuantity(item.variantId, item.quantity - 1)}
-                          className="size-7 rounded-lg flex items-center justify-center hover:bg-white dark:hover:bg-zinc-800 transition-colors"
-                        >
-                          <Minus className="size-2.5" />
-                        </button>
-                        <span className="text-[11px] font-black w-4 text-center">{item.quantity}</span>
-                        <button 
-                          onClick={() => {
-                            const max = item.availableStock ?? Infinity;
-                            if (item.quantity + 1 > max) {
-                              // notify user
-                              // eslint-disable-next-line no-console
-                              console.log('exceed stock');
-                              // use window toast via sonner? import toast here
-                              // we'll dynamically import toast to avoid circular deps
-                              import('sonner').then(({ toast }) => toast.error(`Only ${max} item(s) available in stock.`));
-                              return;
-                            }
-                            updateQuantity(item.variantId, item.quantity + 1);
-                          }}
-                          className={cn(
-                            "size-7 rounded-lg flex items-center justify-center transition-colors",
-                            item.availableStock !== undefined && item.quantity >= item.availableStock ? "opacity-40 cursor-not-allowed" : "hover:bg-white dark:hover:bg-zinc-800"
+
+                    {/* Product Details */}
+                    <div className="flex-1 flex flex-col justify-between">
+                      <div className="space-y-1">
+                        <div className="flex justify-between items-start gap-2">
+                          <h4 className="font-black text-sm tracking-tight line-clamp-1 group-hover:text-brand-navy transition-colors">{item.name}</h4>
+                          <button 
+                            onClick={() => removeItem(item.variantId)}
+                            className="size-7 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 flex items-center justify-center text-rose-600 hover:text-rose-700 transition-all duration-200 flex-shrink-0"
+                          >
+                            <Trash2 className="size-3.5" />
+                          </button>
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          {item.size && (
+                            <span className="text-[7px] font-black uppercase tracking-widest px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                              {item.size}
+                            </span>
                           )}
-                          disabled={item.availableStock !== undefined && item.quantity >= item.availableStock}
-                        >
-                          <Plus className="size-2.5" />
-                        </button>
+                          {item.color && (
+                            <span className="text-[7px] font-black uppercase tracking-widest px-2 py-0.5 rounded bg-purple-500/10 text-purple-600 dark:text-purple-400">
+                              {item.color}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <p className="font-black text-sm tracking-tighter">₦{(item.price * item.quantity).toLocaleString()}</p>
+
+                      {/* Quantity & Price */}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1 bg-muted/40 dark:bg-zinc-800/40 rounded-lg p-1">
+                          <button 
+                            onClick={() => updateQuantity(item.variantId, item.quantity - 1)}
+                            className="size-6 rounded flex items-center justify-center hover:bg-white dark:hover:bg-zinc-700 transition-colors text-foreground"
+                          >
+                            <Minus className="size-3" />
+                          </button>
+                          <span className="text-xs font-black w-4 text-center">{item.quantity}</span>
+                          <button 
+                            onClick={() => {
+                              const max = item.availableStock ?? Infinity;
+                              if (item.quantity + 1 > max) {
+                                import('sonner').then(({ toast }) => toast.error(`Only ${max} item(s) available.`));
+                                return;
+                              }
+                              updateQuantity(item.variantId, item.quantity + 1);
+                            }}
+                            className={cn(
+                              "size-6 rounded flex items-center justify-center transition-colors",
+                              item.availableStock !== undefined && item.quantity >= item.availableStock 
+                                ? "opacity-40 cursor-not-allowed" 
+                                : "hover:bg-white dark:hover:bg-zinc-700 text-foreground"
+                            )}
+                            disabled={item.availableStock !== undefined && item.quantity >= item.availableStock}
+                          >
+                            <Plus className="size-3" />
+                          </button>
+                        </div>
+                        <div className="text-right space-y-0.5">
+                          <p className="text-sm font-black text-brand-navy">₦{((Number(item.price) || 0) * item.quantity).toLocaleString()}</p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -136,31 +159,50 @@ export function CartDrawer({ open, onOpenChange }: { open: boolean, onOpenChange
         </div>
 
         {items.length > 0 && (
-          <SheetFooter className="p-6 border-t border-border/20 bg-zinc-50/50 dark:bg-zinc-950/50 flex-col gap-4">
-            <div className="w-full space-y-2">
-              <div className="flex justify-between text-[11px] font-bold">
-                <span className="text-muted-foreground uppercase tracking-[0.1em]">Subtotal</span>
-                <span className="font-black">₦{subtotal.toLocaleString()}</span>
+          <div className="sticky bottom-0 z-40 bg-gradient-to-t from-white via-white to-white/95 dark:from-zinc-950 dark:via-zinc-950 dark:to-zinc-950/95 px-6 py-4 border-t border-border/10 shadow-2xl shadow-brand-navy/5">
+            <div className="space-y-4">
+              {/* Price Breakdown */}
+              <div className="space-y-3 bg-muted/20 dark:bg-zinc-900/30 rounded-2xl p-3 border border-border/20">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs font-black uppercase tracking-[0.15em] text-muted-foreground">Subtotal</span>
+                  <span className="text-base font-black text-foreground">₦{subtotal.toLocaleString()}</span>
+                </div>
+                <Separator className="bg-border/30" />
+                <div className="flex justify-between items-center">
+                  <span className="text-xs font-black uppercase tracking-[0.15em] text-muted-foreground flex items-center gap-2">
+                    <ShieldCheck className="size-3.5 text-emerald-600" />
+                    Delivery
+                  </span>
+                  <span className="text-xs font-black text-muted-foreground/60">Calculated at checkout</span>
+                </div>
               </div>
-              <div className="flex justify-between text-[11px] font-bold">
-                <span className="text-muted-foreground uppercase tracking-[0.1em]">Logistics</span>
-                <span className="text-zinc-400 font-black tracking-widest uppercase">Calculated at checkout</span>
+
+              {/* Total */}
+              <div className="bg-gradient-to-r from-brand-navy/5 to-brand-navy/10 rounded-2xl p-3 border border-brand-navy/20">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-black uppercase tracking-widest text-muted-foreground">Total</span>
+                  <span className="text-2xl font-black text-brand-navy tracking-tighter">₦{subtotal.toLocaleString()}</span>
+                </div>
               </div>
-              <Separator className="bg-border/20 my-1" />
-              <div className="flex justify-between items-center">
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Total</span>
-                <span className="text-2xl font-black text-brand-navy tracking-tighter">₦{subtotal.toLocaleString()}</span>
+
+              {/* Checkout Button */}
+              <Button 
+                onClick={handleCheckout}
+                className="w-full h-12 bg-gradient-to-r from-brand-navy to-brand-navy/90 hover:from-brand-navy/90 hover:to-brand-navy text-white rounded-2xl text-sm font-black tracking-widest shadow-lg shadow-brand-navy/20 group transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+              >
+                <ShieldCheck className="size-4" />
+                SECURE CHECKOUT
+                <ArrowRight className="size-4 group-hover:translate-x-1 transition-transform" />
+              </Button>
+
+              {/* Trust Badge */}
+              <div className="text-center space-y-2 pt-2">
+                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">
+                  ✓ Secure Payment • Free Returns • Premium Quality
+                </p>
               </div>
             </div>
-            
-            <Button 
-                onClick={handleCheckout}
-                className="w-full h-16 bg-brand-navy hover:bg-brand-navy/90 text-white rounded-2xl text-base font-black tracking-widest shadow-2xl shadow-brand-navy/20 group transition-all active:scale-[0.98]"
-            >
-              SECURE CHECKOUT
-              <ArrowRight className="ml-2 size-5 group-hover:translate-x-1 transition-transform" />
-            </Button>
-          </SheetFooter>
+          </div>
         )}
       </SheetContent>
     </Sheet>

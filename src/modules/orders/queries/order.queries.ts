@@ -88,7 +88,7 @@ export class OrderQueries {
         SaleItem: {
           include: {
             ProductVariant: {
-              include: { Product: { select: { name: true } } }
+              include: { Product: { select: { name: true, images: true, description: true } } }
             }
           }
         }

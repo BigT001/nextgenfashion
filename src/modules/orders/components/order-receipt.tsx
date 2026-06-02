@@ -317,9 +317,8 @@ export function OrderReceipt({ orderId, onClose }: OrderReceiptProps) {
                 <div class="party-detail">${data?.customer?.address || ""}</div>
               </div>
               <div>
-                <div class="party-label">Payment</div>
-                <div class="party-name">${data?.paymentMethod}</div>
-                <div class="party-detail">Ref: ${data?.paymentRef || "N/A"}</div>
+                <div class="party-label">Payment ref</div>
+                <div class="party-name">${data?.paymentRef || "N/A"}</div>
               </div>
             </div>
 
@@ -413,7 +412,7 @@ export function OrderReceipt({ orderId, onClose }: OrderReceiptProps) {
                 </p>
                 <span className={cn(
                   "inline-block px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest",
-                  data.status === "COMPLETED" ? "bg-emerald-500/10 text-emerald-600" :
+                  (data.status === "COMPLETED" || data.status === "PAID") ? "bg-emerald-500/10 text-emerald-600" :
                   data.status === "PENDING" ? "bg-amber-500/10 text-amber-600" :
                   "bg-rose-500/10 text-rose-600"
                 )}>
@@ -434,10 +433,9 @@ export function OrderReceipt({ orderId, onClose }: OrderReceiptProps) {
                 </div>
               </div>
               <div className="space-y-3">
-                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-brand-silver">Payment</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-brand-silver">Payment ref</p>
                 <div>
-                  <p className="font-black text-base">{data.paymentMethod}</p>
-                  <p className="text-xs text-muted-foreground font-medium">Ref: {data.paymentRef || "N/A"}</p>
+                  <p className="font-black text-base">{data.paymentRef || "N/A"}</p>
                 </div>
               </div>
             </div>
@@ -451,27 +449,33 @@ export function OrderReceipt({ orderId, onClose }: OrderReceiptProps) {
                 <span className="col-span-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground text-right">Total</span>
               </div>
 
-              {data.items.map((item: any) => (
-                <div key={item.id} className="grid grid-cols-12 gap-4 px-4 py-5 border-b border-border/30 hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors rounded-2xl">
-                  <div className="col-span-6">
-                    <p className="font-black text-sm tracking-tight">{item.variant?.product?.name}</p>
-                    <p className="text-[10px] font-bold text-muted-foreground">
-                      {item.variant?.size && `Size: ${item.variant.size}`}
-                      {item.variant?.color && ` · ${item.variant.color}`}
-                      {` · SKU: ${item.variant?.sku}`}
-                    </p>
+              {(data.items ?? data.SaleItem ?? []).map((item: any, index: number) => {
+                const variant = item.variant ?? item.ProductVariant ?? {};
+                const product = variant.product ?? variant.Product ?? {};
+                const key = item.id || item.variantId || index;
+
+                return (
+                  <div key={key} className="grid grid-cols-12 gap-4 px-4 py-5 border-b border-border/30 hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors rounded-2xl">
+                    <div className="col-span-6">
+                      <p className="font-black text-sm tracking-tight">{product.name || variant.sku || "Item"}</p>
+                      <p className="text-[10px] font-bold text-muted-foreground">
+                        {variant.size && `Size: ${variant.size}`}
+                        {variant.color && ` · ${variant.color}`}
+                        {` · SKU: ${variant.sku ?? "N/A"}`}
+                      </p>
+                    </div>
+                    <div className="col-span-2 flex items-center justify-center">
+                      <span className="font-black text-sm">{item.quantity}</span>
+                    </div>
+                    <div className="col-span-2 flex items-center justify-end">
+                      <span className="font-bold text-sm text-muted-foreground">₦{Number(item.price).toLocaleString()}</span>
+                    </div>
+                    <div className="col-span-2 flex items-center justify-end">
+                      <span className="font-black text-sm">₦{(Number(item.price) * item.quantity).toLocaleString()}</span>
+                    </div>
                   </div>
-                  <div className="col-span-2 flex items-center justify-center">
-                    <span className="font-black text-sm">{item.quantity}</span>
-                  </div>
-                  <div className="col-span-2 flex items-center justify-end">
-                    <span className="font-bold text-sm text-muted-foreground">₦{Number(item.price).toLocaleString()}</span>
-                  </div>
-                  <div className="col-span-2 flex items-center justify-end">
-                    <span className="font-black text-sm">₦{(Number(item.price) * item.quantity).toLocaleString()}</span>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Totals */}

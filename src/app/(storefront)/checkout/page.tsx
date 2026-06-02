@@ -28,14 +28,61 @@ import { useFlutterwave, closePaymentModal } from "flutterwave-react-v3";
 
 type CheckoutStep = "IDENTITY" | "LOGISTICS";
 
+type CheckoutPaymentMethod = "CARD" | "TRANSFER" | "CASH" | "POS";
+type SaleStatusType = import("@prisma/client").SaleStatus;
+
+const detectFlutterwavePaymentMethod = (response: any): CheckoutPaymentMethod => {
+  const normalizeValue = (value: unknown) => (typeof value === "string" ? value.toLowerCase().trim() : "");
+  const transferRegex = /\b(bank|transfer|banktransfer|ussd|account|account_bank|account_number|bank_account|bank_account)\b/;
+  const cardRegex = /\b(card|visa|mastercard|debit|credit|chip|auth_model|payment_card)\b/;
+  const posRegex = /\b(pos|point\s*of\s*sale)\b/;
+  const cashRegex = /\b(cash|cash_on_delivery|cod)\b/;
+
+  const collectValues = (payload: any, result: string[] = []): string[] => {
+    if (payload == null) return result;
+    if (typeof payload === "string") {
+      result.push(normalizeValue(payload));
+      return result;
+    }
+    if (typeof payload === "number" || typeof payload === "boolean") {
+      result.push(String(payload).toLowerCase());
+      return result;
+    }
+    if (Array.isArray(payload)) {
+      for (const item of payload) collectValues(item, result);
+      return result;
+    }
+    if (typeof payload === "object") {
+      for (const [key, value] of Object.entries(payload)) {
+        result.push(normalizeValue(key));
+        collectValues(value, result);
+      }
+      return result;
+    }
+    return result;
+  };
+
+  const values = collectValues(response).filter(Boolean);
+  const combined = values.join(" ");
+
+  if (transferRegex.test(combined)) return "TRANSFER";
+  if (posRegex.test(combined)) return "POS";
+  if (cashRegex.test(combined)) return "CASH";
+  if (cardRegex.test(combined)) return "CARD";
+
+  if (String(response?.payment_options || "").toLowerCase().includes("bank")) return "TRANSFER";
+  return "CARD";
+};
+
 export default function CheckoutPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
   const { items, getTotal, clearCart, removeItem } = useCartStore();
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<CheckoutStep>("IDENTITY");
-  const [paymentMethod] = useState<"CARD" | "TRANSFER" | "CASH">("CARD");
+  const paymentMethod: "CARD" | "TRANSFER" | "CASH" = "CARD";
   const [txRef] = useState(() => `NG-${Date.now().toString(36).toUpperCase()}`);
+  const [isNavigatingToSuccess, setIsNavigatingToSuccess] = useState(false);
   const [customerProfile, setCustomerProfile] = useState<any>(null);
   const [isProfileLoading, setIsProfileLoading] = useState(false);
   const [shippingInfo, setShippingInfo] = useState({
@@ -56,13 +103,13 @@ export default function CheckoutPage() {
   const customerId = (session?.user as any)?.customerId;
 
   useEffect(() => {
-    if (items.length === 0) {
+    if (items.length === 0 && !isNavigatingToSuccess) {
       router.push("/shop");
     }
     if (status === "unauthenticated") {
       router.push("/auth/login?callbackUrl=/checkout");
     }
-  }, [items, router, status]);
+  }, [items, router, status, isNavigatingToSuccess]);
 
   useEffect(() => {
     if (!customerId || status !== "authenticated") return;
@@ -179,8 +226,16 @@ export default function CheckoutPage() {
               rawResponse?.data?.transaction_id ||
               ""
             );
+            const detectedPaymentMethod = detectFlutterwavePaymentMethod(rawResponse);
+            console.debug("Detected payment method from Flutterwave response:", detectedPaymentMethod);
+            const orderItems = items.map((item) => ({
+              productId: item.id,
+              variantId: item.variantId,
+              quantity: item.quantity,
+              price: Number(item.price) || 0,
+            }));
             console.log("[checkout] sending order payload", {
-              items: items.map(item => ({ productId: item.id, variantId: item.variantId, quantity: item.quantity, price: item.price })),
+              items: orderItems,
               totalAmount: grandTotal,
               paymentMethod,
               customerId: (session?.user as any)?.customerId,
@@ -194,28 +249,27 @@ export default function CheckoutPage() {
               name: item.name,
             })), null, 2));
             const result = await createOrderAction({
-              items: items.map(item => ({
-                productId: item.id,
-                variantId: item.variantId,
-                quantity: item.quantity,
-                price: item.price,
-              })),
+              items: orderItems,
               totalAmount: grandTotal,
               shippingInfo,
-              paymentMethod,
+              paymentMethod: detectedPaymentMethod,
               paymentRef: paymentRef || undefined,
-              status: "COMPLETED",
+              paymentProviderData: rawResponse,
+              status: "PAID" as SaleStatusType,
               customerId: (session?.user as any)?.customerId,
             });
             console.debug("[checkout] createOrderAction result", result);
 
             if (result.success) {
-              toast.success("Payment verified. Order received successfully.");
+              const orderData = result as { success: true; data: { orderNumber: string } };
+              toast.success("Purchase successful! Check your email for your order confirmation and delivery details.");
+              setIsNavigatingToSuccess(true);
               clearCart();
-              router.push("/dashboard/orders");
+              router.push(`/checkout/success?orderNumber=${encodeURIComponent(orderData.data.orderNumber)}&totalAmount=${Math.round(grandTotal)}`);
             } else {
-              console.error("Order creation failed after successful payment:", result.error);
-              toast.error(result.error || "Payment succeeded but order creation failed. Please contact support.");
+              const errorResult = result as { success: false; error: string | null };
+              console.error("Order creation failed after successful payment:", errorResult.error);
+              toast.error(errorResult.error || "Payment succeeded but order creation failed. Please contact support.");
             }
           } else if (paymentStatus === "pending") {
             toast.warning("Payment is pending. Please wait a moment and check your bank.");
@@ -234,32 +288,36 @@ export default function CheckoutPage() {
       return;
     }
 
+    const orderItems = items.map((item) => ({
+      productId: item.id,
+      variantId: item.variantId,
+      quantity: item.quantity,
+      price: Number(item.price) || 0,
+    }));
     console.log("[checkout] sending order payload", {
-      items: items.map(item => ({ productId: item.id, variantId: item.variantId, quantity: item.quantity, price: item.price })),
+      items: orderItems,
       totalAmount: grandTotal,
       paymentMethod,
       customerId: (session?.user as any)?.customerId,
     });
     const result = await createOrderAction({
-      items: items.map(item => ({
-        productId: item.id,
-        variantId: item.variantId,
-        quantity: item.quantity,
-        price: item.price,
-      })),
+      items: orderItems,
       totalAmount: grandTotal,
       shippingInfo,
       paymentMethod,
-      status: "PENDING",
+      status: "PENDING" as SaleStatusType,
       customerId: (session?.user as any)?.customerId,
     });
 
     if (result.success) {
-      toast.success("Order received. Your luxury collection is being prepared.");
+      const orderData = result as { success: true; data: { orderNumber: string } };
+      toast.success("Purchase successful! Check your email for your order confirmation and delivery details.");
+      setIsNavigatingToSuccess(true);
       clearCart();
-      router.push("/account");
+      router.push(`/checkout/success?orderNumber=${encodeURIComponent(orderData.data.orderNumber)}&totalAmount=${Math.round(grandTotal)}`);
     } else {
-      toast.error(result.error || "Transaction failed. Please verify your details.");
+      const errorResult = result as { success: false; error: string | null };
+      toast.error(errorResult.error || "Transaction failed. Please verify your details.");
       setLoading(false);
     }
   };
@@ -433,14 +491,17 @@ export default function CheckoutPage() {
                       <div className="size-24 rounded-3xl bg-zinc-50 border-none relative overflow-hidden flex-shrink-0 glass-card">
                         {item.image && <Image src={item.image} alt={item.name} fill className="object-cover group-hover:scale-110 transition-transform duration-500" />}
                       </div>
-                      <div className="flex-1 space-y-2">
-                        <h4 className="text-sm font-black tracking-tight line-clamp-1 group-hover:text-brand-navy transition-colors">{item.name}</h4>
-                        <div className="flex gap-2">
+                              <div className="flex-1 space-y-2">
+                          <h4 className="text-sm font-black tracking-tight line-clamp-1 group-hover:text-brand-navy transition-colors">{item.name}</h4>
+                          <div className="flex gap-2">
                             <Badge variant="outline" className="text-[9px] font-black uppercase tracking-tighter border-border/50">QTY: {item.quantity}</Badge>
                             {item.size && <Badge variant="outline" className="text-[9px] font-black uppercase tracking-tighter border-border/50">SIZE: {item.size}</Badge>}
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">₦{(Number(item.price) || 0).toLocaleString()} each</p>
+                            <p className="text-sm font-black tracking-tighter">₦{((Number(item.price) || 0) * item.quantity).toLocaleString()}</p>
+                          </div>
                         </div>
-                        <p className="text-sm font-black tracking-tighter">₦{(item.price * item.quantity).toLocaleString()}</p>
-                      </div>
                     </div>
                   ))}
                 </div>

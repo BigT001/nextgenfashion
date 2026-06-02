@@ -52,8 +52,10 @@ import {
   uploadImageAction, 
   getCategoriesAction,
   getProductBySkuAction,
-  createCategoryAction 
+  createCategoryAction,
+  deleteCategoryAction,
 } from "@/modules/products/actions/product.actions";
+import { useSession } from "next-auth/react";
 import { 
   getWarehousesAction, 
   createWarehouseAction, 
@@ -105,6 +107,8 @@ export function ProductForm({
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [isAddingCategory, setIsAddingCategory] = useState(false);
+  const [isDeletingCategoryId, setIsDeletingCategoryId] = useState<string | null>(null);
+  const { data: session } = useSession();
   
 
   useEffect(() => {
@@ -568,6 +572,44 @@ export function ProductForm({
                                     {isAddingCategory ? "Adding..." : "Add"}
                                   </Button>
                                 </div>
+
+                                {/* Existing categories with delete option for admins */}
+                                {categories.length > 0 && (
+                                  <div className="mt-4 space-y-2">
+                                    <h4 className="text-xs font-black uppercase tracking-wider text-muted-foreground">Existing Categories</h4>
+                                    <div className="space-y-2">
+                                      {categories.map((cat) => (
+                                        <div key={cat.id} className="flex items-center justify-between gap-3 p-2 rounded-md border border-border/50 bg-white">
+                                          <div className="text-sm font-medium">{cat.name}</div>
+                                          {session?.user?.role === "ADMIN" || session?.user?.role === "SUPERADMIN" ? (
+                                            <div className="flex items-center gap-2">
+                                              <Button size="sm" variant="ghost" className="text-rose-600" onClick={async () => {
+                                                if (!confirm(`Delete category '${cat.name}'? This cannot be undone.`)) return;
+                                                try {
+                                                  setIsDeletingCategoryId(cat.id);
+                                                  const res = await deleteCategoryAction(cat.id);
+                                                  if (res.success) {
+                                                    setCategories((prev) => prev.filter(c => c.id !== cat.id));
+                                                    toast.success("Category deleted");
+                                                  } else {
+                                                    toast.error(res.error || "Failed to delete category");
+                                                  }
+                                                } catch (e) {
+                                                  console.error(e);
+                                                  toast.error("Failed to delete category");
+                                                } finally {
+                                                  setIsDeletingCategoryId(null);
+                                                }
+                                              }}>
+                                                {isDeletingCategoryId === cat.id ? "Deleting..." : <Trash2 className="size-4" />}
+                                              </Button>
+                                            </div>
+                                          ) : null}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             </DialogContent>
                           </Dialog>

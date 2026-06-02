@@ -19,6 +19,7 @@ type CategoryProductRow = {
   id: string;
   name: string;
   categoryId?: string | null;
+  images?: string[] | null;
   Category?: { name?: string | null } | null;
   ProductVariant?: Array<{
     sku?: string | null;
@@ -48,7 +49,7 @@ export default async function LandingPage() {
     return rawProducts.map((product) => ({
       id: product.id,
       name: product.name,
-      images: [],
+      images: product.images ?? [],
       categoryId: product.categoryId ?? null,
       category: product.Category ? { name: product.Category.name } : null,
       variants: (product.ProductVariant ?? []).map((variant) => ({
@@ -65,7 +66,7 @@ export default async function LandingPage() {
     const rawProducts = (cat.Product ?? []) as unknown as Array<{ id: string }>;
     const firstProduct = rawProducts[0];
     const productImage = firstProduct ? resolvedCategoryImageMap.get(firstProduct.id) || "" : "";
-    const displayImage = productImage || cat.image;
+    const displayImage = cat.image || productImage;
 
     return {
       name: cat.name,

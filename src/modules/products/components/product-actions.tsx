@@ -72,6 +72,42 @@ export function ProductActions({ product }: ProductActionsProps) {
     );
   }, [variants, selectedColor, uniqueSizes]);
 
+  // Helper function to get stock for a specific size
+  const getStockForSize = (size: string) => {
+    const variantsWithSize = variants.filter(
+      (v: any) => splitSizes(v.size).includes(size)
+    );
+    
+    if (!variantsWithSize.length) return 0;
+    
+    if (selectedColor) {
+      const variant = variantsWithSize.find((v: any) => normalize(v.color) === selectedColor);
+      return variant ? (variant.inventory?.quantity ?? 0) : 0;
+    }
+    
+    // Return max stock across all colors for this size
+    return Math.max(...variantsWithSize.map((v: any) => v.inventory?.quantity ?? 0));
+  };
+
+  // Helper function to get stock for a specific color
+  const getStockForColor = (color: string) => {
+    const variantsWithColor = variants.filter(
+      (v: any) => normalize(v.color) === color
+    );
+    
+    if (!variantsWithColor.length) return 0;
+    
+    if (selectedSize) {
+      const variant = variantsWithColor.find((v: any) => 
+        splitSizes(v.size).includes(selectedSize)
+      );
+      return variant ? (variant.inventory?.quantity ?? 0) : 0;
+    }
+    
+    // Return max stock across all sizes for this color
+    return Math.max(...variantsWithColor.map((v: any) => v.inventory?.quantity ?? 0));
+  };
+
   const totalStock = variants.reduce((acc: number, v: any) => acc + (v.inventory?.quantity || 0), 0);
   const isOutOfStock = totalStock <= 0;
 
@@ -138,14 +174,26 @@ export function ProductActions({ product }: ProductActionsProps) {
       (v: any) => normalize(v.color) === selectedColor && splitSizes(v.size).includes(selectedSize || "")
     );
     if (exactMatch) return exactMatch;
+
     if (selectedColor) {
-      return variants.find((v: any) => normalize(v.color) === selectedColor) ?? null;
+      return variants.find((v: any) => normalize(v.color) === selectedColor && splitSizes(v.size).includes(selectedSize || "") && (v.inventory?.quantity ?? 0) > 0) ??
+        variants.find((v: any) => normalize(v.color) === selectedColor && splitSizes(v.size).includes(selectedSize || "")) ??
+        variants.find((v: any) => normalize(v.color) === selectedColor && (v.inventory?.quantity ?? 0) > 0) ??
+        variants.find((v: any) => normalize(v.color) === selectedColor) ??
+        null;
     }
+
     if (selectedSize) {
-      return variants.find((v: any) => splitSizes(v.size).includes(selectedSize || "")) ?? null;
+      return variants.find((v: any) => splitSizes(v.size).includes(selectedSize || "") && (v.inventory?.quantity ?? 0) > 0) ??
+        variants.find((v: any) => splitSizes(v.size).includes(selectedSize || "")) ??
+        null;
     }
+
     return variants.find((v: any) => (v.inventory?.quantity || 0) > 0) || variants[0] || null;
   }, [variants, selectedColor, selectedSize]);
+
+  const selectedVariantQuantity = selectedVariant ? Number(selectedVariant.inventory?.quantity ?? 0) : totalStock;
+  const maxAvailable = Math.max(0, selectedVariantQuantity);
 
   const isCssColor = (color: string) => {
     if (!color || typeof window === "undefined") return false;
@@ -186,12 +234,10 @@ export function ProductActions({ product }: ProductActionsProps) {
     setQuantity(1);
   }, [existingCartItem?.quantity, existingCartItem]);
 
-  const maxAvailable = selectedVariant ? (selectedVariant.inventory?.quantity ?? 0) : totalStock;
-
   const adjustQuantity = (newQuantity: number) => {
     const cappedQuantity = Math.max(1, Math.min(newQuantity, maxAvailable));
     setQuantity(cappedQuantity);
-    if (existingCartItem) {
+    if (existingCartItem && variantId) {
       updateQuantity(variantId, cappedQuantity);
     }
   };
@@ -212,7 +258,13 @@ export function ProductActions({ product }: ProductActionsProps) {
       return;
     }
 
-    const stockAvailable = selectedVariant?.inventory?.quantity ?? 0;
+    if (selectedColor && selectedSize && !selectedVariant) {
+      toast.error("The selected combination is unavailable. Please choose another size or color.");
+      return;
+    }
+
+    const stockAvailable = selectedVariant ? maxAvailable : totalStock;
+
     if (stockAvailable <= 0) {
       toast.error(`The selected options for "${product.name}" are out of stock!`, {
         duration: 5000,
@@ -221,7 +273,7 @@ export function ProductActions({ product }: ProductActionsProps) {
     }
 
     if (quantity > stockAvailable) {
-      toast.error(`Only ${stockAvailable} item(s) left in stock. You cannot request ${quantity}.`, {
+      toast.error(`Only ${stockAvailable} item(s) left in stock for the selected option.`, {
         duration: 5000,
       });
       return;
@@ -242,7 +294,7 @@ export function ProductActions({ product }: ProductActionsProps) {
       id: product.id,
       variantId,
       name: product.name,
-      price: Number(selectedVariant?.price || product.basePrice),
+      price: Number(selectedVariant?.price ?? product.basePrice) || 0,
       quantity,
       image: product.images?.[0],
       size: selectedSize || undefined,
@@ -265,10 +317,13 @@ export function ProductActions({ product }: ProductActionsProps) {
         });
         return;
       }
-      await navigator.clipboard.writeText(url);
-      toast.success("Product link copied to clipboard.");
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(url);
+        toast.success("Product link copied to clipboard.");
+        return;
+      }
+      window.prompt("Copy this product link:", url);
     } catch (err: any) {
-      // If the user cancels the native share dialog, do not show an error
       if (err && (err.name === "AbortError" || err.name === "NotAllowedError")) return;
       console.error("Share failed:", err);
       toast.error("Could not share the product.");
@@ -278,47 +333,78 @@ export function ProductActions({ product }: ProductActionsProps) {
   return (
     <div className="space-y-6">
       {/* Variants Selection */}
-      <div className="space-y-8">
+      <div className="space-y-6 sm:space-y-8">
         {sizes.length > 0 && (
-          <div className="space-y-4">
-            <h3 className="text-xs font-black uppercase tracking-[0.3em] text-muted-foreground/60">Select Size</h3>
-            <div className="flex flex-wrap gap-4">
-              {sizes.map((size: any) => (
-                <button
-                  key={size}
-                  onClick={() => setSelectedSize(size)}
-                  className={cn(
-                    "h-10 min-w-[3rem] px-4 rounded-xl border-2 font-black text-xs transition-all active:scale-95",
-                    selectedSize === size
-                      ? "border-brand-navy bg-brand-navy/5 text-brand-navy shadow-lg shadow-brand-navy/10"
-                      : "border-border/50 hover:border-brand-navy/50 glass-card"
-                  )}
-                >
-                  {size}
-                </button>
-              ))}
+          <div className="space-y-3">
+            <h3 className="text-[11px] sm:text-xs font-black uppercase tracking-[0.3em] text-muted-foreground/60">Select Size</h3>
+            <div className="flex flex-wrap gap-2 sm:gap-3">
+              {sizes.map((size: any) => {
+                const stock = getStockForSize(size);
+                const isOutOfStockVariant = stock <= 0;
+                return (
+                  <div key={size} className="flex flex-col items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedSize(size)}
+                      disabled={isOutOfStockVariant}
+                      className={cn(
+                        "h-11 sm:h-10 min-w-[3rem] px-4 rounded-lg sm:rounded-xl border-2 font-black text-xs sm:text-xs transition-all active:scale-95 touch-manipulation disabled:opacity-50 disabled:cursor-not-allowed",
+                        selectedSize === size
+                          ? "border-brand-navy bg-brand-navy/5 text-brand-navy shadow-lg shadow-brand-navy/10"
+                          : "border-border/50 hover:border-brand-navy/50 glass-card"
+                      )}
+                    >
+                      {size}
+                    </button>
+                    <span className={cn(
+                      "text-[9px] font-black uppercase tracking-widest",
+                      isOutOfStockVariant ? "text-rose-500" : "text-emerald-600"
+                    )}>
+                      {stock} {stock === 1 ? "item" : "items"}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
 
         {colors.length > 0 && (
-          <div className="space-y-4">
-            <h3 className="text-xs font-black uppercase tracking-[0.3em] text-muted-foreground/60">Select Color</h3>
-            <div className="flex flex-wrap gap-3">
+          <div className="space-y-3">
+            <h3 className="text-[11px] sm:text-xs font-black uppercase tracking-[0.3em] text-muted-foreground/60">Select Color</h3>
+            <div className="flex flex-wrap gap-2 sm:gap-3">
               {colors.map((color: any) => {
-                const isActive = selectedColor === color;
-                const buttonStyles = cn(
-                  "inline-flex items-center gap-2 rounded-full border px-3 py-2 text-[10px] font-black uppercase tracking-[0.18em] transition-all",
-                  isActive ? "border-brand-navy bg-brand-navy/5 text-brand-navy shadow-lg shadow-brand-navy/10" : "border-border/40 bg-white/90 hover:border-brand-navy/50"
-                );
+                const stock = getStockForColor(color);
+                const isOutOfStockVariant = stock <= 0;
                 return (
-                  <button key={color} type="button" onClick={() => setSelectedColor(color)} className={buttonStyles}>
-                    <span
-                      className="h-3.5 w-3.5 rounded-full border border-border/50"
-                      style={{ backgroundColor: color || "transparent" }}
-                    />
-                    {color}
-                  </button>
+                  <div key={color} className="flex flex-col items-center gap-1">
+                    <button 
+                      type="button" 
+                      onClick={() => setSelectedColor(color)}
+                      disabled={isOutOfStockVariant}
+                      className={cn(
+                        "inline-flex items-center gap-2 rounded-full border px-3 py-2 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.18em] transition-all touch-manipulation disabled:opacity-50 disabled:cursor-not-allowed",
+                        selectedColor === color 
+                          ? "border-brand-navy bg-brand-navy/5 text-brand-navy shadow-lg shadow-brand-navy/10" 
+                          : "border-border/40 bg-white/90 hover:border-brand-navy/50"
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "h-3 w-3 sm:h-3.5 sm:w-3.5 rounded-full border",
+                          isOutOfStockVariant ? "border-rose-500/40" : "border-border/50"
+                        )}
+                        style={{ backgroundColor: color || "transparent" }}
+                      />
+                      {color}
+                    </button>
+                    <span className={cn(
+                      "text-[8px] font-black uppercase tracking-widest",
+                      isOutOfStockVariant ? "text-rose-500" : "text-emerald-600"
+                    )}>
+                      {stock} {stock === 1 ? "item" : "items"}
+                    </span>
+                  </div>
                 );
               })}
             </div>
@@ -326,80 +412,90 @@ export function ProductActions({ product }: ProductActionsProps) {
         )}
 
         {selectedColor && colors.length > 0 && (
-          <div className="flex items-center gap-3">
-            <span className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground/80 font-black">Color</span>
-            <div className="inline-flex items-center gap-2 rounded-full px-3 py-1 bg-muted/10 border border-border/30">
-              <span className="h-3.5 w-3.5 rounded-full border border-border/40" style={{ backgroundColor: selectedColor }} />
-              <span className="text-[11px] font-black uppercase tracking-[0.15em] text-foreground">{selectedColor}</span>
+          <div className="flex items-center gap-2 sm:gap-3">
+            <span className="text-[9px] sm:text-[10px] uppercase tracking-[0.25em] text-muted-foreground/80 font-black">Color</span>
+            <div className="inline-flex items-center gap-2 rounded-full px-2 sm:px-3 py-1 bg-muted/10 border border-border/30">
+              <span className="h-3 w-3 sm:h-3.5 sm:w-3.5 rounded-full border border-border/40" style={{ backgroundColor: selectedColor }} />
+              <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.15em] text-foreground">{selectedColor}</span>
             </div>
           </div>
         )}
       </div>
 
       {/* Quantity & Actions */}
-      <div className="space-y-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-          <div className="flex items-center gap-4 glass-card rounded-2xl p-2 min-h-[3.75rem] min-w-[10rem] sm:w-auto">
+      <div className="space-y-4 sm:space-y-6">
+        <div className="flex flex-col gap-3 sm:gap-4">
+          <div className="flex items-center gap-3 glass-card rounded-xl sm:rounded-2xl p-1 sm:p-2 min-h-[3.5rem] sm:min-h-[3.75rem]">
             <Button
+              type="button"
               variant="ghost"
               size="icon"
-              className="size-10 rounded-xl hover:bg-white dark:hover:bg-zinc-800 transition-colors"
+              className="size-11 sm:size-10 rounded-lg sm:rounded-xl hover:bg-white dark:hover:bg-zinc-800 transition-colors touch-manipulation"
               onClick={() => adjustQuantity(quantity - 1)}
               disabled={quantity <= 1}
+              aria-label="Decrease quantity"
             >
-              <Minus className="size-4" />
+              <Minus className="size-4 sm:size-5" />
             </Button>
-            <span className="flex-1 text-center font-black text-base tracking-tighter">{quantity}</span>
+            <span className="flex-1 text-center font-black text-lg sm:text-base tracking-tighter">{quantity}</span>
             <Button
+              type="button"
               variant="ghost"
               size="icon"
-              className={cn("size-10 rounded-xl transition-colors", quantity >= maxAvailable || maxAvailable <= 0 ? "opacity-40 cursor-not-allowed" : "hover:bg-white dark:hover:bg-zinc-800")}
+              className={cn("size-11 sm:size-10 rounded-lg sm:rounded-xl transition-colors touch-manipulation", quantity >= maxAvailable || maxAvailable <= 0 ? "opacity-40 cursor-not-allowed" : "hover:bg-white dark:hover:bg-zinc-800")}
               onClick={() => adjustQuantity(quantity + 1)}
               disabled={quantity >= maxAvailable || maxAvailable <= 0}
+              aria-label="Increase quantity"
             >
-              <Plus className="size-4" />
+              <Plus className="size-4 sm:size-5" />
             </Button>
           </div>
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-2 text-xs font-black text-emerald-500 uppercase tracking-widest">
-              <Zap className="size-4 fill-emerald-500" />
-              {maxAvailable <= 0 ? (
-                <span className="text-rose-600">Out of stock</span>
-              ) : maxAvailable <= 10 ? (
-                <span className="text-emerald-600">Limited stock — {maxAvailable} left</span>
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2 text-[10px] sm:text-xs font-black uppercase tracking-widest">
+              <Zap className="size-3.5 sm:size-4 fill-emerald-500" />
+              {selectedVariant ? (
+                maxAvailable <= 0 ? (
+                  <span className="text-rose-600">Selected option out of stock</span>
+                ) : (
+                  <span className="text-emerald-600">Limited stock — {maxAvailable} left for selected option</span>
+                )
               ) : (
-                <span className="text-emerald-600">In stock</span>
+                <span className="text-emerald-600">{totalStock} item{totalStock === 1 ? "" : "s"} available</span>
               )}
             </div>
             {existingCartItem && (
-              <div className="text-[10px] font-black uppercase tracking-[0.3em] text-brand-navy">
+              <div className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em] text-brand-navy">
                 In cart: {existingCartItem.quantity}
               </div>
             )}
           </div>
         </div>
 
-        <div className="flex flex-row flex-wrap gap-3 items-stretch">
+        <div className="flex flex-col gap-2 items-stretch">
           <Button
+            type="button"
             size="lg"
             onClick={handleAddToCart}
             className={cn(
-              "flex-1 min-h-[4rem] rounded-2xl px-5 text-base font-black tracking-widest transition-all sm:text-sm",
+              "w-full min-h-[3.5rem] sm:min-h-[4rem] rounded-xl sm:rounded-2xl px-4 sm:px-5 text-sm sm:text-base font-black tracking-widest transition-all touch-manipulation",
               isOutOfStock
                 ? "bg-rose-600 hover:bg-rose-700 text-white shadow-xl shadow-rose-600/20 cursor-not-allowed"
                 : "bg-brand-navy hover:bg-brand-navy/90 text-white shadow-xl shadow-brand-navy/20 active:scale-95 group"
             )}
+            disabled={isOutOfStock}
           >
-            <ShoppingCart className="mr-3 size-5 group-hover:scale-110 transition-transform" />
+            <ShoppingCart className="mr-2 sm:mr-3 size-4 sm:size-5 group-hover:scale-110 transition-transform" />
             {isOutOfStock ? "OUT OF STOCK" : existingCartItem ? "UPDATE CART" : "ADD TO COLLECTION"}
           </Button>
           <Button
-            size="icon"
+            type="button"
+            size="lg"
             variant="outline"
             onClick={handleShare}
-            className="h-16 w-16 rounded-2xl border-2 border-border/50 hover:text-brand-silver hover:border-brand-silver/50 transition-all glass-card sm:h-14 sm:w-14"
+            className="w-full min-h-[3rem] sm:min-h-[3.75rem] rounded-xl sm:rounded-2xl border-2 border-border/50 hover:text-brand-silver hover:border-brand-silver/50 transition-all glass-card touch-manipulation text-sm sm:text-base font-black tracking-widest"
           >
-            <Share2 className="size-5" />
+            <Share2 className="mr-2 sm:mr-3 size-4 sm:size-5" />
+            SHARE
           </Button>
         </div>
       </div>

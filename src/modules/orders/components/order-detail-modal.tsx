@@ -305,134 +305,205 @@ export function OrderDetailModal({ orderId, onClose }: OrderDetailModalProps) {
     setIsUpdating(false);
   };
 
+  const customer = data?.customer ?? data?.Customer ?? null;
+  const items = data?.items ?? data?.SaleItem ?? [];
+  const staffUser = data?.user ?? data?.User ?? null;
+  const createdAt = data?.createdAt ? new Date(data.createdAt).toLocaleString() : "";
+  const paymentRef = data?.paymentRef ?? "N/A";
+  const customerName = customer?.name ?? "Guest Customer";
+  const customerEmail = customer?.email ?? "No email available";
+  const customerPhone = customer?.phone ?? "No phone available";
+  const customerAddress = customer?.address ?? "Pickup at physical outlet.";
+
   return (
     <Dialog open={!!orderId} onOpenChange={() => onClose()}>
-      <DialogContent className="max-w-5xl p-0 overflow-hidden border-none glass-card shadow-2xl bg-white/80 dark:bg-zinc-950/80 backdrop-blur-3xl rounded-[3rem]">
+      <DialogContent className="max-w-7xl p-0 overflow-hidden border-none glass-card shadow-2xl bg-white/80 dark:bg-zinc-950/80 backdrop-blur-3xl rounded-[3rem]">
         {isLoading ? (
-          <div className="h-[600px] flex flex-col items-center justify-center space-y-4">
+          <div className="h-[84vh] md:h-[820px] flex flex-col items-center justify-center space-y-4">
             <LoadingSpinner size="lg" />
             <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground animate-pulse">Auditing Fulfillment Signature...</p>
           </div>
         ) : data ? (
-          <div className="flex flex-col h-[85vh] md:h-[700px]">
-            {/* Header: Identity & Global Status */}
-            <div className="p-8 md:p-10 bg-brand-navy bg-brand-mesh border-b border-white/5 flex flex-col md:flex-row items-center justify-between gap-8 relative overflow-hidden">
-                <div className="absolute inset-0 bg-linear-to-b from-white/5 to-transparent pointer-events-none" />
-                <div className="flex items-center gap-6 relative z-10">
-                    <div className="size-16 bg-white shadow-2xl rounded-2xl flex items-center justify-center text-brand-navy group">
-                        <ShoppingBag className="size-8 group-hover:scale-110 transition-transform" />
-                    </div>
-                    <div className="space-y-1">
-                        <h2 className="text-3xl font-black text-white tracking-tighter leading-none">{data.orderNumber}</h2>
-                        <div className="flex items-center gap-3">
-                            <Badge className="bg-white/10 text-white border-none font-black text-[10px] px-3 tracking-widest uppercase">
-                                {data.paymentMethod}
-                            </Badge>
-                            <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">{new Date(data.createdAt).toLocaleString()}</span>
-                        </div>
-                    </div>
+          <div className="flex flex-col h-[88vh] md:h-[820px]">
+            <div className="p-4 md:p-6 bg-brand-navy bg-brand-mesh border-b border-white/5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between relative overflow-hidden">
+              <div className="absolute inset-0 bg-linear-to-b from-white/10 to-transparent pointer-events-none" />
+              <div className="relative z-10 flex items-start gap-4">
+                <div className="size-12 rounded-[1.5rem] bg-white shadow-2xl flex items-center justify-center text-brand-navy">
+                  <ShoppingBag className="size-5" />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[9px] font-black uppercase tracking-[0.45em] text-white/60">Fulfillment audit</p>
+                  <h2 className="text-xl md:text-2xl font-black text-white tracking-tight leading-none">{data.orderNumber}</h2>
+                  <div className="flex flex-wrap items-center gap-2 text-[9px] uppercase tracking-[0.25em] text-white/70">
+                    <Badge className="bg-white/10 text-white border-none font-black px-2 rounded-full text-[8px]">{data.status}</Badge>
+                    <span className="text-[9px]">{createdAt}</span>
+                  </div>
+                </div>
                 </div>
 
-                <div className="flex items-center gap-4 relative z-10">
-                    <Select value={data.status} onValueChange={handleStatusUpdate} disabled={isUpdating}>
-                        <SelectTrigger className="w-[180px] h-14 rounded-2xl bg-white/10 border-white/20 text-white font-black text-[10px] uppercase tracking-widest outline-none focus:ring-0">
-                            <SelectValue placeholder="STATUS" />
-                        </SelectTrigger>
-                        <SelectContent className="border border-border bg-popover text-popover-foreground p-2 rounded-2xl shadow-xl min-w-[180px]">
-                            <SelectItem value="PENDING" className="rounded-xl h-10 font-black text-[10px] uppercase tracking-widest cursor-pointer">PENDING</SelectItem>
-                            <SelectItem value="PROCESSING" className="rounded-xl h-10 font-black text-[10px] uppercase tracking-widest cursor-pointer">PROCESSING</SelectItem>
-                            <SelectItem value="SHIPPED" className="rounded-xl h-10 font-black text-[10px] uppercase tracking-widest cursor-pointer">SHIPPED</SelectItem>
-                            <SelectItem value="COMPLETED" className="rounded-xl h-10 font-black text-[10px] uppercase tracking-widest cursor-pointer">COMPLETED</SelectItem>
-                            <SelectItem value="CANCELLED" className="rounded-xl h-10 font-black text-[10px] uppercase tracking-widest cursor-pointer">CANCELLED</SelectItem>
-                            <SelectItem value="REFUNDED" className="rounded-xl h-10 font-black text-[10px] uppercase tracking-widest cursor-pointer">REFUNDED</SelectItem>
-                        </SelectContent>
-                    </Select>
-                    <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        onClick={() => setShowReceipt(true)}
-                        className="size-14 rounded-2xl bg-white/10 text-white hover:bg-white/20 transition-all"
-                    >
-                        <Printer className="size-5" />
-                    </Button>
-                </div>
+              <div className="relative z-10 flex items-center gap-3">
+                <Select value={data.status} onValueChange={handleStatusUpdate} disabled={isUpdating}>
+                  <SelectTrigger className="w-[160px] h-10 rounded-2xl bg-white/10 border-white/20 text-white font-black text-[9px] uppercase tracking-widest outline-none focus:ring-0">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent className="border border-border bg-popover text-popover-foreground p-2 rounded-2xl shadow-xl min-w-[190px]">
+                    <SelectItem value="PENDING" className="rounded-xl h-10 font-black text-[10px] uppercase tracking-widest">PENDING</SelectItem>
+                    <SelectItem value="PROCESSING" className="rounded-xl h-10 font-black text-[10px] uppercase tracking-widest">PROCESSING</SelectItem>
+                    <SelectItem value="PAID" className="rounded-xl h-10 font-black text-[10px] uppercase tracking-widest">PAID</SelectItem>
+                    <SelectItem value="SHIPPED" className="rounded-xl h-10 font-black text-[10px] uppercase tracking-widest">SHIPPED</SelectItem>
+                    <SelectItem value="COMPLETED" className="rounded-xl h-10 font-black text-[10px] uppercase tracking-widest">COMPLETED</SelectItem>
+                    <SelectItem value="CANCELLED" className="rounded-xl h-10 font-black text-[10px] uppercase tracking-widest">CANCELLED</SelectItem>
+                    <SelectItem value="REFUNDED" className="rounded-xl h-10 font-black text-[10px] uppercase tracking-widest">REFUNDED</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button variant="ghost" size="icon" onClick={() => setShowReceipt(true)} className="size-14 rounded-2xl bg-white/10 text-white hover:bg-white/20 transition-all">
+                  <Printer className="size-5" />
+                </Button>
+              </div>
             </div>
 
-            <div className="flex-1 flex flex-col md:flex-row overflow-hidden bg-white dark:bg-zinc-950">
-                {/* Left: Itemized Ledger */}
-                <div className="flex-1 p-8 md:p-10 overflow-y-auto scrollbar-hide border-r border-border/30">
-                    <div className="space-y-8">
-                        <div className="flex items-center justify-between">
-                            <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-brand-navy">ACQUISITION LEDGER</h4>
-                            <Package className="size-4 text-brand-navy/30" />
+            <div className="flex-1 flex flex-col gap-6 overflow-hidden bg-white dark:bg-zinc-950 md:flex-row">
+              <div className="flex-1 overflow-y-auto scrollbar-hide p-10 md:p-12 border-b border-border/10 md:border-b-0 md:border-r md:border-border/10">
+                <div className="grid gap-6">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="rounded-[2rem] bg-zinc-50 dark:bg-zinc-900/60 p-6 shadow-sm border border-border/50">
+                      <div className="flex items-center gap-3 mb-4">
+                        <CreditCard className="size-5 text-brand-navy" />
+                        <h3 className="text-xs font-black uppercase tracking-[0.4em] text-muted-foreground">Order details</h3>
+                      </div>
+                      <div className="space-y-3 text-sm text-foreground">
+                        <div className="flex justify-between gap-4">
+                          <span className="font-black text-[11px] uppercase tracking-[0.3em] text-muted-foreground">Order ID</span>
+                          <span className="text-right">{data.orderNumber}</span>
                         </div>
-                        
-                        <div className="space-y-4">
-                            {data.items.map((item: any) => (
-                                <div key={item.id} className="flex items-center gap-6 p-5 rounded-[2rem] bg-zinc-50 dark:bg-zinc-900/50 hover:bg-zinc-100 transition-all group">
-                                    <div className="size-20 rounded-2xl bg-white dark:bg-zinc-800 relative overflow-hidden flex-shrink-0 shadow-sm border border-border/10 group-hover:scale-105 transition-transform duration-500">
-                                        {item.variant.product.images?.[0] ? (
-                                            <Image src={item.variant.product.images[0]} alt={item.variant.product.name} fill className="object-cover" />
-                                        ) : (
-                                            <div className="flex items-center justify-center h-full opacity-10"><Zap className="size-6" /></div>
-                                        )}
-                                    </div>
-                                    <div className="flex-1 flex flex-col gap-1">
-                                        <h5 className="font-black text-sm tracking-tight group-hover:text-brand-navy transition-colors line-clamp-1">{item.variant.product.name}</h5>
-                                        <div className="flex gap-2">
-                                            <Badge variant="outline" className="text-[8px] font-black border-none bg-muted/50 px-2 tracking-tighter uppercase">QTY: {item.quantity}</Badge>
-                                            <Badge variant="outline" className="text-[8px] font-black border-none bg-muted/50 px-2 tracking-tighter uppercase">SIZE: {item.variant.size}</Badge>
-                                        </div>
-                                    </div>
-                                    <div className="text-right">
-                                        <p className="font-black text-sm tracking-tighter">₦{(Number(item.price) * item.quantity).toLocaleString()}</p>
-                                    </div>
-                                </div>
-                            ))}
+                        <div className="flex justify-between gap-4">
+                          <span className="font-black text-[11px] uppercase tracking-[0.3em] text-muted-foreground">Created</span>
+                          <span className="text-right">{new Date(data.createdAt).toLocaleString()}</span>
                         </div>
-                    </div>
-                </div>
-
-                {/* Right: Logistics & Patron Intel */}
-                <div className="md:w-[320px] p-8 md:p-10 bg-zinc-50/50 dark:bg-zinc-900/30 overflow-y-auto scrollbar-hide space-y-10">
-                    <div className="space-y-6">
-                        <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-brand-silver">PATRON INTEL</h4>
-                        <div className="flex items-center gap-4 group">
-                            <div className="size-12 rounded-2xl bg-brand-silver/10 flex items-center justify-center text-brand-silver shadow-inner group-hover:rotate-12 transition-transform">
-                                <User className="size-6" />
-                            </div>
-                            <div className="flex flex-col">
-                                <span className="font-black text-sm tracking-tight">{data.customer?.name || "Offline"}</span>
-                                <span className="text-[10px] text-muted-foreground font-black uppercase tracking-widest truncate max-w-[120px]">{data.customer?.email || "No Email"}</span>
-                            </div>
+                        <div className="flex justify-between gap-4">
+                          <span className="font-black text-[11px] uppercase tracking-[0.3em] text-muted-foreground">Items</span>
+                          <span className="text-right">{items.length}</span>
                         </div>
+                      </div>
                     </div>
 
-                    <Separator className="bg-border/30" />
-
-                    <div className="space-y-6">
-                        <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-500">DESTINATION LOGISTICS</h4>
-                        <div className="flex gap-4">
-                            <MapPin className="size-5 text-emerald-500/30 shrink-0 mt-1" />
-                            <p className="text-xs font-bold leading-relaxed text-muted-foreground italic">
-                                {data.customer?.address || "Physical Outlet Acquisition"}
-                            </p>
+                    <div className="rounded-[2rem] bg-zinc-50 dark:bg-zinc-900/60 p-6 shadow-sm border border-border/50">
+                      <div className="flex items-center gap-3 mb-4">
+                        <User className="size-5 text-brand-navy" />
+                        <h3 className="text-xs font-black uppercase tracking-[0.4em] text-muted-foreground">Customer info</h3>
+                      </div>
+                      <div className="space-y-3 text-sm text-foreground">
+                        <div>
+                          <p className="font-black text-sm">{customerName}</p>
+                          <p className="text-xs text-muted-foreground">{customerEmail}</p>
                         </div>
+                        <div className="text-xs text-muted-foreground">
+                          <p>{customerPhone}</p>
+                          <p className="break-words">{customer?.address ? customerAddress : "No address available"}</p>
+                        </div>
+                      </div>
                     </div>
+                  </div>
 
-                    <Separator className="bg-border/30" />
+                  <div className="rounded-[2rem] bg-zinc-50 dark:bg-zinc-900/60 p-6 shadow-sm border border-border/50">
+                    <div className="flex items-center gap-3 mb-4">
+                      <MapPin className="size-5 text-emerald-500" />
+                      <h3 className="text-xs font-black uppercase tracking-[0.4em] text-muted-foreground">Shipping / delivery</h3>
+                    </div>
+                    <p className="text-sm text-foreground leading-relaxed">
+                      {customerAddress}
+                    </p>
+                  </div>
 
+                  <div className="rounded-[2rem] bg-zinc-50 dark:bg-zinc-900/60 p-6 shadow-sm border border-border/50">
+                    <div className="flex items-center justify-between mb-5">
+                      <div>
+                        <p className="text-xs font-black uppercase tracking-[0.4em] text-muted-foreground">Acquisition ledger</p>
+                        <p className="text-base font-black text-foreground">Product breakdown</p>
+                      </div>
+                      <span className="text-xs font-black uppercase tracking-[0.3em] text-muted-foreground">Line totals shown</span>
+                    </div>
                     <div className="space-y-4">
-                        <div className="flex justify-between items-end">
-                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Settled Revenue</span>
-                            <span className="text-3xl font-black text-foreground tracking-tighter">₦{Number(data.totalAmount).toLocaleString()}</span>
-                        </div>
-                        <div className="flex items-center justify-center gap-3 text-[9px] font-black text-muted-foreground/40 uppercase tracking-[0.3em] pt-4">
-                            <ShieldCheck className="size-4" />
-                            NextGen Logistics Standard
-                        </div>
+                      {items.map((item: any, index: number) => {
+                        const variant = item.variant ?? item.ProductVariant ?? {};
+                        const product = variant.product ?? variant.Product ?? {};
+                        const key = item.id || item.variantId || index;
+
+                        return (
+                          <div key={key} className="grid gap-4 md:grid-cols-[auto_1fr_auto] items-center rounded-[1.5rem] bg-white dark:bg-zinc-950 p-4 border border-border/40">
+                            <div className="relative h-28 w-28 rounded-3xl overflow-hidden bg-zinc-100 dark:bg-zinc-800">
+                              {product.images?.[0] ? (
+                                <Image src={product.images[0]} alt={product.name || "Product image"} fill className="object-cover" />
+                              ) : (
+                                <div className="flex h-full items-center justify-center text-muted-foreground"><Zap className="size-6" /></div>
+                              )}
+                            </div>
+                            <div className="space-y-2">
+                              <p className="font-black text-sm text-foreground">{product.name || variant.sku || "Unnamed product"}</p>
+                              <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-2">{product.description ?? "No product description available."}</p>
+                              <div className="flex flex-wrap gap-2 text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
+                                {variant.sku ? <span className="rounded-full bg-muted/20 px-2 py-1">SKU: {variant.sku}</span> : null}
+                                {variant.size ? <span className="rounded-full bg-muted/20 px-2 py-1">Size: {variant.size}</span> : null}
+                                {variant.color ? <span className="rounded-full bg-muted/20 px-2 py-1">Color: {variant.color}</span> : null}
+                              </div>
+                            </div>
+                            <div className="space-y-2 text-right">
+                              <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Qty {item.quantity}</p>
+                              <p className="font-black text-sm">₦{Number(item.price).toLocaleString()}</p>
+                              <p className="text-[11px] text-muted-foreground">Line total: ₦{(Number(item.price) * item.quantity).toLocaleString()}</p>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
+                  </div>
                 </div>
+              </div>
+
+              <aside className="md:w-[420px] p-8 md:p-10 overflow-y-auto scrollbar-hide bg-zinc-50/60 dark:bg-zinc-900/40 rounded-tr-[3rem] rounded-br-[3rem]">
+                <div className="space-y-6">
+                  <div className="rounded-[2rem] bg-white dark:bg-zinc-950 p-6 border border-border/40 shadow-sm">
+                    <div className="flex items-center gap-3 mb-4">
+                      <CheckCircle2 className="size-5 text-emerald-500" />
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-muted-foreground">Revenue</p>
+                        <p className="text-3xl font-black tracking-tight">₦{Number(data.totalAmount).toLocaleString()}</p>
+                      </div>
+                    </div>
+                    <div className="grid gap-3 text-sm text-foreground">
+                      <div className="flex justify-between text-muted-foreground"><span>Order subtotal</span><span>₦{Number(data.totalAmount).toLocaleString()}</span></div>
+                      <div className="flex justify-between text-muted-foreground"><span>Order count</span><span>{items.length}</span></div>
+                      <div className="flex justify-between text-muted-foreground"><span>Customer</span><span>{customerName}</span></div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-[2rem] bg-white dark:bg-zinc-950 p-6 border border-border/40 shadow-sm">
+                    <div className="flex items-center gap-3 mb-4">
+                      <Package className="size-5 text-brand-navy" />
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-muted-foreground">Order audit</p>
+                        <p className="text-sm font-black text-foreground">Operations overview</p>
+                      </div>
+                    </div>
+                    <div className="space-y-3 text-sm text-foreground">
+                      <div className="flex justify-between"><span className="text-muted-foreground">Source</span><span>{staffUser?.name ? `Staff - ${staffUser.name}` : "Storefront"}</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">Payment ref</span><span>{paymentRef}</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">Status</span><span>{data.status}</span></div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-[2rem] bg-white dark:bg-zinc-950 p-6 border border-border/40 shadow-sm">
+                    <div className="flex items-center gap-3 mb-4">
+                      <ShieldCheck className="size-5 text-brand-silver" />
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-muted-foreground">Shipping priority</p>
+                        <p className="text-sm font-black text-foreground">Standard nextgen logistics</p>
+                      </div>
+                    </div>
+                    <p className="text-sm leading-relaxed text-muted-foreground">Deliver with extra care and confirm the customer address before packing. Use the SKU and size details above for inventory match.</p>
+                  </div>
+                </div>
+              </aside>
             </div>
           </div>
         ) : (

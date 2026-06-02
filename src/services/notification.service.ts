@@ -105,6 +105,14 @@ export class NotificationService {
     customerEmail: string;
     orderNumber: string;
     totalAmount: number;
+    items?: Array<{
+      productName?: string;
+      sku?: string;
+      size?: string | null;
+      color?: string | null;
+      quantity: number;
+      price: number;
+    }>;
   }) {
     console.log(`Sending order confirmation to ${data.customerEmail} for order ${data.orderNumber}`);
     
@@ -113,13 +121,55 @@ export class NotificationService {
           console.warn("Resend API key missing. Order confirmation not sent.");
           return { success: false, error: "Missing API Key" };
         }
+
+        const itemsHtml = (data.items || [])
+          .map((item) => `
+            <tr>
+              <td style="padding: 8px; border: 1px solid #eee;">${item.productName || item.sku || "Item"}</td>
+              <td style="padding: 8px; border: 1px solid #eee;">${item.quantity}</td>
+              <td style="padding: 8px; border: 1px solid #eee;">₦${Number(item.price).toLocaleString()}</td>
+              <td style="padding: 8px; border: 1px solid #eee;">₦${(Number(item.price) * item.quantity).toLocaleString()}</td>
+            </tr>
+          `)
+          .join("");
+
         await resend.emails.send({
           from: 'NextGen Kiddies <orders@nextgenkiddies.com>',
           to: [data.customerEmail],
           subject: `Order Confirmed: ${data.orderNumber}`,
-          html: `<p>Your order for NGN ${data.totalAmount} has been received.</p>`
+          html: `
+            <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 12px; background: #ffffff;">
+              <h1 style="color: #0B1E3F;">Thank You for Your Purchase!</h1>
+              <p>Dear customer,</p>
+              <p>Your order <strong>${data.orderNumber}</strong> has been confirmed successfully.</p>
+              <p><strong>Total Paid:</strong> ₦${data.totalAmount.toLocaleString()}</p>
+              ${itemsHtml ? `
+                <h2 style="margin-top: 20px;">Purchase Details</h2>
+                <table style="width: 100%; border-collapse: collapse; margin-top: 12px;">
+                  <thead>
+                    <tr>
+                      <th style="text-align: left; padding: 8px; border: 1px solid #eee;">Item</th>
+                      <th style="text-align: left; padding: 8px; border: 1px solid #eee;">Qty</th>
+                      <th style="text-align: left; padding: 8px; border: 1px solid #eee;">Unit Price</th>
+                      <th style="text-align: left; padding: 8px; border: 1px solid #eee;">Line Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${itemsHtml}
+                  </tbody>
+                </table>
+              ` : ""}
+              <p style="margin-top: 24px;">We appreciate you choosing NextGen Kiddies. You can check your order status in the dashboard or continue shopping with us.</p>
+              <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #666;">
+                &copy; ${new Date().getFullYear()} NextGen Kiddies.
+              </div>
+            </div>
+          `,
         });
-    } catch (e) {}
+    } catch (e) {
+      console.error("Resend Error:", e);
+      return { success: false, error: e };
+    }
 
     return {
       success: true,

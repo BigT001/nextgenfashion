@@ -105,7 +105,7 @@ export async function registerCustomerAction(data: {
           email: data.email,
           password: hashedPassword,
           role: (UserRole?.CUSTOMER || "CUSTOMER") as any,
-          customer: {
+          Customer: {
             connect: { id: customer.id }
           }
         } as any,

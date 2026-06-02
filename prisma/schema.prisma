@@ -119,7 +119,7 @@ model Sale {
   customerId    String?
   userId        String?
   totalAmount   Decimal       @db.Decimal(10, 2)
-  status        SaleStatus    @default(COMPLETED)
+  status        SaleStatus    @default(PENDING)
   paymentMethod PaymentMethod
   paymentRef    String?
   createdAt     DateTime      @default(now())
@@ -209,6 +209,7 @@ enum PaymentMethod {
 
 enum SaleStatus {
   PENDING
+  PAID
   COMPLETED
   CANCELLED
   REFUNDED

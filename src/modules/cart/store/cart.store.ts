@@ -33,6 +33,8 @@ export const useCartStore = create<CartState>()(
       addItem: (newItem) => {
         const currentItems = get().items;
         const existingItem = currentItems.find((item) => item.variantId === newItem.variantId);
+        const normalizedPrice = Number(newItem.price ?? 0) || 0;
+        const itemToAdd = { ...newItem, price: normalizedPrice };
 
         if (existingItem) {
           const desiredQty = existingItem.quantity + newItem.quantity;
@@ -45,7 +47,7 @@ export const useCartStore = create<CartState>()(
             ),
           });
         } else {
-          set({ items: [...currentItems, newItem] });
+          set({ items: [...currentItems, itemToAdd] });
         }
       },
       setOpenCart: (open: boolean) => set({ openCart: open }),
@@ -68,7 +70,7 @@ export const useCartStore = create<CartState>()(
       },
       clearCart: () => set({ items: [] }),
       getTotal: () => {
-        return get().items.reduce((total, item) => total + item.price * item.quantity, 0);
+        return get().items.reduce((total, item) => total + (Number(item.price) || 0) * item.quantity, 0);
       },
       getItemCount: () => {
         return get().items.reduce((count, item) => count + item.quantity, 0);
