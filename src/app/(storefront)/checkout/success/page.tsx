@@ -37,12 +37,12 @@ function OrderSuccessClient() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-white selection:bg-brand-navy/30 flex flex-col items-center justify-center p-6 relative overflow-hidden">
+    <div className="min-h-screen bg-white selection:bg-brand-navy/30 flex flex-col items-center justify-center p-4 sm:p-6 relative overflow-hidden">
       {/* Background Accents */}
       <div className="absolute inset-0 bg-brand-mesh opacity-5" />
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 size-[800px] bg-brand-navy/5 rounded-full blur-[120px] -z-10" />
 
-      <div className="max-w-4xl w-full text-center space-y-12 animate-slow-fade relative z-10">
+      <div className="max-w-4xl w-full text-center space-y-8 sm:space-y-10 animate-slow-fade relative z-10">
         <div className="inline-flex items-center justify-center gap-5 rounded-full bg-brand-navy/5 px-6 py-4 shadow-lg shadow-brand-navy/10 mx-auto">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-navy text-white shadow-sm">
             <CheckCircle2 className="size-6" />
@@ -51,15 +51,15 @@ function OrderSuccessClient() {
         </div>
 
         <div className="space-y-6">
-          <h1 className="text-5xl md:text-6xl font-black tracking-tight leading-none text-slate-950">
+          <h1 className="text-3xl sm:text-4xl md:text-6xl font-black tracking-tight leading-tight text-slate-950">
             CONGRATULATIONS <span className="text-brand-navy">🎉</span>
           </h1>
-          <p className="mx-auto max-w-2xl text-lg text-slate-600 font-medium leading-8">
+          <p className="mx-auto max-w-xl sm:max-w-2xl text-sm sm:text-base text-slate-600 font-medium leading-7 sm:leading-8">
             Your payment was successful and your order is confirmed. We’ve emailed your receipt and delivery details — you can track the status anytime from your dashboard.
           </p>
         </div>
 
-        <div className="relative overflow-hidden rounded-[3rem] border border-slate-200/80 bg-white/95 shadow-[0_40px_120px_rgba(15,23,42,0.08)] p-8 sm:p-10">
+        <div className="relative overflow-hidden rounded-[1.5rem] border border-slate-200/80 bg-white/95 shadow-[0_24px_80px_rgba(15,23,42,0.06)] p-4 sm:p-6">
           <div className="absolute top-0 right-0 h-32 w-32 rounded-full bg-brand-navy/10 blur-3xl opacity-70" />
           <div className="relative space-y-8">
             <div className="rounded-3xl border border-slate-200/70 bg-slate-900/5 p-6 text-left">
@@ -73,13 +73,13 @@ function OrderSuccessClient() {
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Link href="/account" className="block w-full">
-                <Button className="w-full h-16 bg-brand-navy text-white rounded-2xl font-black text-xs uppercase tracking-[0.3em] shadow-2xl group transition-all active:scale-95">
+                <Button className="w-full h-12 bg-brand-navy text-white rounded-xl font-black text-xs uppercase tracking-[0.3em] shadow-lg group transition-all active:scale-95">
                   VIEW ACCOUNT
                   <ArrowRight className="ml-3 size-4 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </Link>
               <Link href="/shop" className="block w-full">
-                <Button variant="outline" className="w-full h-16 border-2 border-brand-navy text-brand-navy rounded-2xl font-black text-xs uppercase tracking-[0.3em] shadow-none group transition-all active:scale-95">
+                <Button variant="outline" className="w-full h-12 border-2 border-brand-navy text-brand-navy rounded-xl font-black text-xs uppercase tracking-[0.3em] shadow-none group transition-all active:scale-95">
                   CONTINUE SHOPPING
                   <ArrowRight className="ml-3 size-4 group-hover:translate-x-1 transition-transform" />
                 </Button>
@@ -88,7 +88,7 @@ function OrderSuccessClient() {
           </div>
         </div>
 
-        <p className="text-sm uppercase tracking-[0.35em] text-slate-400">
+        <p className="text-xs sm:text-sm uppercase tracking-[0.35em] text-slate-400">
           Need help? Contact support at <a href="tel:+234800NEXTGEN" className="font-semibold text-brand-navy">+234 800 NEXTGEN</a>
         </p>
       </div>
