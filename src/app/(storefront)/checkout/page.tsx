@@ -290,7 +290,7 @@ export default function CheckoutPage() {
               paymentMethod: detectedPaymentMethod,
               paymentRef: paymentRef || undefined,
               paymentProviderData: rawResponse,
-              status: "PAID" as SaleStatusType,
+              status: "COMPLETED" as SaleStatusType,
               customerId: (session?.user as any)?.customerId,
             });
             console.debug("[checkout] createOrderAction result", result);

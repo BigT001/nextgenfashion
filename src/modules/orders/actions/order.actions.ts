@@ -242,7 +242,8 @@ export async function createOrderAction(data: CreateOrderActionPayload) {
     ];
 
     const requestedStatus = String(data.status || "PENDING").toUpperCase();
-    const statusValue = KNOWN_STATUSES.includes(requestedStatus) ? requestedStatus : "PENDING";
+    const normalizedStatus = requestedStatus === "PAID" ? "COMPLETED" : requestedStatus;
+    const statusValue = KNOWN_STATUSES.includes(normalizedStatus) ? normalizedStatus : "PENDING";
 
     let customer: { id: string; email?: string | null } | null = null;
     // Try the transaction; if the database enum isn't migrated yet and rejects
@@ -347,8 +348,15 @@ export async function createOrderAction(data: CreateOrderActionPayload) {
       });
     } catch (err: any) {
       const msg = String(err?.message || err);
-      if (msg.includes("Invalid value for argument `status`") || msg.includes("invalid value")) {
-        console.warn("[createOrderAction] database rejected status value, retrying with PENDING", { statusValue });
+      const lowerMsg = msg.toLowerCase();
+      const isStatusEnumError = [
+        "invalid value for argument `status`",
+        "invalid value",
+        "invalid input value for enum",
+      ].some((pattern) => lowerMsg.includes(pattern));
+
+      if (isStatusEnumError) {
+        console.warn("[createOrderAction] database rejected status value, retrying with PENDING", { statusValue, error: msg });
         // retry with PENDING
         result = await prisma.$transaction(async (tx) => {
           // create/connect customer (same logic as above)
