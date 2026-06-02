@@ -228,7 +228,6 @@ export default function CheckoutPage() {
         return;
       }
       setStep("LOGISTICS");
-      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
@@ -388,26 +387,30 @@ export default function CheckoutPage() {
             <form id="checkout-form" onSubmit={handleSubmit} className="lg:col-span-7 space-y-10">
               
               {/* Persistent step tabs for consistent navigation */}
-              <div className="mb-6 grid grid-cols-1 gap-3 md:grid-cols-2">
-                {steps.map((s) => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() => {
-                      if (s.id === "LOGISTICS" && step === "IDENTITY" && !validateIdentityStep()) return;
-                      setStep(s.id);
-                    }}
-                    className={cn(
-                      "flex w-full items-center justify-center gap-2 rounded-[1.75rem] py-3 px-4 text-[11px] font-black uppercase tracking-[0.3em] transition-all shadow-sm min-h-[52px]",
-                      step === s.id
-                        ? "bg-brand-navy text-white"
-                        : "bg-white text-zinc-600 border border-zinc-200 hover:border-brand-navy/80"
-                    )}
-                  >
-                    <s.icon className="size-5" />
-                    <span>{s.label}</span>
-                  </button>
-                ))}
+              <div className="mb-6 overflow-x-auto">
+                <div className="inline-flex min-w-full items-center gap-3 rounded-full bg-zinc-100/90 p-1.5 shadow-sm border border-zinc-200">
+                  {steps.map((s) => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => {
+                        if (s.id === "LOGISTICS" && step === "IDENTITY" && !validateIdentityStep()) return;
+                        setStep(s.id);
+                      }}
+                      className={cn(
+                        "flex min-w-[150px] flex-1 items-center justify-center gap-2 rounded-full px-4 py-3 text-[11px] font-black uppercase tracking-[0.28em] transition-all whitespace-nowrap",
+                        step === s.id
+                          ? "bg-brand-navy text-white shadow-lg shadow-brand-navy/10"
+                          : "bg-white text-zinc-600 border border-transparent hover:border-brand-navy/80 hover:bg-white/90"
+                      )}
+                    >
+                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-brand-navy shadow-sm">
+                        <s.icon className="size-4" />
+                      </span>
+                      <span>{s.label}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {/* Step 1: Identity */}
