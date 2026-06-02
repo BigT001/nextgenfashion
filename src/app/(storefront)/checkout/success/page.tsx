@@ -42,7 +42,7 @@ function OrderSuccessClient() {
       <div className="absolute inset-0 bg-brand-mesh opacity-5" />
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 size-[800px] bg-brand-navy/5 rounded-full blur-[120px] -z-10" />
 
-      <div className="max-w-4xl w-full text-center space-y-8 sm:space-y-10 animate-slow-fade relative z-10">
+      <div className="max-w-4xl w-full text-center space-y-6 sm:space-y-8 animate-slow-fade relative z-10">
         <div className="inline-flex items-center justify-center gap-5 rounded-full bg-brand-navy/5 px-6 py-4 shadow-lg shadow-brand-navy/10 mx-auto">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-navy text-white shadow-sm">
             <CheckCircle2 className="size-6" />
@@ -50,8 +50,8 @@ function OrderSuccessClient() {
           <span className="text-xs font-black uppercase tracking-[0.45em] text-brand-navy">ORDER CONFIRMED</span>
         </div>
 
-        <div className="space-y-6">
-          <h1 className="text-3xl sm:text-4xl md:text-6xl font-black tracking-tight leading-tight text-slate-950">
+        <div className="space-y-4">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight leading-tight text-slate-950">
             CONGRATULATIONS <span className="text-brand-navy">🎉</span>
           </h1>
           <p className="mx-auto max-w-xl sm:max-w-2xl text-sm sm:text-base text-slate-600 font-medium leading-7 sm:leading-8">
@@ -59,27 +59,27 @@ function OrderSuccessClient() {
           </p>
         </div>
 
-        <div className="relative overflow-hidden rounded-[1.5rem] border border-slate-200/80 bg-white/95 shadow-[0_24px_80px_rgba(15,23,42,0.06)] p-4 sm:p-6">
+        <div className="relative overflow-hidden rounded-[1.5rem] border border-slate-200/80 bg-white/95 shadow-[0_24px_80px_rgba(15,23,42,0.06)] p-4 sm:p-5">
           <div className="absolute top-0 right-0 h-32 w-32 rounded-full bg-brand-navy/10 blur-3xl opacity-70" />
-          <div className="relative space-y-8">
-            <div className="rounded-3xl border border-slate-200/70 bg-slate-900/5 p-6 text-left">
-              <p className="text-sm uppercase tracking-[0.35em] text-slate-500">What happens next</p>
-              <ul className="mt-4 space-y-3 text-sm leading-7 text-slate-700">
+          <div className="relative space-y-5">
+            <div className="rounded-2xl border border-slate-200/70 bg-slate-900/5 p-4 text-left">
+              <p className="text-xs uppercase tracking-[0.35em] text-slate-500">What happens next</p>
+              <ul className="mt-3 space-y-2 text-xs leading-6 text-slate-700">
                 <li>• Confirmation email delivered to your inbox.</li>
                 <li>• Order progress will appear in your account.</li>
                 <li>• Our logistics team starts processing immediately.</li>
               </ul>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Link href="/account" className="block w-full">
-                <Button className="w-full h-12 bg-brand-navy text-white rounded-xl font-black text-xs uppercase tracking-[0.3em] shadow-lg group transition-all active:scale-95">
+                <Button className="w-full h-10 bg-brand-navy text-white rounded-lg font-black text-xs uppercase tracking-[0.3em] shadow-md group transition-all active:scale-95">
                   VIEW ACCOUNT
                   <ArrowRight className="ml-3 size-4 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </Link>
               <Link href="/shop" className="block w-full">
-                <Button variant="outline" className="w-full h-12 border-2 border-brand-navy text-brand-navy rounded-xl font-black text-xs uppercase tracking-[0.3em] shadow-none group transition-all active:scale-95">
+                <Button variant="outline" className="w-full h-10 border-2 border-brand-navy text-brand-navy rounded-lg font-black text-xs uppercase tracking-[0.3em] shadow-none group transition-all active:scale-95">
                   CONTINUE SHOPPING
                   <ArrowRight className="ml-3 size-4 group-hover:translate-x-1 transition-transform" />
                 </Button>
