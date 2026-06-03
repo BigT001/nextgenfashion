@@ -44,17 +44,24 @@ export async function POST(request: Request) {
       return new Response("Invalid signature", { status: 401 });
     }
 
-    // Now we know the payload is 100% authentically from Resend
-    
-    // Resend wraps inbound emails in a specific JSON structure.
-    // Example: payload.type === "email.received"
-    if (payload.type === "email.received" || payload.type === "email.inbound") {
-        const data = payload.data;
-        const fromEmail = data.from || "unknown@example.com";
-        const toEmail = data.to?.[0] || "support@nextgenkiddies.com";
+    // Log the full payload so we can see Resend's exact field structure
+    console.log("[RESEND WEBHOOK] Event type:", payload.type);
+    console.log("[RESEND WEBHOOK] Full payload:", JSON.stringify(payload, null, 2));
+
+    // Resend wraps inbound emails — try all known event type names
+    if (payload.type === "email.received" || payload.type === "email.inbound" || payload.type === "inbound.email") {
+        const data = payload.data || payload;
+        
+        // Handle all known Resend field name variations
+        const fromEmail = data.from || data.sender || data.fromEmail || "unknown@example.com";
+        const toEmail = (Array.isArray(data.to) ? data.to[0] : data.to) || data.recipient || "support@nextgenkiddies.com";
         const subject = data.subject || "No Subject";
-        const html = data.html || data.text || "";
-        const text = data.text || "";
+        
+        // Try all known body field name variations from Resend
+        const html = data.html || data.bodyHtml || data.htmlBody || data.body_html || "";
+        const text = data.text || data.bodyText || data.textBody || data.body_text || data.plain || data.body || "";
+        
+        console.log("[RESEND WEBHOOK] Parsed - from:", fromEmail, "subject:", subject, "html length:", html.length, "text length:", text.length);
         
         await EmailQueries.saveInboundMessage({
             fromEmail,
@@ -64,6 +71,9 @@ export async function POST(request: Request) {
             bodyText: text,
             status: "DELIVERED",
         });
+    } else {
+        // Log unhandled types so we learn the correct event name
+        console.log("[RESEND WEBHOOK] Unhandled event type:", payload.type);
     }
 
     return NextResponse.json({ success: true, message: "Webhook processed securely" });
