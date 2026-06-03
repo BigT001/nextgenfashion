@@ -94,10 +94,16 @@ export default function MailroomInboxPage() {
               </div>
             </div>
             <div className="p-6 overflow-y-auto flex-1">
-              <div 
-                className="prose prose-sm max-w-none text-zinc-700"
-                dangerouslySetInnerHTML={{ __html: selectedMessage.bodyHtml || selectedMessage.bodyText?.replace(/\n/g, '<br/>') || "" }}
-              />
+              {selectedMessage.bodyHtml ? (
+                <div 
+                  className="prose prose-sm max-w-none text-zinc-700"
+                  dangerouslySetInnerHTML={{ __html: selectedMessage.bodyHtml }}
+                />
+              ) : (
+                <div className="whitespace-pre-wrap font-sans text-sm text-zinc-700">
+                  {selectedMessage.bodyText || "No content"}
+                </div>
+              )}
             </div>
             <div className="p-4 border-t border-border bg-zinc-50">
               <p className="text-xs text-zinc-500 text-center">Reply functionality is handled via your official email client.</p>

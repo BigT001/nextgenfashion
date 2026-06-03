@@ -98,10 +98,16 @@ export default function MailroomSentPage() {
               </div>
             </div>
             <div className="p-6 overflow-y-auto flex-1">
-              <div 
-                className="prose prose-sm max-w-none text-zinc-700"
-                dangerouslySetInnerHTML={{ __html: selectedMessage.bodyHtml || selectedMessage.bodyText?.replace(/\n/g, '<br/>') || "" }}
-              />
+              {selectedMessage.bodyHtml ? (
+                <div 
+                  className="prose prose-sm max-w-none text-zinc-700"
+                  dangerouslySetInnerHTML={{ __html: selectedMessage.bodyHtml }}
+                />
+              ) : (
+                <div className="whitespace-pre-wrap font-sans text-sm text-zinc-700">
+                  {selectedMessage.bodyText || "No content"}
+                </div>
+              )}
             </div>
           </div>
         ) : (

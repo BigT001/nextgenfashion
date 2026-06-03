@@ -1,19 +1,22 @@
 import { NextResponse } from "next/server";
 import { EmailQueries } from "@/modules/email/queries/email.queries";
 import { Webhook } from "svix";
+import { Resend } from "resend";
 
 export const dynamic = "force-dynamic";
+
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
 /**
  * INBOUND EMAIL WEBHOOK
  *
- * Handles two webhook types from Resend:
- * 1. Outbound tracking events (email.sent, email.delivered, email.received)
- *    → These are delivery confirmations for emails YOU sent, NOT customer emails.
- *    → We skip these for the inbox.
+ * Handles two webhook paths from Resend:
+ * 1. Svix-signed inbound email event (email.received)
+ *    → Retrieves the full email content (HTML/text) using Resend API and saves to inbox.
  * 2. Raw inbound email routing (no Svix headers)
- *    → Real emails sent TO support@nextgenkiddies.com by customers.
- *    → Saved to inbox.
+ *    → Fallback for local testing or custom routing.
+ * 3. Outbound tracking events (email.sent, email.delivered, etc.)
+ *    → Skipped or logged.
  */
 export async function POST(request: Request) {
   try {
@@ -25,7 +28,6 @@ export async function POST(request: Request) {
     const svix_signature = headersList.get("svix-signature");
 
     // ─── CASE 1: No Svix headers → raw inbound email from Resend domain routing ───
-    // This fires when a customer actually emails support@nextgenkiddies.com
     if (!svix_id || !svix_timestamp || !svix_signature) {
       let raw: any = {};
       try {
@@ -54,7 +56,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true });
     }
 
-    // ─── CASE 2: Svix-signed outbound event from Resend ───
+    // ─── CASE 2: Svix-signed outbound event or inbound notification from Resend ───
     const webhookSecret = process.env.RESEND_WEBHOOK_SECRET;
     if (!webhookSecret) {
       return new Response("Server configuration error", { status: 500 });
@@ -76,12 +78,50 @@ export async function POST(request: Request) {
 
     const eventType = payload.type as string;
 
+    // Handle inbound email received event (retrieves full email contents)
+    if (eventType === "email.received") {
+      if (!resend) {
+        console.error("Resend API key missing. Cannot fetch email content.");
+        return new Response("Configuration error", { status: 500 });
+      }
+
+      const emailId = payload.data.email_id;
+      try {
+        const { data: email, error } = await resend.emails.receiving.get(emailId);
+        
+        if (error || !email) {
+          console.error("Failed to fetch inbound email content from Resend:", error);
+          return new Response("Failed to fetch email content", { status: 500 });
+        }
+
+        const fromEmail = email.from || payload.data.from || "unknown@example.com";
+        const toEmail = Array.isArray(email.to)
+          ? email.to[0]
+          : email.to || (payload.data.to ? payload.data.to[0] : "support@nextgenkiddies.com");
+        const subject = email.subject || payload.data.subject || "No Subject";
+        const html = email.html || "";
+        const text = email.text || "";
+
+        await EmailQueries.saveInboundMessage({
+          fromEmail,
+          toEmail,
+          subject,
+          bodyHtml: html,
+          bodyText: text,
+          status: "DELIVERED",
+        });
+
+        return NextResponse.json({ success: true, note: "Inbound email processed and saved" });
+      } catch (err: any) {
+        console.error("Error retrieving inbound email content:", err);
+        return new Response("Error retrieving email content", { status: 500 });
+      }
+    }
+
     // These are outbound delivery tracking events — NOT customer emails.
-    // They confirm that emails YOU sent were delivered. Skip them for the inbox.
     const OUTBOUND_TRACKING_EVENTS = [
       "email.sent",
       "email.delivered",
-      "email.received",   // = "recipient's mail server confirmed receipt of YOUR sent email"
       "email.opened",
       "email.clicked",
       "email.bounced",
@@ -91,7 +131,6 @@ export async function POST(request: Request) {
     ];
 
     if (OUTBOUND_TRACKING_EVENTS.includes(eventType)) {
-      // In the future, we could update the status of the outbound email in the Sent tab here.
       console.log(`[RESEND] Outbound tracking event: ${eventType} — skipping inbox save.`);
       return NextResponse.json({ success: true, note: `Outbound event ${eventType} acknowledged` });
     }
