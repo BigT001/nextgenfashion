@@ -53,6 +53,12 @@ export const EmailQueries = {
     });
   },
 
+  async deleteMessage(id: string) {
+    return prisma.emailMessage.delete({
+      where: { id },
+    });
+  },
+
   // --- CAMPAIGNS ---
   async getCampaigns() {
     return prisma.emailCampaign.findMany({

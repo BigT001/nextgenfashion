@@ -1,15 +1,33 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getSentMessagesAction } from "@/modules/email/actions/email.actions";
+import { getSentMessagesAction, deleteMessageAction } from "@/modules/email/actions/email.actions";
 import { format } from "date-fns";
-import { Send, Search } from "lucide-react";
+import { Send, Search, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 export default function MailroomSentPage() {
   const [messages, setMessages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMessage, setSelectedMessage] = useState<any>(null);
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this sent email?")) return;
+    try {
+      const res = await deleteMessageAction(id);
+      if (res.success) {
+        toast.success("Email deleted successfully");
+        setMessages((prev) => prev.filter((m) => m.id !== id));
+        setSelectedMessage(null);
+      } else {
+        toast.error(res.error || "Failed to delete email");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "An error occurred");
+    }
+  };
 
   useEffect(() => {
     async function load() {
@@ -92,9 +110,19 @@ export default function MailroomSentPage() {
                     <p className="text-xs text-zinc-500">From {selectedMessage.fromEmail}</p>
                   </div>
                 </div>
-                <span className="text-sm font-medium text-zinc-500">
-                  {format(new Date(selectedMessage.createdAt), "PPP 'at' p")}
-                </span>
+                <div className="flex items-center gap-4">
+                  <span className="text-sm font-medium text-zinc-500">
+                    {format(new Date(selectedMessage.createdAt), "PPP 'at' p")}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleDelete(selectedMessage.id)}
+                    className="text-zinc-500 hover:text-red-600 hover:bg-red-50 rounded-xl"
+                  >
+                    <Trash2 className="size-5" />
+                  </Button>
+                </div>
               </div>
             </div>
             <div className="p-6 overflow-y-auto flex-1">

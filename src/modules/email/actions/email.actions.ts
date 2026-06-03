@@ -26,6 +26,15 @@ export async function getSentMessagesAction() {
   }
 }
 
+export async function deleteMessageAction(id: string) {
+  try {
+    const deleted = await EmailQueries.deleteMessage(id);
+    return { success: true, data: JSON.parse(JSON.stringify(deleted)) };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
 export async function sendDirectEmailAction(data: {
   to: string;
   subject: string;
