@@ -28,7 +28,7 @@ export const EmailQueries = {
     });
   },
 
-  async saveInboundMessage(data: Prisma.EmailMessageCreateInput) {
+  async saveInboundMessage(data: Omit<Prisma.EmailMessageCreateInput, 'direction'>) {
     return prisma.emailMessage.create({
       data: {
         ...data,
@@ -37,7 +37,7 @@ export const EmailQueries = {
     });
   },
 
-  async saveOutboundMessage(data: Prisma.EmailMessageCreateInput) {
+  async saveOutboundMessage(data: Omit<Prisma.EmailMessageCreateInput, 'direction'>) {
     return prisma.emailMessage.create({
       data: {
         ...data,
