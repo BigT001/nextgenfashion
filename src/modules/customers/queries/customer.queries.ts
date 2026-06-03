@@ -98,7 +98,15 @@ export const CustomerQueries = {
     const normalizedCustomer = normalizeCustomer(customer);
     const salesWithItems = normalizedCustomer.sales.map((sale: any) => ({
       ...sale,
-      items: sale.SaleItem ?? [],
+      items: (sale.SaleItem ?? []).map((item: any) => ({
+        ...item,
+        variant: item.ProductVariant
+          ? {
+              ...item.ProductVariant,
+              product: item.ProductVariant.Product ?? null,
+            }
+          : null,
+      })),
     }));
 
     // Calculate Extended Metrics from ALL sales data

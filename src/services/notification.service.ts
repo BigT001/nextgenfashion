@@ -183,4 +183,108 @@ export class NotificationService {
   }) {
     console.log(`Low stock alert for ${data.variantId}: ${data.currentStock} remaining`);
   }
+
+  /**
+   * EMAIL: Password Reset OTP (User self-service)
+   */
+  static async sendPasswordResetOtpEmail(data: {
+    email: string;
+    name: string;
+    otp: string;
+  }) {
+    try {
+      if (!resend) return { success: false, error: "Missing API Key" };
+      await resend.emails.send({
+        from: 'NextGen Kiddies <security@nextgenkiddies.com>',
+        to: [data.email],
+        subject: 'Your Password Reset Code',
+        html: `
+          <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 560px; margin: auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.08);">
+            <div style="background: linear-gradient(135deg, #0B1E3F 0%, #1a3a8a 100%); padding: 40px 40px 32px; text-align: center;">
+              <div style="display: inline-block; background: rgba(255,255,255,0.12); border-radius: 12px; padding: 10px 16px; margin-bottom: 16px;">
+                <span style="color: #ffffff; font-size: 12px; font-weight: 900; letter-spacing: 0.25em; text-transform: uppercase;">Security Alert</span>
+              </div>
+              <h1 style="color: #ffffff; margin: 0; font-size: 26px; font-weight: 900; letter-spacing: -0.5px;">Password Reset</h1>
+              <p style="color: rgba(255,255,255,0.6); margin: 8px 0 0; font-size: 13px; font-weight: 500;">NextGen Kiddies Operating System</p>
+            </div>
+
+            <div style="padding: 40px;">
+              <p style="color: #374151; font-size: 15px; line-height: 1.6; margin: 0 0 24px;">Hello <strong>${data.name}</strong>,</p>
+              <p style="color: #6B7280; font-size: 14px; line-height: 1.6; margin: 0 0 32px;">We received a request to reset your password. Use the verification code below to proceed. This code expires in <strong>15 minutes</strong>.</p>
+
+              <div style="background: #F8FAFC; border: 2px dashed #E2E8F0; border-radius: 16px; padding: 32px; text-align: center; margin: 0 0 32px;">
+                <p style="color: #9CA3AF; font-size: 11px; font-weight: 900; letter-spacing: 0.3em; text-transform: uppercase; margin: 0 0 16px;">Verification Code</p>
+                <div style="display: inline-block; background: #0B1E3F; border-radius: 12px; padding: 16px 32px;">
+                  <span style="color: #ffffff; font-size: 36px; font-weight: 900; letter-spacing: 0.25em; font-family: 'Courier New', monospace;">${data.otp}</span>
+                </div>
+                <p style="color: #9CA3AF; font-size: 12px; margin: 16px 0 0;">Do not share this code with anyone.</p>
+              </div>
+
+              <div style="background: #FFF7ED; border: 1px solid #FED7AA; border-radius: 12px; padding: 16px 20px;">
+                <p style="color: #92400E; font-size: 13px; font-weight: 700; margin: 0 0 4px;">⚠ Didn&apos;t request this?</p>
+                <p style="color: #B45309; font-size: 12px; margin: 0;">If you didn&apos;t request a password reset, please ignore this email. Your account remains secure.</p>
+              </div>
+            </div>
+
+            <div style="background: #F9FAFB; border-top: 1px solid #F3F4F6; padding: 20px 40px; text-align: center;">
+              <p style="color: #9CA3AF; font-size: 11px; font-weight: 600; margin: 0; letter-spacing: 0.05em;">&copy; ${new Date().getFullYear()} NextGen Kiddies. All rights reserved.</p>
+            </div>
+          </div>
+        `
+      });
+      return { success: true };
+    } catch (error) {
+      console.error("Resend Error [Password Reset OTP]:", error);
+      return { success: false, error };
+    }
+  }
+
+  /**
+   * EMAIL: Admin-initiated password reset notification
+   */
+  static async sendAdminPasswordResetEmail(data: {
+    email: string;
+    name: string;
+    resetByAdmin: string;
+  }) {
+    try {
+      if (!resend) return { success: false, error: "Missing API Key" };
+      await resend.emails.send({
+        from: 'NextGen Kiddies <security@nextgenkiddies.com>',
+        to: [data.email],
+        subject: 'Your Password Has Been Reset by an Administrator',
+        html: `
+          <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 560px; margin: auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.08);">
+            <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); padding: 40px 40px 32px; text-align: center;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 26px; font-weight: 900; letter-spacing: -0.5px;">Password Reset</h1>
+              <p style="color: rgba(255,255,255,0.55); margin: 8px 0 0; font-size: 13px; font-weight: 500;">Administrative Action — NextGen Kiddies OS</p>
+            </div>
+
+            <div style="padding: 40px;">
+              <p style="color: #374151; font-size: 15px; line-height: 1.6; margin: 0 0 20px;">Hello <strong>${data.name}</strong>,</p>
+              <p style="color: #6B7280; font-size: 14px; line-height: 1.6; margin: 0 0 24px;">An administrator (<strong>${data.resetByAdmin}</strong>) has reset your account password. You can now log in to the dashboard using your new credentials.</p>
+
+              <div style="background: #F0F9FF; border: 1px solid #BAE6FD; border-radius: 12px; padding: 16px 20px; margin: 0 0 24px;">
+                <p style="color: #0369A1; font-size: 13px; font-weight: 700; margin: 0 0 4px;">🔒 What to do next</p>
+                <p style="color: #0284C7; font-size: 12px; margin: 0;">Log in with your new password, then change it immediately from your profile settings for security.</p>
+              </div>
+
+              <div style="background: #FFF7ED; border: 1px solid #FED7AA; border-radius: 12px; padding: 16px 20px;">
+                <p style="color: #92400E; font-size: 13px; font-weight: 700; margin: 0 0 4px;">⚠ Not expecting this?</p>
+                <p style="color: #B45309; font-size: 12px; margin: 0;">Contact your system administrator immediately if you did not request or expect a password reset.</p>
+              </div>
+            </div>
+
+            <div style="background: #F9FAFB; border-top: 1px solid #F3F4F6; padding: 20px 40px; text-align: center;">
+              <p style="color: #9CA3AF; font-size: 11px; font-weight: 600; margin: 0;">&copy; ${new Date().getFullYear()} NextGen Kiddies. Operational Security.</p>
+            </div>
+          </div>
+        `
+      });
+      return { success: true };
+    } catch (error) {
+      console.error("Resend Error [Admin Password Reset]:", error);
+      return { success: false, error };
+    }
+  }
 }

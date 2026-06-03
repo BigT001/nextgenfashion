@@ -199,10 +199,10 @@ export function CustomerDetailModal({ customerId, previewData, onClose }: Custom
                               <div key={item.id || idx} className="flex justify-between items-center text-[11px]">
                                 <span className="text-zinc-600 flex items-center gap-1.5">
                                   <Package className="size-3 text-zinc-300" />
-                                  {item.variant.product.name}
-                                  {(item.variant.size || item.variant.color) && (
+                                  {item.variant?.product?.name ?? "Unknown product"}
+                                  {(item.variant?.size || item.variant?.color) && (
                                     <span className="text-zinc-400">
-                                      ({item.variant.size}{item.variant.color ? ` / ${item.variant.color}` : ""})
+                                      ({item.variant?.size}{item.variant?.color ? ` / ${item.variant.color}` : ""})
                                     </span>
                                   )}
                                   <span className="font-bold text-zinc-500">×{item.quantity}</span>

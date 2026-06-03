@@ -226,3 +226,59 @@ export async function getStaffLogsAction(staffId: string, staffName?: string, st
     return { success: false, error: error.message };
   }
 }
+
+export async function adminResetPasswordAction(staffId: string, newPassword: string) {
+  try {
+    const { auth } = await import("@/services/auth.service");
+    const session = await auth();
+    const actorId = session?.user?.id || "system";
+    const actorName = session?.user?.name || "Administrator";
+    const actorRole = (session?.user as any)?.role;
+
+    if (actorRole !== "ADMIN" && actorRole !== "SUPERADMIN") {
+      return { success: false, error: "Unauthorized. Only administrators can perform this action." };
+    }
+
+    const { PasswordResetService } = await import("../../auth/services/password-reset.service");
+    const { PasswordResetQueries } = await import("../../auth/queries/password-reset.queries");
+    const { prisma } = await import("@/services/prisma.service");
+    const { randomUUID } = await import("crypto");
+    const { NotificationService } = await import("@/services/notification.service");
+
+    const validation = PasswordResetService.validatePassword(newPassword);
+    if (!validation.valid) {
+      return { success: false, error: validation.message };
+    }
+
+    const targetUser = await prisma.user.findUnique({ where: { id: staffId } });
+    if (!targetUser || !targetUser.email) {
+      return { success: false, error: "User not found or has no email." };
+    }
+
+    const hashed = await PasswordResetService.hashPassword(newPassword);
+    await PasswordResetQueries.updatePasswordById(staffId, hashed);
+    await PasswordResetQueries.deleteTokensForEmail(targetUser.email);
+
+    await prisma.auditLog.create({
+      data: {
+        id: randomUUID(),
+        userId: actorId,
+        action: "PASSWORD_RESET_ADMIN",
+        entity: "User",
+        entityId: staffId,
+        details: { targetEmail: targetUser.email, targetName: targetUser.name },
+      },
+    });
+
+    NotificationService.sendAdminPasswordResetEmail({
+      email: targetUser.email,
+      name: targetUser.name || "Team Member",
+      resetByAdmin: actorName,
+    }).catch((err) => console.error("[PASSWORD_RESET] Admin email send failed:", err));
+
+    return { success: true, message: "Password updated successfully." };
+  } catch (error: any) {
+    console.error("[PASSWORD_RESET] adminResetPasswordAction error:", error);
+    return { success: false, error: "Failed to reset password." };
+  }
+}

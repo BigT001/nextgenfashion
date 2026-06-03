@@ -15,7 +15,8 @@ import {
   ChevronDown,
   Sparkles,
   ShieldCheck,
-  User
+  User,
+  Mailbox
 } from "lucide-react";
 
 import {
@@ -103,6 +104,12 @@ const data = {
           roles: [UserRole.SUPERADMIN, UserRole.ADMIN],
         },
         {
+          title: "Mailroom",
+          url: "/dashboard/mailroom",
+          icon: Mailbox,
+          roles: [UserRole.SUPERADMIN, UserRole.ADMIN],
+        },
+        {
           title: "Settings",
           url: "/dashboard/settings",
           icon: Settings,
@@ -180,6 +187,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             else if (item.url.includes("/customers")) permKey = "CUSTOMERS";
             else if (item.url.includes("/staff")) permKey = "STAFF";
             else if (item.url.includes("/analytics")) permKey = "ANALYTICS";
+            else if (item.url.includes("/mailroom")) permKey = "MAILROOM";
             
             if (!permKey) return true; // general paths (like dashboard) have no restrictions
             return userPermissions.includes(permKey);

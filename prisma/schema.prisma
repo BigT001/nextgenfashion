@@ -223,3 +223,77 @@ enum UserRole {
   CUSTOMER
   SUPERADMIN
 }
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model EmailMessage {
+  id        String   @id @default(uuid())
+  subject   String
+  bodyText  String?
+  bodyHtml  String?
+  fromEmail String
+  toEmail   String
+  status    EmailStatus @default(DRAFT)
+  threadId  String?  // To group replies
+  direction EmailDirection
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  Campaign  EmailCampaign? @relation(fields: [campaignId], references: [id])
+  campaignId String?
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model EmailCampaign {
+  id            String   @id @default(uuid())
+  name          String
+  subject       String
+  bodyHtml      String
+  status        CampaignStatus @default(DRAFT)
+  scheduledAt   DateTime?
+  sentAt        DateTime?
+  audience      String   @default("ALL") // "ALL", "CUSTOMERS", "SUBSCRIBERS"
+  totalSent     Int      @default(0)
+  totalOpened   Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  EmailMessage  EmailMessage[]
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model EmailSubscriber {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?
+  source    String   @default("WEBSITE")
+  status    SubscriberStatus @default(SUBSCRIBED)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum EmailStatus {
+  DRAFT
+  QUEUED
+  SENT
+  DELIVERED
+  FAILED
+  OPENED
+}
+
+enum EmailDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  PROCESSING
+  COMPLETED
+  CANCELLED
+}
+
+enum SubscriberStatus {
+  SUBSCRIBED
+  UNSUBSCRIBED
+}

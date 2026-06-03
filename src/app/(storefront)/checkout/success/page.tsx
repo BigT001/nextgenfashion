@@ -89,7 +89,7 @@ function OrderSuccessClient() {
         </div>
 
         <p className="text-xs sm:text-sm uppercase tracking-[0.35em] text-slate-400">
-          Need help? Contact support at <a href="tel:+234800NEXTGEN" className="font-semibold text-brand-navy">+234 800 NEXTGEN</a>
+          Need help? Contact support at <a href="tel:07040913003" className="font-semibold text-brand-navy">07040913003</a>
         </p>
       </div>
     </div>

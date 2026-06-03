@@ -22,9 +22,11 @@ import {
   Edit,
   Trash2,
   Calendar,
-  Lock
+  Lock,
+  KeyRound
 } from "lucide-react";
 import { getStaffLogsAction } from "../actions/staff.actions";
+import { AdminResetPasswordDialog } from "./admin-reset-password-dialog";
 
 interface StaffMember {
   id: string;
@@ -56,6 +58,7 @@ export function StaffDetailsDialog({
 }: StaffDetailsDialogProps) {
   const [logs, setLogs] = useState<any[]>([]);
   const [isLoadingLogs, setIsLoadingLogs] = useState(false);
+  const [resetPasswordOpen, setResetPasswordOpen] = useState(false);
 
   useEffect(() => {
     if (!open || !staff) return;
@@ -340,6 +343,15 @@ export function StaffDetailsDialog({
               )}
             </Button>
 
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setResetPasswordOpen(true)}
+              className="text-zinc-700 font-semibold text-xs rounded-lg flex items-center gap-1.5"
+            >
+              <KeyRound className="h-3.5 w-3.5" /> Reset Password
+            </Button>
+
             {staff.role !== "SUPERADMIN" && (
               <Button
                 variant="destructive"
@@ -365,6 +377,13 @@ export function StaffDetailsDialog({
           </Button>
         </div>
       </DialogContent>
+
+      <AdminResetPasswordDialog
+        open={resetPasswordOpen}
+        onOpenChange={setResetPasswordOpen}
+        staffId={staff.id}
+        staffName={staff.name || "Staff Member"}
+      />
     </Dialog>
   );
 }
