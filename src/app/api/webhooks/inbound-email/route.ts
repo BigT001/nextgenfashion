@@ -6,9 +6,10 @@ export const dynamic = "force-dynamic";
 
 /**
  * INBOUND EMAIL WEBHOOK
- * 
- * This endpoint receives POST requests from an email provider (like Resend)
- * whenever an email is sent to support@nextgenkiddies.com.
+ *
+ * Handles two cases:
+ * 1. Resend outbound event webhooks (signed with Svix headers)
+ * 2. Resend inbound email routing (raw POST without Svix headers)
  */
 export async function POST(request: Request) {
   try {
@@ -19,19 +20,46 @@ export async function POST(request: Request) {
     const svix_timestamp = headersList.get("svix-timestamp");
     const svix_signature = headersList.get("svix-signature");
 
+    // ─── CASE 1: No Svix headers → raw inbound email from Resend routing ───
     if (!svix_id || !svix_timestamp || !svix_signature) {
-      return new Response("Missing svix headers", { status: 400 });
+      let raw: any = {};
+      try {
+        raw = JSON.parse(payloadString);
+      } catch (_) {
+        raw = { raw: payloadString };
+      }
+
+      const fromEmail = raw.from || "unknown@example.com";
+      const toEmail = Array.isArray(raw.to)
+        ? raw.to[0]
+        : raw.to || "support@nextgenkiddies.com";
+      const subject = raw.subject || "No Subject";
+      const html = raw.html || "";
+      const text = raw.text || "";
+
+      // Always include raw payload in body so we can see the full structure
+      const debugDump = JSON.stringify(raw, null, 2);
+
+      await EmailQueries.saveInboundMessage({
+        fromEmail,
+        toEmail,
+        subject,
+        bodyHtml: html || `<pre style="font-size:12px">${debugDump}</pre>`,
+        bodyText: text || debugDump,
+        status: "DELIVERED",
+      });
+
+      return NextResponse.json({ success: true });
     }
 
+    // ─── CASE 2: Svix-signed webhook event from Resend ───
     const webhookSecret = process.env.RESEND_WEBHOOK_SECRET;
-    
     if (!webhookSecret) {
-      console.error("Missing RESEND_WEBHOOK_SECRET in environment");
       return new Response("Server configuration error", { status: 500 });
     }
 
     const wh = new Webhook(webhookSecret);
-    let payload;
+    let payload: any;
 
     try {
       payload = wh.verify(payloadString, {
@@ -44,39 +72,36 @@ export async function POST(request: Request) {
       return new Response("Invalid signature", { status: 401 });
     }
 
-    // Log the full payload so we can see Resend's exact field structure
-    console.log("[RESEND WEBHOOK] Event type:", payload.type);
-    console.log("[RESEND WEBHOOK] Full payload:", JSON.stringify(payload, null, 2));
+    // Extract data — always fall back to full payload if no .data wrapper
+    const data = payload.data || payload;
+    const fromEmail =
+      data.from || data.sender || data.fromEmail || "webhook@resend.com";
+    const toEmail =
+      (Array.isArray(data.to) ? data.to[0] : data.to) ||
+      "support@nextgenkiddies.com";
+    const subject =
+      data.subject || `[Resend Event: ${payload.type || "unknown"}]`;
+    const html = data.html || data.bodyHtml || "";
+    const text = data.text || data.bodyText || "";
 
-    // Resend wraps inbound emails — try all known event type names
-    if (payload.type === "email.received" || payload.type === "email.inbound" || payload.type === "inbound.email") {
-        const data = payload.data || payload;
-        
-        // Handle all known Resend field name variations
-        const fromEmail = data.from || data.sender || data.fromEmail || "unknown@example.com";
-        const toEmail = (Array.isArray(data.to) ? data.to[0] : data.to) || data.recipient || "support@nextgenkiddies.com";
-        const subject = data.subject || "No Subject";
-        
-        // Try all known body field name variations from Resend
-        const html = data.html || data.bodyHtml || data.htmlBody || data.body_html || "";
-        const text = data.text || data.bodyText || data.textBody || data.body_text || data.plain || data.body || "";
-        
-        console.log("[RESEND WEBHOOK] Parsed - from:", fromEmail, "subject:", subject, "html length:", html.length, "text length:", text.length);
-        
-        await EmailQueries.saveInboundMessage({
-            fromEmail,
-            toEmail,
-            subject,
-            bodyHtml: html,
-            bodyText: text,
-            status: "DELIVERED",
-        });
-    } else {
-        // Log unhandled types so we learn the correct event name
-        console.log("[RESEND WEBHOOK] Unhandled event type:", payload.type);
-    }
+    // Save with full debug dump in body so we can see what Resend sends
+    const debugBody =
+      `EVENT TYPE: ${payload.type}\n\n` +
+      `DATA:\n${JSON.stringify(data, null, 2)}\n\n` +
+      `FULL PAYLOAD:\n${JSON.stringify(payload, null, 2)}`;
 
-    return NextResponse.json({ success: true, message: "Webhook processed securely" });
+    await EmailQueries.saveInboundMessage({
+      fromEmail,
+      toEmail,
+      subject,
+      bodyHtml:
+        html ||
+        `<pre style="font-size:12px;line-height:1.5;white-space:pre-wrap">${debugBody}</pre>`,
+      bodyText: text || debugBody,
+      status: "DELIVERED",
+    });
+
+    return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error("Inbound Webhook Error:", error);
     return NextResponse.json(
@@ -85,4 +110,3 @@ export async function POST(request: Request) {
     );
   }
 }
-
