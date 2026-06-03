@@ -291,6 +291,7 @@ enum CampaignStatus {
   PROCESSING
   COMPLETED
   CANCELLED
+  FAILED
 }
 
 enum SubscriberStatus {
