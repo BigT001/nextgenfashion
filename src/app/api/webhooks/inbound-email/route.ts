@@ -2,8 +2,6 @@ import { NextResponse } from "next/server";
 import { EmailQueries } from "@/modules/email/queries/email.queries";
 import { Webhook } from "svix";
 import { Resend } from "resend";
-import fs from 'fs';
-
 export const dynamic = "force-dynamic";
 
 /**
@@ -17,7 +15,6 @@ export const dynamic = "force-dynamic";
  * 3. Outbound tracking events (email.sent, email.delivered, etc.)
  *    → Skipped or logged.
  */
-import fs from 'fs';
 
 export async function POST(request: Request) {
   try {
@@ -27,10 +24,6 @@ export async function POST(request: Request) {
     const svix_id = headersList.get("svix-id");
     const svix_timestamp = headersList.get("svix-timestamp");
     const svix_signature = headersList.get("svix-signature");
-
-    try {
-      fs.appendFileSync('scratch/webhook.log', `\\n\\n--- NEW WEBHOOK at ${new Date().toISOString()} ---\\nHeaders: ${JSON.stringify(Object.fromEntries(headersList))}\\nBody: ${payloadString}\\n`);
-    } catch (e) {}
 
     // ─── CASE 1: No Svix headers → raw inbound email from Resend domain routing ───
     if (!svix_id || !svix_timestamp || !svix_signature) {
@@ -85,7 +78,6 @@ export async function POST(request: Request) {
         }) as any;
       } catch (err: any) {
         console.error("Webhook signature verification failed:", err.message);
-        try { fs.appendFileSync('scratch/webhook.log', `\\nERROR svix verification: ${err.message}\\n`); } catch(e){}
         return new Response("Invalid signature", { status: 401 });
       }
     }
@@ -107,7 +99,6 @@ export async function POST(request: Request) {
         
         if (error || !email) {
           console.error("Failed to fetch inbound email content from Resend:", error);
-          try { fs.appendFileSync('scratch/webhook.log', `\\nERROR fetching email: ${JSON.stringify(error)}\\n`); } catch(e){}
           return new Response("Failed to fetch email content", { status: 500 });
         }
 
@@ -127,13 +118,10 @@ export async function POST(request: Request) {
           bodyText: text,
           status: "DELIVERED",
         });
-        
-        try { fs.appendFileSync('scratch/webhook.log', `\\nSUCCESS saving email ${emailId}\\n`); } catch(e){}
 
         return NextResponse.json({ success: true, note: "Inbound email processed and saved" });
       } catch (err: any) {
         console.error("Error retrieving inbound email content:", err);
-        try { fs.appendFileSync('scratch/webhook.log', `\\nEXCEPTION fetching email: ${err.message}\\n`); } catch(e){}
         return new Response("Error retrieving email content", { status: 500 });
       }
     }
