@@ -74,7 +74,15 @@ export default function InventoryClient({ initialData }: { initialData: any }) {
   const [historyItem, setHistoryItem] = useState<any>(null);
   const [showCriticalDialog, setShowCriticalDialog] = useState(false);
 
-  const criticalProducts = data?.products?.filter((p: any) => p.stock <= 5) || [];
+  const criticalVariants = (data?.products || []).flatMap((p: any) => 
+    (p.variants || []).filter((v: any) => v.stock < 8).map((v: any) => ({
+      ...v,
+      productName: p.name,
+      category: p.category,
+      image: p.image,
+      productId: p.id
+    }))
+  );
 
   const handleExportLedger = () => {
     if (!data?.products) return;
@@ -152,7 +160,7 @@ export default function InventoryClient({ initialData }: { initialData: any }) {
       cell: ({ row }) => (
         <span className={cn(
           "font-black text-sm tracking-tighter",
-          row.original.stock <= 5 ? "text-rose-500" : "text-foreground"
+          row.original.stock < 8 ? "text-rose-500" : "text-foreground"
         )}>
           {row.original.stock} UNITS
         </span>
@@ -447,7 +455,14 @@ export default function InventoryClient({ initialData }: { initialData: any }) {
       </div>
 
       {/* Stock Health KPIs */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <MetricCard
+          title="Total Products"
+          value={data?.kpis?.totalProducts || 0}
+          icon={Boxes}
+          description="Total items in catalog"
+          variant="slate"
+        />
         <MetricCard
           title="Total Stock Units"
           value={data?.products?.reduce((acc: number, p: any) => acc + p.stock, 0) || 0}
@@ -457,16 +472,16 @@ export default function InventoryClient({ initialData }: { initialData: any }) {
         />
         <MetricCard
           title="Stock Critical"
-          value={data?.kpis?.stockAlerts || 0}
+          value={criticalVariants.length}
           icon={AlertTriangle}
-          description="Click to view items requiring restock"
+          description="Click to view variants requiring restock"
           variant="pink"
           onClick={() => setShowCriticalDialog(true)}
         />
         <MetricCard
           title="Inventory Value"
           value={`₦${(data?.kpis?.totalValue || 0).toLocaleString()}`}
-          icon={Boxes}
+          icon={TrendingUp}
           description="Aggregated stock asset value"
           variant="blue"
         />
@@ -550,7 +565,7 @@ export default function InventoryClient({ initialData }: { initialData: any }) {
           </DialogHeader>
           <div className="p-12 max-h-[85vh] overflow-y-auto custom-scrollbar">
             {historyItem && (
-              <InventoryHistoryViewer variantId={historyItem.variantId} refreshTrigger={refreshTrigger} />
+              <InventoryHistoryViewer variants={historyItem.variants} refreshTrigger={refreshTrigger} />
             )}
           </div>
         </DialogContent>
@@ -566,23 +581,35 @@ export default function InventoryClient({ initialData }: { initialData: any }) {
                 Critical Stock Ledger
               </DialogTitle>
               <DialogDescription className="font-bold text-xs uppercase tracking-widest text-rose-600/70">
-                Products requiring immediate restock (5 units or less)
+                Variants requiring immediate restock (below 8 units)
               </DialogDescription>
             </DialogHeader>
           </div>
           <div className="p-6 max-h-[70vh] overflow-y-auto custom-scrollbar bg-zinc-50/50">
-            {criticalProducts.length === 0 ? (
+            {criticalVariants.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                 <Package className="size-12 mb-4 opacity-20" />
                 <p className="font-bold tracking-widest uppercase text-xs">No critical items found</p>
               </div>
             ) : (
               <div className="space-y-3">
-                {criticalProducts.map((product: any) => (
-                  <div key={product.id} className="flex items-center gap-4 p-4 rounded-2xl glass-card border-none bg-white">
+                {criticalVariants.map((variant: any) => (
+                  <div 
+                    key={variant.id} 
+                    className="flex items-center gap-4 p-4 rounded-2xl glass-card border border-border/10 bg-white cursor-pointer hover:bg-brand-navy/5 transition-colors group"
+                    onClick={() => {
+                      setStockUpdateItem({ 
+                        ...variant, 
+                        name: `${variant.productName} (${variant.size || ''} ${variant.color || ''})`.trim(),
+                        variantId: variant.id, 
+                        status: variant.stock === 0 ? 'Out of Stock' : 'Low Stock' 
+                      });
+                      setShowCriticalDialog(false);
+                    }}
+                  >
                     <div className="relative h-12 w-12 rounded-full overflow-hidden border-2 border-rose-500/20">
-                      {product.image ? (
-                        <Image src={product.image} alt={product.name} fill className="object-cover" />
+                      {variant.image ? (
+                        <Image src={variant.image} alt={variant.productName} fill className="object-cover" />
                       ) : (
                         <div className="flex items-center justify-center w-full h-full bg-rose-500/5 text-rose-500/50">
                           <ImageIcon className="h-4 w-4" />
@@ -590,15 +617,17 @@ export default function InventoryClient({ initialData }: { initialData: any }) {
                       )}
                     </div>
                     <div className="flex-1">
-                      <h4 className="font-black text-sm">{product.name}</h4>
-                      <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">{product.category}</p>
+                      <h4 className="font-black text-sm group-hover:text-brand-navy transition-colors">{variant.productName}</h4>
+                      <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">
+                        {variant.category} {variant.size ? `· ${variant.size}` : ''} {variant.color ? `· ${variant.color}` : ''}
+                      </p>
                     </div>
                     <div className="flex items-center gap-3">
                       <Badge variant="outline" className="font-black text-[10px] uppercase tracking-widest border-border/50 bg-muted/30">
-                        {product.sku}
+                        {variant.sku}
                       </Badge>
                       <div className="px-4 py-2 rounded-xl bg-rose-500/10 text-rose-600 font-black text-xs">
-                        {product.stock} UNITS
+                        {variant.stock} UNITS
                       </div>
                     </div>
                   </div>
@@ -615,6 +644,77 @@ export default function InventoryClient({ initialData }: { initialData: any }) {
           columns={columns}
           data={data?.products || []}
           searchKey="name"
+          renderSubComponent={({ row }) => {
+            const variants = row.original.variants || [];
+            if (variants.length === 0) return null;
+            return (
+              <div className="p-6 bg-brand-navy/5 border-t border-brand-navy/10">
+                <h4 className="text-sm font-black text-brand-navy mb-4 uppercase tracking-widest">Product Variants</h4>
+                <div className="grid gap-3 grid-cols-1 lg:grid-cols-2">
+                  {variants.map((v: any) => {
+                    const isLowStock = v.stock <= v.lowStockThreshold;
+                    const isOutOfStock = v.stock === 0;
+                    return (
+                      <div key={v.id} className="bg-white rounded-2xl p-4 border border-border/50 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Badge variant="outline" className="font-black text-[10px] uppercase tracking-widest bg-muted/30">
+                              {v.sku}
+                            </Badge>
+                            {isOutOfStock ? (
+                              <Badge className="bg-rose-500/10 text-rose-600 font-black text-[10px] uppercase tracking-widest border-none">
+                                Out of Stock
+                              </Badge>
+                            ) : isLowStock ? (
+                              <Badge className="bg-amber-500/10 text-amber-600 font-black text-[10px] uppercase tracking-widest border-none">
+                                Low Stock
+                              </Badge>
+                            ) : (
+                              <Badge className="bg-emerald-500/10 text-emerald-600 font-black text-[10px] uppercase tracking-widest border-none">
+                                In Stock
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs font-bold text-muted-foreground">
+                            {v.size && <span>Size: <span className="text-foreground">{v.size}</span></span>}
+                            {v.color && <span>Color: <span className="text-foreground">{v.color}</span></span>}
+                            <span>Stock: <span className={cn("font-black", isLowStock ? "text-rose-500" : "text-foreground")}>{v.stock}</span></span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="text-right">
+                            <div className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Movement</div>
+                            <div className={cn(
+                              "text-xs font-bold px-2 py-1 rounded-lg inline-block",
+                              v.lastMovement === "STOCK INCREMENT" ? "text-emerald-600 bg-emerald-500/10" :
+                              v.lastMovement === "SALES OUTFLOW" ? "text-indigo-600 bg-indigo-500/10" :
+                              v.lastMovement === "STOCK DECREMENT" ? "text-amber-600 bg-amber-500/10" :
+                              "text-muted-foreground bg-muted/50"
+                            )}>
+                              {v.lastMovement}
+                            </div>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 w-8 p-0 rounded-xl bg-brand-navy/5 text-brand-navy border-none hover:bg-brand-navy hover:text-white"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              // we need to set a variant object to update stock, let's map properties properly
+                              setStockUpdateItem({ ...v, name: `${row.original.name} (${v.size || ''} ${v.color || ''})`.trim(), variantId: v.id, status: isOutOfStock ? 'Out of Stock' : isLowStock ? 'Low Stock' : 'In Stock' });
+                            }}
+                            title="Adjust Stock"
+                          >
+                            <Zap className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          }}
         />
       </div>
     </div>

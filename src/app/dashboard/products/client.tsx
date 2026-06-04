@@ -67,6 +67,15 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
   const [isPurging, setIsPurging] = useState(false);
   const [showOnlyWithImages, setShowOnlyWithImages] = useState(false);
 
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const id = params.get("id");
+      if (id) handleEditProduct(id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const getProductThumbnail = (item: any) => {
     const imageArray = Array.isArray(item.images) ? item.images : [];
     const normalizedImages = imageArray.filter((image: any) => typeof image === "string" && image.trim().length > 0);
@@ -391,7 +400,7 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
         const variantsList = productGroups[name];
         const firstRow = variantsList[0];
         
-        let imageUrls: string[] = [];
+        const imageUrls: string[] = [];
         if (firstRow.imageFilename) {
           if (firstRow.imageFilename.startsWith("http://") || firstRow.imageFilename.startsWith("https://")) {
             imageUrls.push(firstRow.imageFilename);

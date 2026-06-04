@@ -55,11 +55,11 @@ export class InventoryQueries {
     });
   }
 
-  static async findAuditLogs(params: { variantId?: string; limit?: number } = {}) {
+  static async findAuditLogs(params: { variantIds?: string[]; limit?: number } = {}) {
     return await prisma.auditLog.findMany({
       where: {
         entity: "ProductVariant",
-        ...(params.variantId && { entityId: params.variantId }),
+        ...(params.variantIds && params.variantIds.length > 0 && { entityId: { in: params.variantIds } }),
       },
       orderBy: { createdAt: "desc" },
       take: params.limit || 50,

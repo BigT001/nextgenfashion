@@ -19,15 +19,15 @@ export async function getInventoryDashboardAction() {
       orderBy: { updatedAt: "desc" }
     });
 
-    // Fetch latest movement log for all main variants in a single bulk query
-    const mainVariantIds = products
-      .map((p) => p.ProductVariant[0]?.id)
+    // Fetch latest movement log for all variants in a single bulk query
+    const allVariantIds = products
+      .flatMap((p) => p.ProductVariant.map(v => v.id))
       .filter((id): id is string => typeof id === "string");
 
     const latestLogs = await prisma.auditLog.findMany({
       where: {
         entity: "ProductVariant",
-        entityId: { in: mainVariantIds }
+        entityId: { in: allVariantIds }
       },
       orderBy: {
         createdAt: "desc"
@@ -96,13 +96,42 @@ export async function getInventoryDashboardAction() {
         colors,
         isSuspended: p.isSuspended,
         status,
-        lastMovement
+        lastMovement,
+        variants: p.ProductVariant.map(v => {
+          let variantLastMovement = "No movements logged";
+          const variantLog = logsMap.get(v.id);
+          if (variantLog) {
+            const details = variantLog.details as any;
+            const reason = (details?.reason || "").toLowerCase();
+            
+            if (variantLog.action === "STOCK_DECREMENT" && (reason.includes("customer purchase") || reason.includes("sale") || reason.includes("pos"))) {
+              variantLastMovement = "SALES OUTFLOW";
+            } else if (variantLog.action === "STOCK_DECREMENT") {
+              variantLastMovement = "STOCK DECREMENT";
+            } else if (variantLog.action === "STOCK_INCREMENT") {
+              variantLastMovement = "STOCK INCREMENT";
+            } else {
+              variantLastMovement = variantLog.action.replace("_", " ");
+            }
+          }
+
+          return {
+            id: v.id,
+            sku: v.sku,
+            size: v.size,
+            color: v.color,
+            price: Number(v.price),
+            stock: v.Inventory?.quantity || 0,
+            lowStockThreshold: v.Inventory?.lowStockThreshold || 5,
+            lastMovement: variantLastMovement
+          };
+        })
       };
     });
 
     // Calculate Executive KPIs
     const totalInventoryValue = processedProducts.reduce((acc, p) => acc + (p.price * p.stock), 0);
-    const stockAlerts = processedProducts.filter(p => p.status !== "In Stock").length;
+    const stockAlerts = processedProducts.filter(p => p.stock < 8).length;
     const productsWithImages = processedProducts.filter((p) => Array.isArray(p.images) && p.images.length > 0).length;
 
     return {
@@ -123,10 +152,10 @@ export async function getInventoryDashboardAction() {
   }
 }
 
-export async function getAuditLogsAction(variantId?: string) {
+export async function getAuditLogsAction(variantIds?: string[]) {
   try {
     const { InventoryQueries } = await import("../queries/inventory.queries");
-    const logs = await InventoryQueries.findAuditLogs({ variantId });
+    const logs = await InventoryQueries.findAuditLogs({ variantIds });
 
     // Hydrate logs with actual User names instead of userIds
     const userIds = Array.from(new Set(logs.map(l => l.userId).filter(Boolean)));

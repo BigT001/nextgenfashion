@@ -377,40 +377,53 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
 
           {/* Hydrated Recent Sales Logs */}
           <Card className="lg:col-span-3 border-none shadow-sm bg-white dark:bg-zinc-950 rounded-[2.5rem] p-6">
-            <CardHeader className="px-2 pb-6">
+            <CardHeader className="px-2 pb-3">
               <CardTitle className="text-xl font-black tracking-tight">Recent Sales</CardTitle>
               <CardDescription className="font-medium text-xs">Real-time acquisitions across POS counter and store checkout.</CardDescription>
             </CardHeader>
             <CardContent className="px-2">
-              <div className="space-y-6">
+              <div className="space-y-3 max-h-[320px] overflow-y-auto pr-1">
                 {recentSalesList.length > 0 ? (
                   recentSalesList.map((sale: any) => {
-                    const customerName = sale.customer?.name || "Offline";
-                    const initials = getInitials(customerName);
+                    const customerName = sale.customerLabel || sale.Customer?.name || sale.customer?.name || "Guest";
+                    const initials = getInitials(customerName === "Online Order" ? "OL" : customerName === "Walk-in Customer" ? "WK" : customerName);
+                    const channel = sale.channel || (sale.paymentMethod === "TRANSFER" ? "Online" : "POS");
+                    const isOnline = channel === "Online";
                     
                     return (
-                      <div key={sale.id} className="flex items-center justify-between pb-4 border-b border-border/20 last:border-0 last:pb-0 hover:translate-x-1 transition-transform">
+                      <Link href={`/dashboard/orders?id=${sale.id}`} key={sale.id} className="flex items-center justify-between pb-3 border-b border-border/20 last:border-0 last:pb-0 hover:translate-x-1 transition-transform cursor-pointer group">
                         <div className="flex items-center gap-4">
-                          <div className="size-11 rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-border/10 flex items-center justify-center font-black text-xs text-brand-navy shadow-sm uppercase shrink-0">
+                          <div className={cn(
+                            "size-11 rounded-2xl border border-border/10 flex items-center justify-center font-black text-xs shadow-sm uppercase shrink-0 transition-colors",
+                            isOnline ? "bg-indigo-500/10 text-indigo-600 group-hover:bg-indigo-500/20" : "bg-zinc-50 dark:bg-zinc-900 text-brand-navy group-hover:bg-zinc-200 dark:group-hover:bg-zinc-800"
+                          )}>
                             {initials}
                           </div>
                           <div className="space-y-0.5 max-w-[150px]">
-                            <p className="text-sm font-black tracking-tight text-foreground truncate">{customerName}</p>
+                            <p className="text-sm font-black tracking-tight text-foreground truncate group-hover:text-brand-navy transition-colors">{customerName}</p>
                             <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest flex items-center gap-1">
                               <Clock className="size-3" />
                               {timeAgo(sale.createdAt)}
                             </p>
                           </div>
                         </div>
-                        <div className="text-right space-y-0.5">
-                          <p className="text-sm font-black tracking-tighter text-foreground">
+                        <div className="text-right space-y-1">
+                          <p className="text-sm font-black tracking-tighter text-foreground group-hover:text-brand-navy transition-colors">
                             ₦{Number(sale.totalAmount).toLocaleString()}
                           </p>
-                          <Badge className="bg-emerald-500/10 text-emerald-600 border-none font-black text-[8px] tracking-widest px-2 uppercase shadow-sm">
-                            SUCCESS
-                          </Badge>
+                          <div className="flex items-center gap-1.5 justify-end">
+                            <Badge className={cn(
+                              "border-none font-black text-[8px] tracking-widest px-2 uppercase shadow-sm",
+                              isOnline ? "bg-indigo-500/10 text-indigo-600" : "bg-brand-navy/10 text-brand-navy"
+                            )}>
+                              {isOnline ? "ONLINE" : "POS"}
+                            </Badge>
+                            <Badge className="bg-emerald-500/10 text-emerald-600 border-none font-black text-[8px] tracking-widest px-2 uppercase shadow-sm">
+                              SUCCESS
+                            </Badge>
+                          </div>
                         </div>
-                      </div>
+                      </Link>
                     );
                   })
                 ) : (
@@ -430,40 +443,53 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
           {/* Hydrated Recent Sales Logs (4/7 width) */}
           <Card className="lg:col-span-4 border-none shadow-sm bg-white dark:bg-zinc-950 rounded-[2.5rem] p-6">
-            <CardHeader className="px-2 pb-6">
+            <CardHeader className="px-2 pb-3">
               <CardTitle className="text-xl font-black tracking-tight">Recent Sales logs</CardTitle>
               <CardDescription className="font-medium text-xs">Real-time acquisitions across POS counter and store checkout.</CardDescription>
             </CardHeader>
             <CardContent className="px-2">
-              <div className="space-y-6">
+              <div className="space-y-3 max-h-[320px] overflow-y-auto pr-1">
                 {recentSalesList.length > 0 ? (
                   recentSalesList.map((sale: any) => {
-                    const customerName = sale.customer?.name || "Offline";
-                    const initials = getInitials(customerName);
+                    const customerName = sale.customerLabel || sale.Customer?.name || sale.customer?.name || "Guest";
+                    const initials = getInitials(customerName === "Online Order" ? "OL" : customerName === "Walk-in Customer" ? "WK" : customerName);
+                    const channel = sale.channel || (sale.paymentMethod === "TRANSFER" ? "Online" : "POS");
+                    const isOnline = channel === "Online";
                     
                     return (
-                      <div key={sale.id} className="flex items-center justify-between pb-4 border-b border-border/20 last:border-0 last:pb-0 hover:translate-x-1 transition-transform">
+                      <Link href={`/dashboard/orders?id=${sale.id}`} key={sale.id} className="flex items-center justify-between pb-3 border-b border-border/20 last:border-0 last:pb-0 hover:translate-x-1 transition-transform cursor-pointer group">
                         <div className="flex items-center gap-4">
-                          <div className="size-11 rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-border/10 flex items-center justify-center font-black text-xs text-brand-navy shadow-sm uppercase shrink-0">
+                          <div className={cn(
+                            "size-11 rounded-2xl border border-border/10 flex items-center justify-center font-black text-xs shadow-sm uppercase shrink-0 transition-colors",
+                            isOnline ? "bg-indigo-500/10 text-indigo-600 group-hover:bg-indigo-500/20" : "bg-zinc-50 dark:bg-zinc-900 text-brand-navy group-hover:bg-zinc-200 dark:group-hover:bg-zinc-800"
+                          )}>
                             {initials}
                           </div>
                           <div className="space-y-0.5 max-w-[150px]">
-                            <p className="text-sm font-black tracking-tight text-foreground truncate">{customerName}</p>
+                            <p className="text-sm font-black tracking-tight text-foreground truncate group-hover:text-brand-navy transition-colors">{customerName}</p>
                             <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest flex items-center gap-1">
                               <Clock className="size-3" />
                               {timeAgo(sale.createdAt)}
                             </p>
                           </div>
                         </div>
-                        <div className="text-right space-y-0.5">
-                          <p className="text-sm font-black tracking-tighter text-foreground">
+                        <div className="text-right space-y-1">
+                          <p className="text-sm font-black tracking-tighter text-foreground group-hover:text-brand-navy transition-colors">
                             ₦{Number(sale.totalAmount).toLocaleString()}
                           </p>
-                          <Badge className="bg-emerald-500/10 text-emerald-600 border-none font-black text-[8px] tracking-widest px-2 uppercase shadow-sm">
-                            SUCCESS
-                          </Badge>
+                          <div className="flex items-center gap-1.5 justify-end">
+                            <Badge className={cn(
+                              "border-none font-black text-[8px] tracking-widest px-2 uppercase shadow-sm",
+                              isOnline ? "bg-indigo-500/10 text-indigo-600" : "bg-brand-navy/10 text-brand-navy"
+                            )}>
+                              {isOnline ? "ONLINE" : "POS"}
+                            </Badge>
+                            <Badge className="bg-emerald-500/10 text-emerald-600 border-none font-black text-[8px] tracking-widest px-2 uppercase shadow-sm">
+                              SUCCESS
+                            </Badge>
+                          </div>
                         </div>
-                      </div>
+                      </Link>
                     );
                   })
                 ) : (
@@ -478,32 +504,32 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
 
           {/* Stock Replenishment Alerts Card (3/7 width) */}
           <Card className="lg:col-span-3 border-none shadow-sm bg-white dark:bg-zinc-950 rounded-[2.5rem] p-6">
-            <CardHeader className="px-2 pb-6">
+            <CardHeader className="px-2 pb-3">
               <CardTitle className="text-xl font-black tracking-tight">Stock Alerts</CardTitle>
               <CardDescription className="font-medium text-xs">Critical inventory levels running below standard warehouse bounds.</CardDescription>
             </CardHeader>
             <CardContent className="px-2">
-              <div className="space-y-5">
+              <div className="space-y-3 max-h-[320px] overflow-y-auto pr-1">
                 {lowStockItemsList.length > 0 ? (
                   lowStockItemsList.map((item: any) => {
-                    const productName = item.variant?.product?.name || "Unknown Product";
-                    const size = item.variant?.size ? `Size ${item.variant.size}` : "One Size";
-                    const sku = item.variant?.sku || "NO-SKU";
+                    const productName = item.ProductVariant?.Product?.name || "Unknown Product";
+                    const size = item.ProductVariant?.size ? `Size ${item.ProductVariant.size}` : "One Size";
+                    const sku = item.ProductVariant?.sku || "NO-SKU";
                     
                     return (
-                      <div key={item.id} className="flex items-center justify-between pb-4 border-b border-border/20 last:border-0 last:pb-0 hover:translate-x-1 transition-transform">
+                      <Link href={`/dashboard/products?id=${item.ProductVariant?.productId}`} key={item.id} className="flex items-center justify-between pb-3 border-b border-border/20 last:border-0 last:pb-0 hover:translate-x-1 transition-transform cursor-pointer group">
                         <div className="space-y-0.5 max-w-[170px]">
-                          <p className="text-sm font-black tracking-tight text-foreground truncate">{productName}</p>
+                          <p className="text-sm font-black tracking-tight text-foreground truncate group-hover:text-brand-navy transition-colors">{productName}</p>
                           <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">
                             {size} • {sku}
                           </p>
                         </div>
                         <div className="text-right space-y-1">
-                          <Badge className="bg-rose-500/10 text-rose-600 border-none font-black text-[9px] tracking-widest px-2 uppercase shadow-sm">
+                          <Badge className="bg-rose-500/10 text-rose-600 border-none font-black text-[9px] tracking-widest px-2 uppercase shadow-sm group-hover:bg-rose-500/20 transition-colors">
                             {item.quantity} LEFT
                           </Badge>
                         </div>
-                      </div>
+                      </Link>
                     );
                   })
                 ) : (
@@ -528,15 +554,15 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
           {/* Top Selling Collection Card (4/7 width) */}
           <Card className="lg:col-span-4 border-none shadow-sm bg-white dark:bg-zinc-950 rounded-[2.5rem] p-6">
-            <CardHeader className="px-2 pb-6">
+            <CardHeader className="px-2 pb-3">
               <CardTitle className="text-xl font-black tracking-tight">Top Performance Items</CardTitle>
               <CardDescription className="font-medium text-xs">Best selling fashion designs ranked by order volume and acquisition revenue.</CardDescription>
             </CardHeader>
             <CardContent className="px-2">
-              <div className="space-y-5">
+              <div className="space-y-3 max-h-[320px] overflow-y-auto pr-1">
                 {topProductsList.length > 0 ? (
                   topProductsList.map((item: any, idx: number) => (
-                    <div key={idx} className="flex items-center justify-between pb-4 border-b border-border/20 last:border-0 last:pb-0 hover:translate-x-1 transition-transform">
+                    <div key={idx} className="flex items-center justify-between pb-3 border-b border-border/20 last:border-0 last:pb-0 hover:translate-x-1 transition-transform">
                       <div className="flex items-center gap-4">
                         <div className="size-8 rounded-xl bg-brand-navy/5 flex items-center justify-center font-black text-xs text-brand-navy">
                           #{idx + 1}
@@ -570,32 +596,32 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
 
           {/* Stock Replenishment Alerts Card (3/7 width) */}
           <Card className="lg:col-span-3 border-none shadow-sm bg-white dark:bg-zinc-950 rounded-[2.5rem] p-6">
-            <CardHeader className="px-2 pb-6">
+            <CardHeader className="px-2 pb-3">
               <CardTitle className="text-xl font-black tracking-tight">Stock Replenishment Alerts</CardTitle>
               <CardDescription className="font-medium text-xs">Critical inventory levels running below standard warehouse bounds.</CardDescription>
             </CardHeader>
             <CardContent className="px-2">
-              <div className="space-y-5">
+              <div className="space-y-3 max-h-[320px] overflow-y-auto pr-1">
                 {lowStockItemsList.length > 0 ? (
                   lowStockItemsList.map((item: any) => {
-                    const productName = item.variant?.product?.name || "Unknown Product";
-                    const size = item.variant?.size ? `Size ${item.variant.size}` : "One Size";
-                    const sku = item.variant?.sku || "NO-SKU";
+                    const productName = item.ProductVariant?.Product?.name || "Unknown Product";
+                    const size = item.ProductVariant?.size ? `Size ${item.ProductVariant.size}` : "One Size";
+                    const sku = item.ProductVariant?.sku || "NO-SKU";
                     
                     return (
-                      <div key={item.id} className="flex items-center justify-between pb-4 border-b border-border/20 last:border-0 last:pb-0 hover:translate-x-1 transition-transform">
+                      <Link href={`/dashboard/products?id=${item.ProductVariant?.productId}`} key={item.id} className="flex items-center justify-between pb-3 border-b border-border/20 last:border-0 last:pb-0 hover:translate-x-1 transition-transform cursor-pointer group">
                         <div className="space-y-0.5 max-w-[170px]">
-                          <p className="text-sm font-black tracking-tight text-foreground truncate">{productName}</p>
+                          <p className="text-sm font-black tracking-tight text-foreground truncate group-hover:text-brand-navy transition-colors">{productName}</p>
                           <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">
                             {size} • {sku}
                           </p>
                         </div>
                         <div className="text-right space-y-1">
-                          <Badge className="bg-rose-500/10 text-rose-600 border-none font-black text-[9px] tracking-widest px-2 uppercase shadow-sm">
+                          <Badge className="bg-rose-500/10 text-rose-600 border-none font-black text-[9px] tracking-widest px-2 uppercase shadow-sm group-hover:bg-rose-500/20 transition-colors">
                             {item.quantity} LEFT
                           </Badge>
                         </div>
-                      </div>
+                      </Link>
                     );
                   })
                 ) : (

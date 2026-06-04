@@ -47,6 +47,14 @@ export default function OrdersClient({ initialData }: { initialData: any[] }) {
   const [receiptOrderId, setReceiptOrderId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"ALL" | "ONLINE" | "POS">("ALL");
 
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const id = params.get("id");
+      if (id) setSelectedOrderId(id);
+    }
+  }, []);
+
   const loadData = async () => {
     const result = await getOrdersDashboardAction();
     if (result.success) {

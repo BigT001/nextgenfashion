@@ -7,24 +7,29 @@ import { getAuditLogsAction } from "../actions/inventory.actions";
 import { cn } from "@/lib/utils";
 
 interface InventoryHistoryViewerProps {
-  variantId: string;
+  variants?: any[];
   refreshTrigger?: number;
 }
 
-export function InventoryHistoryViewer({ variantId, refreshTrigger = 0 }: InventoryHistoryViewerProps) {
+export function InventoryHistoryViewer({ variants = [], refreshTrigger = 0 }: InventoryHistoryViewerProps) {
   const [logs, setLogs] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     async function fetchLogs() {
-      const res = await getAuditLogsAction(variantId);
+      const variantIds = variants.map(v => v.id);
+      if (variantIds.length === 0) {
+        setIsLoading(false);
+        return;
+      }
+      const res = await getAuditLogsAction(variantIds);
       if (res.success) {
         setLogs(res.data);
       }
       setIsLoading(false);
     }
     fetchLogs();
-  }, [variantId, refreshTrigger]);
+  }, [variants, refreshTrigger]);
 
   if (isLoading) {
     return (
@@ -62,6 +67,8 @@ export function InventoryHistoryViewer({ variantId, refreshTrigger = 0 }: Invent
           const isSuspend = log.action === "PRODUCT_SUSPENDED";
           const isActivate = log.action === "PRODUCT_ACTIVATED";
 
+          const variant = variants.find(v => v.id === log.entityId);
+
           return (
             <div key={log.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
               <div className="flex items-center justify-center w-8 h-8 rounded-full border-[3px] border-brand-navy/5 bg-white shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10">
@@ -89,6 +96,12 @@ export function InventoryHistoryViewer({ variantId, refreshTrigger = 0 }: Invent
                     {new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true }).format(new Date(log.createdAt))}
                   </span>
                 </div>
+                {variant && (variant.size || variant.color) && (
+                  <div className="flex gap-2 mb-1.5 items-center">
+                    {variant.size && <span className="bg-muted text-muted-foreground px-1.5 py-0.5 rounded-[4px] text-[8px] font-black uppercase tracking-widest">Size: {variant.size}</span>}
+                    {variant.color && <span className="bg-brand-navy/5 text-brand-navy px-1.5 py-0.5 rounded-[4px] text-[8px] font-black uppercase tracking-widest">Color: {variant.color}</span>}
+                  </div>
+                )}
                 <div className="text-xs font-bold text-foreground line-clamp-1">
                   {log.details?.reason || log.details?.message || "Stock update logged"}
                 </div>

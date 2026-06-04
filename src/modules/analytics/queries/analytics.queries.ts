@@ -55,11 +55,11 @@ export const AnalyticsQueries = {
       }
     });
 
-    // 4. Low Stock Count — compare quantity against default threshold (5)
+    // 4. Low Stock Count — flag variants with stock below 8 as critical
     const lowStockCount = await prisma.inventory.count({
       where: {
         quantity: {
-          lte: 5
+          lt: 8
         }
       }
     });
@@ -173,19 +173,37 @@ export const AnalyticsQueries = {
    * Get 5 most recent transactions with hydrated customer and cashier information
    */
   async getRecentSales() {
-    return await prisma.sale.findMany({
+    const sales = await prisma.sale.findMany({
       orderBy: [
         { updatedAt: "desc" },
         { createdAt: "desc" }
       ],
-      take: 5,
+      take: 50,
       include: {
         Customer: true,
         User: {
           select: { name: true }
+        },
+        SaleItem: {
+          take: 1,
+          include: {
+            ProductVariant: {
+              include: { Product: { select: { name: true } } }
+            }
+          }
         }
       }
     });
+    return sales.map(sale => ({
+      ...sale,
+      // Determine if this is an online order or a POS/in-store sale
+      channel: !sale.customerId && sale.paymentMethod === "TRANSFER" ? "Online" :
+               sale.paymentMethod === "CASH" ? "POS" :
+               sale.paymentMethod === "CARD" ? "POS" :
+               sale.paymentMethod === "POS" ? "POS" : "Online",
+      // Provide a human-readable customer label
+      customerLabel: sale.Customer?.name || (sale.paymentMethod === "TRANSFER" ? "Online Order" : "Walk-in Customer")
+    }));
   },
 
   /**
@@ -195,10 +213,11 @@ export const AnalyticsQueries = {
     return await prisma.inventory.findMany({
       where: {
         quantity: {
-          lte: 5
+          lt: 8
         }
       },
-      take: 5,
+      take: 50,
+      orderBy: { quantity: 'asc' },
       include: {
         ProductVariant: {
           include: {
