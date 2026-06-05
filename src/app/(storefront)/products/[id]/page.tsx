@@ -1,33 +1,24 @@
 export const dynamic = "force-dynamic";
 
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 import { GetProductsService } from "@/modules/products/services/get-products.service";
 import { Badge } from "@/components/ui/badge";
 import { ProductActions } from "@/modules/products/components/product-actions";
 import { ProductImageGallery } from "@/modules/products/components/product-image-gallery";
-import { ResolveProductImagesService } from "@/modules/media/services/resolve-product-images.service";
+import { ProductDetailSkeleton } from "@/modules/products/components/product-detail-skeleton";
+import { ExpandableDescription } from "@/modules/products/components/expandable-description";
 
-export default async function ProductDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = await params;
-  const product = await GetProductsService.byId(id);
+async function ProductDetailContent({ id }: { id: string }) {
+  const product = await GetProductsService.byId(id, { allowRemoteImageDiscovery: false });
 
   if (!product) {
     notFound();
   }
 
-  const resolvedProducts = await ResolveProductImagesService.resolve([product]);
-  const resolvedProduct = resolvedProducts[0];
-  const displayImage = resolvedProduct.resolvedImage || "/images/product-placeholder.svg";
+  const displayImage = product.resolvedImage || "/images/product-placeholder.svg";
 
   const totalStock = product.variants?.reduce((acc: number, v: { inventory?: { quantity?: number | null } | null }) => acc + (v.inventory?.quantity || 0), 0) ?? 0;
-  const firstVariant = product.variants?.[0];
-  const skuLabel = firstVariant?.sku || firstVariant?.barcode || "—";
-  const categoryName = product.Category?.name || product.category?.name || "Exclusive collection";
-  const imageCount = resolvedProduct.images?.length ?? 1;
   const rawDescription = product.description?.trim();
   const isPlaceholderDescription = rawDescription === "Imported from PHP Point of Sale";
   const descriptionText = rawDescription && !isPlaceholderDescription
@@ -48,7 +39,7 @@ export default async function ProductDetailPage({
           {/* Product Showcase */}
           <div className="space-y-6 animate-slow-fade lg:sticky lg:top-24">
             <div className="max-w-[34rem] mx-auto">
-              <ProductImageGallery images={resolvedProduct.images ?? [displayImage]} alt={product.name} />
+              <ProductImageGallery images={product.images ?? [displayImage]} alt={product.name} />
             </div>
             {isNew && (
               <div className="mx-auto w-fit rounded-full bg-white/95 border border-slate-200 px-4 py-2 text-xs font-black uppercase tracking-[0.35em] text-slate-800 shadow-sm shadow-slate-900/10">
@@ -65,9 +56,7 @@ export default async function ProductDetailPage({
                   <h1 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight text-slate-950 leading-tight">
                     {product.name}
                   </h1>
-                  <p className="max-w-2xl text-sm sm:text-base leading-relaxed text-slate-600">
-                    {descriptionText}
-                  </p>
+                  <ExpandableDescription text={descriptionText} characterLimit={280} />
                 </div>
 
                 <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
@@ -82,44 +71,30 @@ export default async function ProductDetailPage({
                     {totalStock > 0 ? "Ready to ship" : "Out of stock"}
                   </Badge>
                 </div>
-
-                <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-                  <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4 text-sm font-medium text-slate-700">
-                    <p className="text-[10px] uppercase tracking-[0.35em] text-slate-400">Category</p>
-                    <p className="mt-2 font-black text-slate-950">{categoryName}</p>
-                  </div>
-                  <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4 text-sm font-medium text-slate-700">
-                    <p className="text-[10px] uppercase tracking-[0.35em] text-slate-400">SKU</p>
-                    <p className="mt-2 font-black text-slate-950">{skuLabel}</p>
-                  </div>
-                  <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4 text-sm font-medium text-slate-700">
-                    <p className="text-[10px] uppercase tracking-[0.35em] text-slate-400">Stock</p>
-                    <p className="mt-2 font-black text-slate-950">{totalStock}</p>
-                  </div>
-                  <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4 text-sm font-medium text-slate-700">
-                    <p className="text-[10px] uppercase tracking-[0.35em] text-slate-400">Images</p>
-                    <p className="mt-2 font-black text-slate-950">{imageCount}</p>
-                  </div>
-                </div>
               </div>
             </div>
 
             <div className="glass-card p-6 sm:p-8 rounded-[2.5rem] border-none shadow-xl bg-white/90">
               <ProductActions product={product} />
             </div>
-
-            <div className="rounded-[2.5rem] border border-slate-200 bg-slate-950/5 p-8">
-              <div className="mb-4 text-xs uppercase tracking-[0.35em] text-slate-500 font-black">
-                Product details
-              </div>
-              <p className="text-sm sm:text-base leading-relaxed text-slate-700">
-                {descriptionText}
-              </p>
-            </div>
           </div>
         </div>
       </div>
     </div>
+  );
+}
+
+export default async function ProductDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+
+  return (
+    <Suspense fallback={<ProductDetailSkeleton />}>
+      <ProductDetailContent id={id} />
+    </Suspense>
   );
 }
 
@@ -129,8 +104,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     const product = await GetProductsService.byId(id);
     if (!product) return { title: "Product not found" };
 
-    const [resolvedProduct] = await ResolveProductImagesService.resolve([product]);
-    const resolvedImage = resolvedProduct?.resolvedImage || "";
+    const resolvedImage = product.resolvedImage || "";
 
     return {
       title: `${product.name} — NextGen Fashion`,

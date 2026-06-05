@@ -198,9 +198,9 @@ export const AnalyticsQueries = {
       ...sale,
       // Determine if this is an online order or a POS/in-store sale
       channel: !sale.customerId && sale.paymentMethod === "TRANSFER" ? "Online" :
-               sale.paymentMethod === "CASH" ? "POS" :
-               sale.paymentMethod === "CARD" ? "POS" :
-               sale.paymentMethod === "POS" ? "POS" : "Online",
+        sale.paymentMethod === "CASH" ? "POS" :
+          sale.paymentMethod === "CARD" ? "POS" :
+            sale.paymentMethod === "POS" ? "POS" : "Online",
       // Provide a human-readable customer label
       customerLabel: sale.Customer?.name || (sale.paymentMethod === "TRANSFER" ? "Online Order" : "Walk-in Customer")
     }));
@@ -234,7 +234,7 @@ export const AnalyticsQueries = {
   async getCategoryPerformance() {
     const categories = await prisma.category.findMany({
       include: {
-        Product: {
+        products: {
           include: {
             ProductVariant: {
               include: {
@@ -250,7 +250,7 @@ export const AnalyticsQueries = {
       let unitsSold = 0;
       let revenue = 0;
 
-      cat.Product.forEach(product => {
+      cat.products.forEach(product => {
         product.ProductVariant.forEach(variant => {
           variant.SaleItem.forEach(item => {
             unitsSold += item.quantity;

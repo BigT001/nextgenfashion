@@ -45,7 +45,10 @@ export class GetProductsService {
       };
       const result = await ProductQueries.findAll(searchParams);
       const normalized = this.normalizeProducts(result);
-      const resolved = await ResolveProductImagesService.resolve(normalized);
+      // Skip remote image discovery for shop/category views - use DB images only for blazing fast load
+      const resolved = await ResolveProductImagesService.resolve(normalized, {
+        allowRemoteImageDiscovery: false,
+      });
       return serialize(resolved);
     } catch (error) {
       console.error("[GetProductsService.execute] Failed to load products:", error);
@@ -53,14 +56,16 @@ export class GetProductsService {
     }
   }
 
-  static async byId(id: string) {
+  static async byId(id: string, options?: { allowRemoteImageDiscovery?: boolean }) {
     if (!id) throw new Error("Product ID is required");
 
     try {
       const result = await ProductQueries.findById(id);
       if (!result) return null;
       const normalized = this.normalizeProduct(result);
-      const [resolved] = await ResolveProductImagesService.resolve([normalized]);
+      const [resolved] = await ResolveProductImagesService.resolve([normalized], {
+        allowRemoteImageDiscovery: options?.allowRemoteImageDiscovery,
+      });
       return serialize(resolved);
     } catch (error) {
       console.error(`[GetProductsService.byId] Failed to load product ${id}:`, error);
@@ -72,7 +77,10 @@ export class GetProductsService {
     try {
       const result = await ProductQueries.findFeatured(limit);
       const normalized = this.normalizeProducts(result);
-      const resolved = await ResolveProductImagesService.resolve(normalized);
+      // Skip remote image discovery for featured products - use DB images only for blazing fast load
+      const resolved = await ResolveProductImagesService.resolve(normalized, {
+        allowRemoteImageDiscovery: false,
+      });
       return serialize(resolved);
     } catch (error) {
       console.error("[GetProductsService.findFeatured] Failed to load featured products:", error);

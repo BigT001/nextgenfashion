@@ -9,7 +9,8 @@ import { prisma } from "@/services/prisma.service";
 export class CreateProductService {
   static async execute(
     productData: Omit<Prisma.ProductCreateInput, "category" | "images"> & {
-      categoryId: string;
+      categoryIds?: string[];
+      categoryId?: string;
       images?: string[];
     },
     variants: (Prisma.ProductVariantCreateWithoutProductInput & {
@@ -75,6 +76,8 @@ export class CreateProductService {
       }
     }
 
+    const categoryIdToUse = productData.categoryId ?? (productData.categoryIds && productData.categoryIds.length > 0 ? productData.categoryIds[0] : undefined);
+
     const createInput: any = {
       name: productData.name,
       description: productData.description,
@@ -83,7 +86,7 @@ export class CreateProductService {
       tax: (productData as any).tax,
       // Persist uploaded image URLs — unique to this product
       images: (productData as any).images ?? [],
-      Category: { connect: { id: productData.categoryId } },
+      ...(categoryIdToUse ? { categories: { connect: [{ id: categoryIdToUse }] } } : {}),
     };
 
     // targetAudience removed from schema — no-op

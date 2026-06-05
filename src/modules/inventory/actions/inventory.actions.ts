@@ -9,7 +9,7 @@ export async function getInventoryDashboardAction() {
   try {
     const products = await prisma.product.findMany({
       include: {
-        Category: true,
+        categories: true,
         ProductVariant: {
           include: {
             Inventory: true
@@ -56,7 +56,7 @@ export async function getInventoryDashboardAction() {
         if (latestLog) {
           const details = latestLog.details as any;
           const reason = (details?.reason || "").toLowerCase();
-          
+
           if (latestLog.action === "STOCK_DECREMENT" && (reason.includes("customer purchase") || reason.includes("sale") || reason.includes("pos"))) {
             lastMovement = "SALES OUTFLOW";
           } else if (latestLog.action === "STOCK_DECREMENT") {
@@ -80,8 +80,8 @@ export async function getInventoryDashboardAction() {
       return {
         id: p.id,
         name: p.name,
-        category: p.Category?.name || "",
-        categoryId: p.categoryId,
+        category: p.categories?.[0]?.name || "",
+        categoryId: p.categories?.[0]?.id || null,
         sku: p.ProductVariant[0]?.sku || "N/A",
         variantId: p.ProductVariant[0]?.id || null,
         stock: totalStock,
@@ -103,7 +103,7 @@ export async function getInventoryDashboardAction() {
           if (variantLog) {
             const details = variantLog.details as any;
             const reason = (details?.reason || "").toLowerCase();
-            
+
             if (variantLog.action === "STOCK_DECREMENT" && (reason.includes("customer purchase") || reason.includes("sale") || reason.includes("pos"))) {
               variantLastMovement = "SALES OUTFLOW";
             } else if (variantLog.action === "STOCK_DECREMENT") {

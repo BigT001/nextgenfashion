@@ -27,6 +27,30 @@ export function CartDrawer({ open, onOpenChange }: { open: boolean, onOpenChange
 
   const itemCount = getItemCount();
 
+  const getColorChipStyles = (color?: string) => {
+    const normalized = String(color || "").trim().toLowerCase();
+    const palette: Record<string, { bg: string; text: string }> = {
+      white: { bg: "bg-slate-100 text-slate-900", text: "text-slate-900" },
+      yellow: { bg: "bg-amber-100 text-amber-700", text: "text-amber-700" },
+      pink: { bg: "bg-fuchsia-100 text-fuchsia-700", text: "text-fuchsia-700" },
+      purple: { bg: "bg-violet-100 text-violet-700", text: "text-violet-700" },
+      red: { bg: "bg-rose-100 text-rose-700", text: "text-rose-700" },
+      blue: { bg: "bg-sky-100 text-sky-700", text: "text-sky-700" },
+      green: { bg: "bg-emerald-100 text-emerald-700", text: "text-emerald-700" },
+      black: { bg: "bg-slate-900 text-white", text: "text-white" },
+      gray: { bg: "bg-slate-200 text-slate-900", text: "text-slate-900" },
+      brown: { bg: "bg-amber-200 text-amber-900", text: "text-amber-900" },
+      orange: { bg: "bg-orange-100 text-orange-700", text: "text-orange-700" },
+    };
+
+    const match = Object.entries(palette).find(([key]) => normalized.includes(key));
+    if (match) {
+      return match[1];
+    }
+
+    return { bg: "bg-slate-100 text-slate-900", text: "text-slate-900" };
+  };
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-screen h-screen p-0 border-none bg-white dark:bg-zinc-950 shadow-none rounded-none flex flex-col">
@@ -50,7 +74,7 @@ export function CartDrawer({ open, onOpenChange }: { open: boolean, onOpenChange
           </div>
         </SheetHeader>
 
-        <div className="flex-1 overflow-y-auto scrollbar-hide pb-36 md:pb-40">
+        <div className="flex-1 min-h-0 overflow-y-auto scrollbar-hide pb-36 md:pb-40 overscroll-contain">
           {items.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center px-6 py-12 text-center space-y-6 relative overflow-hidden">
               <div className="absolute inset-0 bg-brand-mesh opacity-3 -z-10" />
@@ -108,11 +132,14 @@ export function CartDrawer({ open, onOpenChange }: { open: boolean, onOpenChange
                               {item.size}
                             </span>
                           )}
-                          {item.color && (
-                            <span className="text-[7px] font-black uppercase tracking-widest px-2 py-0.5 rounded bg-purple-500/10 text-purple-600 dark:text-purple-400">
-                              {item.color}
-                            </span>
-                          )}
+                          {item.color && (() => {
+                            const styles = getColorChipStyles(item.color);
+                            return (
+                              <span className={cn("text-[7px] font-black uppercase tracking-widest px-2 py-0.5 rounded", styles.bg, styles.text)}>
+                                {item.color}
+                              </span>
+                            );
+                          })()}
                         </div>
                       </div>
 

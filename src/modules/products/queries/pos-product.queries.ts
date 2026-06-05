@@ -19,7 +19,7 @@ export const POSProductQueries = {
             Inventory: true,
           },
         },
-        Category: true,
+        categories: true,
       },
       orderBy: {
         name: "asc",

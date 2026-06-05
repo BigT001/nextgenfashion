@@ -5,6 +5,7 @@ interface ProductUpdatePayload {
   name?: string;
   description?: string | null;
   categoryId?: string | null;
+  categoryIds?: string[] | null;
   sellingPrice?: number;
   costPrice?: number;
   tax?: number;
@@ -50,7 +51,9 @@ export class UpdateProductService {
       updateData.images = [...new Set(images)].slice(0, 5);
     }
     if (categoryId !== undefined && categoryId !== null) {
-      updateData.Category = { connect: { id: categoryId } };
+      updateData.categories = { set: [{ id: categoryId }] };
+    } else if (payload.categoryIds !== undefined && payload.categoryIds !== null && payload.categoryIds.length > 0) {
+      updateData.categories = { set: payload.categoryIds.map(id => ({ id })) };
     }
     // targetAudience removed from schema — no-op
 
@@ -59,7 +62,7 @@ export class UpdateProductService {
       data: updateData,
       include: {
         ProductVariant: true,
-        Category: true,
+        categories: true,
       }
     });
 

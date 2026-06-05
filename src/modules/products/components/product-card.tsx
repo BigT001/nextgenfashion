@@ -25,6 +25,7 @@ interface ProductCardProduct {
   category?: {
     name?: string | null;
   } | null;
+  categories?: Array<{ name?: string | null }> | null;
   images?: unknown;
   resolvedImage?: string | null;
   variants?: ProductVariant[] | null;
@@ -51,6 +52,10 @@ export function ProductCard({ product, className }: ProductCardProps) {
     || "/images/product-placeholder.svg";
 
   const displayImageSrc = imageFailed ? "/images/product-placeholder.svg" : imageSrc;
+
+  const categoryLabel = product.categories?.length
+    ? product.categories.map((cat) => cat.name).filter(Boolean).join(", ")
+    : product.category?.name || "COLLECTION";
 
   const addItem = useCartStore((state) => state.addItem);
   const setOpenCart = useCartStore((state) => state.setOpenCart);
@@ -128,7 +133,7 @@ export function ProductCard({ product, className }: ProductCardProps) {
           </div>
           <div className="absolute bottom-6 left-6 z-10">
             <Badge className="bg-white/90 backdrop-blur-xl text-black border-none font-black text-[10px] px-3 py-1 uppercase tracking-widest rounded-lg">
-              {product.category?.name || "COLLECTION"}
+              {categoryLabel}
             </Badge>
           </div>
         </div>

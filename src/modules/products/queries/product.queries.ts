@@ -24,10 +24,14 @@ export class ProductQueries {
           ]
         }),
         ...(params.categoryId && {
-          OR: [
-            { categoryId: params.categoryId },
-            { Category: { name: { equals: params.categoryId, mode: "insensitive" } } }
-          ]
+          categories: {
+            some: {
+              OR: [
+                { id: params.categoryId },
+                { name: { equals: params.categoryId, mode: "insensitive" } }
+              ]
+            }
+          }
         }),
         ...(params.search && {
           OR: [
@@ -40,7 +44,7 @@ export class ProductQueries {
         }),
       },
       include: {
-        Category: true,
+        categories: true,
         ProductVariant: params.includeVariants ?? true
           ? { include: { Inventory: true } }
           : false,
@@ -60,7 +64,7 @@ export class ProductQueries {
         },
         take: limit,
         include: {
-          Category: true,
+          categories: true,
           ProductVariant: {
             include: { Inventory: true }
           },
@@ -79,7 +83,7 @@ export class ProductQueries {
             },
             take: limit,
             include: {
-              Category: true,
+              categories: true,
               ProductVariant: true,
             },
           });
@@ -96,7 +100,7 @@ export class ProductQueries {
     return await prisma.product.findUnique({
       where: { id },
       include: {
-        Category: true,
+        categories: true,
         ProductVariant: {
           include: {
             Inventory: true,
@@ -116,7 +120,7 @@ export class ProductQueries {
 
     return await prisma.category.findMany({
       where: targetGender ? {
-        Product: {
+        products: {
           some: genderFilter
         }
       } : undefined,
@@ -124,10 +128,10 @@ export class ProductQueries {
       include: {
         _count: {
           select: {
-            Product: true,
+            products: true,
           },
         },
-        Product: {
+        products: {
           where: genderFilter,
           take: 1,
         },

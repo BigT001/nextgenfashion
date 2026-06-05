@@ -17,7 +17,7 @@ export const SearchQueries = {
           ]
         },
         take: 5,
-        include: { Category: true }
+        include: { categories: true }
       }),
       // Search Categories
       prisma.category.findMany({

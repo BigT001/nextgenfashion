@@ -49,7 +49,7 @@ export function VariantBuilder({
 }: VariantBuilderProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newColor, setNewColor] = useState("");
-  const [newSize, setNewSize] = useState("");
+  const [newSizes, setNewSizes] = useState("");
   const [newQuantity, setNewQuantity] = useState("0");
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -62,66 +62,66 @@ export function VariantBuilder({
     return `${namePart}-${colorPart}${sizePart}-${random}`;
   };
 
+  const parseSizes = (value: string) =>
+    Array.from(
+      new Set(
+        value
+          .toString()
+          .split(/[,\/|]+/)
+          .map((size) => size.trim())
+          .filter(Boolean)
+      )
+    );
+
   const handleAddVariant = () => {
     if (!newColor.trim()) {
       toast.error("Color is required");
       return;
     }
-    if (!newSize.trim()) {
-      toast.error("Size is required");
+
+    const sizes = parseSizes(newSizes);
+    if (sizes.length === 0) {
+      toast.error("At least one size is required");
       return;
     }
+
     if (Number(newQuantity) < 0) {
       toast.error("Quantity cannot be negative");
       return;
     }
 
-    // Check for duplicate
-    const isDuplicate = variants.some(
-      (v) =>
-        v.color.toLowerCase() === newColor.toLowerCase() &&
-        v.size.toLowerCase() === newSize.toLowerCase() &&
-        v.id !== editingId
+    const normalizedColor = newColor.trim();
+    const baseVariants = editingId ? variants.filter((v) => v.id !== editingId) : variants;
+    const existingKeys = new Set(
+      baseVariants.map((v) => `${v.color.toLowerCase()}|${v.size.toLowerCase()}`)
     );
 
-    if (isDuplicate) {
-      toast.error("This color-size combination already exists");
+    const newVariants = sizes
+      .map((size) => ({ size, key: `${normalizedColor.toLowerCase()}|${size.toLowerCase()}` }))
+      .filter((entry) => !existingKeys.has(entry.key))
+      .map((entry) => ({
+        id: `var-${Date.now()}-${Math.random()}`,
+        color: normalizedColor,
+        size: entry.size,
+        sku: generateSku(normalizedColor, entry.size),
+        quantity: Number(newQuantity),
+      }));
+
+    if (newVariants.length === 0) {
+      toast.error("All selected size combinations already exist");
       return;
     }
 
     if (editingId) {
-      // Update existing
-      onVariantsChange(
-        variants.map((v) =>
-          v.id === editingId
-            ? {
-                ...v,
-                color: newColor,
-                size: newSize,
-                quantity: Number(newQuantity),
-              }
-            : v
-        )
-      );
-      toast.success("Variant updated");
+      onVariantsChange([...baseVariants, ...newVariants]);
+      toast.success(`Updated ${newVariants.length} variant${newVariants.length === 1 ? "" : "s"}`);
     } else {
-      // Add new
-      const sku = generateSku(newColor, newSize);
-      onVariantsChange([
-        ...variants,
-        {
-          id: `var-${Date.now()}`,
-          color: newColor,
-          size: newSize,
-          sku,
-          quantity: Number(newQuantity),
-        },
-      ]);
-      toast.success("Variant added");
+      onVariantsChange([...variants, ...newVariants]);
+      toast.success(`Added ${newVariants.length} variant${newVariants.length === 1 ? "" : "s"}`);
     }
 
     setNewColor("");
-    setNewSize("");
+    setNewSizes("");
     setNewQuantity("0");
     setEditingId(null);
     setIsDialogOpen(false);
@@ -135,7 +135,7 @@ export function VariantBuilder({
   const handleEditVariant = (variant: Variant) => {
     setEditingId(variant.id);
     setNewColor(variant.color);
-    setNewSize(variant.size);
+    setNewSizes(variant.size);
     setNewQuantity(variant.quantity.toString());
     setIsDialogOpen(true);
   };
@@ -183,7 +183,7 @@ export function VariantBuilder({
             onClick={() => {
               setEditingId(null);
               setNewColor("");
-              setNewSize("");
+              setNewSizes("");
               setNewQuantity("0");
             }}
             aria-label="Add Variant"
@@ -211,14 +211,17 @@ export function VariantBuilder({
                 </div>
                 <div>
                   <label className="text-xs font-bold uppercase tracking-widest">
-                    Size
+                    Sizes
                   </label>
                   <Input
-                    placeholder="e.g. S, M, L, XL"
-                    value={newSize}
-                    onChange={(e) => setNewSize(e.target.value)}
+                    placeholder="e.g. S, M, L or 0-3m | 3-6m"
+                    value={newSizes}
+                    onChange={(e) => setNewSizes(e.target.value)}
                     className="mt-1"
                   />
+                  <p className="mt-1 text-[10px] text-muted-foreground">
+                    Separate multiple sizes with commas, slashes, or pipes.
+                  </p>
                 </div>
                 <div>
                   <label className="text-xs font-bold uppercase tracking-widest">

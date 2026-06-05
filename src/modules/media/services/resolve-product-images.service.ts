@@ -48,6 +48,7 @@ export type ProductWithVariants = {
   images?: string[] | null;
   categoryId?: string | null;
   category?: { name?: string | null } | null;
+  categories?: Array<{ id?: string; name?: string | null }> | null;
   // Prisma relation alias
   Category?: { name?: string | null } | null;
   variants?: Array<{
@@ -178,27 +179,34 @@ const collectCloudinaryAssets = async (shouldFetchRemoteAssets: boolean) => {
 };
 
 export class ResolveProductImagesService {
-  static async resolve<T extends ProductWithVariants>(products: T[]): Promise<ResolvedProduct<T>[]> {
+  static async resolve<T extends ProductWithVariants>(
+    products: T[],
+    options?: { allowRemoteImageDiscovery?: boolean }
+  ): Promise<ResolvedProduct<T>[]> {
     if (products.length === 0) return [];
 
+    const allowRemoteImageDiscovery = options?.allowRemoteImageDiscovery ?? true;
     const hasCloudinaryCredentials = Boolean(
       process.env.CLOUDINARY_CLOUD_NAME &&
       process.env.CLOUDINARY_API_KEY &&
       process.env.CLOUDINARY_API_SECRET
     );
 
-    if (hasCloudinaryCredentials) {
+    if (hasCloudinaryCredentials && allowRemoteImageDiscovery) {
       cloudinary.config({
         cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
         api_key: process.env.CLOUDINARY_API_KEY,
         api_secret: process.env.CLOUDINARY_API_SECRET,
         secure: true,
       });
-    } else {
+    } else if (!hasCloudinaryCredentials && allowRemoteImageDiscovery) {
       console.warn("[ResolveProductImagesService] Cloudinary environment variables are not fully configured.");
     }
 
-    const { assetGroups, globalTokenFrequency } = await collectCloudinaryAssets(hasCloudinaryCredentials);
+    const shouldCollectRemoteAssets = hasCloudinaryCredentials && allowRemoteImageDiscovery;
+    const { assetGroups, globalTokenFrequency } = shouldCollectRemoteAssets
+      ? await collectCloudinaryAssets(hasCloudinaryCredentials)
+      : { assetGroups: new Map(), globalTokenFrequency: new Map() };
 
     if (assetGroups.size === 0) {
       console.warn("[ResolveProductImagesService] No Cloudinary assets were discovered; using local product placeholder fallback.");

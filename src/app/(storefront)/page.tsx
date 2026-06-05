@@ -18,9 +18,8 @@ type CategoryWithProducts = Awaited<ReturnType<typeof ProductQueries.findCategor
 type CategoryProductRow = {
   id: string;
   name: string;
-  categoryId?: string | null;
+  categories?: Array<{ id: string; name?: string | null }> | null;
   images?: string[] | null;
-  Category?: { name?: string | null } | null;
   ProductVariant?: Array<{
     sku?: string | null;
     barcode?: string | null;
@@ -44,14 +43,14 @@ export default async function LandingPage() {
   }
 
   const categoryProducts: ProductWithVariants[] = dbCategories.flatMap((cat) => {
-    const rawProducts = (cat.Product ?? []) as unknown as CategoryProductRow[];
+    const rawProducts = (cat.products ?? []) as unknown as CategoryProductRow[];
 
     return rawProducts.map((product) => ({
       id: product.id,
       name: product.name,
       images: product.images ?? [],
-      categoryId: product.categoryId ?? null,
-      category: product.Category ? { name: product.Category.name } : null,
+      categoryId: product.categories?.[0]?.id ?? null,
+      category: product.categories?.[0] ? { name: product.categories[0].name } : null,
       variants: (product.ProductVariant ?? []).map((variant) => ({
         sku: variant.sku ?? null,
         barcode: variant.barcode ?? null,
@@ -59,11 +58,14 @@ export default async function LandingPage() {
     }));
   });
 
-  const resolvedCategoryProducts = await ResolveProductImagesService.resolve(categoryProducts);
+  // Skip remote image discovery for landing page - use DB images only for blazing fast load
+  const resolvedCategoryProducts = await ResolveProductImagesService.resolve(categoryProducts, {
+    allowRemoteImageDiscovery: false,
+  });
   const resolvedCategoryImageMap = new Map(resolvedCategoryProducts.map((item) => [item.id, item.resolvedImage]));
 
   const categories = dbCategories.map(cat => {
-    const rawProducts = (cat.Product ?? []) as unknown as Array<{ id: string }>;
+    const rawProducts = (cat.products ?? []) as unknown as Array<{ id: string }>;
     const firstProduct = rawProducts[0];
     const productImage = firstProduct ? resolvedCategoryImageMap.get(firstProduct.id) || "" : "";
     const displayImage = cat.image || productImage;
@@ -125,7 +127,10 @@ export default async function LandingPage() {
     image: string;
   };
 
-  const resolvedFeaturedProducts = await ResolveProductImagesService.resolve(featuredProducts);
+  // Skip remote image discovery for featured products - use DB images only for blazing fast load
+  const resolvedFeaturedProducts = await ResolveProductImagesService.resolve(featuredProducts, {
+    allowRemoteImageDiscovery: false,
+  });
   const uniqueFeaturedProducts = resolvedFeaturedProducts
     .filter((product, index, products) => Boolean(product?.id) && products.findIndex((candidate) => candidate?.id === product.id) === index)
     .slice(0, 8);
@@ -143,7 +148,7 @@ export default async function LandingPage() {
     .slice(0, 4);
 
   const discoverCards = discoverProducts.map((product) => ({
-    name: product.Category?.name || product.name,
+    name: product.categories?.[0]?.name || product.name,
     img: product.resolvedImage,
     link: product.categoryId ? `/shop?category=${product.categoryId}` : "/shop"
   }));
@@ -216,23 +221,23 @@ export default async function LandingPage() {
         <div className="relative z-20 text-center px-4 pt-10 pb-6 flex flex-col items-center">
           {/* Subtle glow behind text for legibility over clouds */}
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-white/40 blur-[50px] rounded-full pointer-events-none" />
-          
+
           <div className="relative z-10">
             <div className="inline-block mb-4 px-4 py-1.5 bg-white/40 backdrop-blur-md rounded-full border border-white/50 text-[#0B1E3F] font-black text-xs tracking-[0.25em] uppercase shadow-sm">
               NextGen Exclusives
             </div>
-            
+
             <h1 className="text-[3.5rem] md:text-7xl lg:text-8xl font-black tracking-tighter leading-[1] md:leading-[0.95] text-[#0B1E3F] drop-shadow-sm">
               <span className="block">Kids Premium</span>
               <span className="block text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-rose-500 to-orange-400 mt-2 pb-2">
                 Fashion
               </span>
             </h1>
-            
+
             <p className="text-[#0B1E3F]/80 font-black text-base md:text-xl mt-5 mb-8 max-w-md mx-auto tracking-wide">
               Designed for play <span className="text-pink-500 mx-1">•</span> Built to last <span className="text-pink-500 mx-1">•</span> Made to love
             </p>
-            
+
             <Link href="/shop">
               <button className="h-14 px-10 md:px-14 rounded-full font-black text-sm md:text-base text-white shadow-xl hover:scale-105 active:scale-95 transition-all border border-white/20 group relative overflow-hidden"
                 style={{ background: "linear-gradient(135deg,#e91e63,#f44336)", boxShadow: "0 8px 32px rgba(233,30,99,0.4)" }}>
@@ -303,11 +308,11 @@ export default async function LandingPage() {
                       <div className="w-14 h-14 md:w-16 md:h-16 rounded-full overflow-hidden bg-zinc-100 flex items-center justify-center shadow-md group-hover:scale-110 group-hover:shadow-brand-navy/30 transition-all duration-500 relative border-2 border-transparent group-hover:border-brand-navy">
                         {cat.image ? (
                           <>
-                            <Image 
-                              src={cat.image} 
-                              alt={cat.name} 
-                              fill 
-                              className="object-cover transition-transform duration-700 group-hover:scale-110" 
+                            <Image
+                              src={cat.image}
+                              alt={cat.name}
+                              fill
+                              className="object-cover transition-transform duration-700 group-hover:scale-110"
                             />
                             {(() => {
                               const [c1, c2] = pickColors(cat.name);
@@ -468,11 +473,11 @@ export default async function LandingPage() {
                 <div className="flex gap-4 text-5xl">🎒 👗 👟</div>
               </div>
             </div>
-              {/* Decorative emojis */}
-              <span className="absolute right-32 top-4 text-5xl opacity-60 animate-float">👗</span>
-              <span className="absolute right-16 bottom-4 text-4xl opacity-60 animate-float-delay-2">👟</span>
-              <span className="absolute right-56 top-8 text-3xl opacity-40 animate-float-delay-1">🎒</span>
-            </div>
+            {/* Decorative emojis */}
+            <span className="absolute right-32 top-4 text-5xl opacity-60 animate-float">👗</span>
+            <span className="absolute right-16 bottom-4 text-4xl opacity-60 animate-float-delay-2">👟</span>
+            <span className="absolute right-56 top-8 text-3xl opacity-40 animate-float-delay-1">🎒</span>
+          </div>
         </section>
       </AnimatedSection>
 
