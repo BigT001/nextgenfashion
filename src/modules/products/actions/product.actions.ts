@@ -26,11 +26,11 @@ export async function uploadImageAction(formData: FormData) {
 
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    
+
     // Convert buffer to base64 for Cloudinary
     const fileBase64 = `data:${file.type};base64,${buffer.toString("base64")}`;
     const result = await CloudinaryService.uploadImage(fileBase64, "products", publicIdValue);
-    
+
     return { success: true, ...result };
   } catch (error: any) {
     console.error("Upload error:", error);
@@ -40,8 +40,8 @@ export async function uploadImageAction(formData: FormData) {
 
 export async function createProductAction(data: any) {
   try {
-    const { variants, categoryId, ...productData } = data;
-    
+    const { variants, categoryIds, ...productData } = data;
+
     const variantPrices = variants
       .map((v: any) => typeof v.price === "number" ? v.price : NaN)
       .filter((price: number) => !Number.isNaN(price));
@@ -51,10 +51,10 @@ export async function createProductAction(data: any) {
     );
 
     const product = await CreateProductService.execute(
-      { 
-        ...productData, 
-        basePrice, 
-        categoryId,
+      {
+        ...productData,
+        basePrice,
+        categoryIds,
       },
       variants
     );
@@ -134,6 +134,23 @@ export async function createCategoryAction(name: string) {
   }
 }
 
+export async function updateCategoryAction(categoryId: string, name: string) {
+  try {
+    const { prisma } = await import("@/services/prisma.service");
+    const category = await prisma.category.update({
+      where: { id: categoryId },
+      data: { name }
+    });
+    revalidatePath("/dashboard/products");
+    revalidatePath("/inventory");
+    revalidatePath("/");
+    return { success: true, data: JSON.parse(JSON.stringify(category)) };
+  } catch (error: any) {
+    console.error("Update category error:", error);
+    return { success: false, error: error.message };
+  }
+}
+
 export async function deleteCategoryAction(categoryId: string) {
   try {
     const { prisma } = await import("@/services/prisma.service");
@@ -146,7 +163,13 @@ export async function deleteCategoryAction(categoryId: string) {
     }
 
     // Prevent deletion when products are still assigned to this category
-    const productCount = await prisma.product.count({ where: { categoryId } });
+    const productCount = await prisma.product.count({
+      where: {
+        categories: {
+          some: { id: categoryId }
+        }
+      }
+    });
     if (productCount > 0) {
       return { success: false, error: "Cannot delete category with assigned products. Reassign or remove products first." };
     }
@@ -169,7 +192,7 @@ export async function getProductBySkuAction(sku: string) {
   try {
     const { prisma } = await import("@/services/prisma.service");
     const variant = await prisma.productVariant.findFirst({
-      where: { 
+      where: {
         OR: [
           { sku: sku.toUpperCase() },
           { barcode: sku }
@@ -178,13 +201,13 @@ export async function getProductBySkuAction(sku: string) {
       include: {
         Product: {
           include: {
-            Category: true
+            categories: true
           }
         },
         Inventory: true
       }
     });
-    
+
     if (!variant) return { success: false, error: "Product not found" };
     return { success: true, data: JSON.parse(JSON.stringify(variant)) };
   } catch (error: any) {
@@ -245,7 +268,7 @@ export async function toggleSuspendProductAction(productId: string) {
     revalidatePath("/dashboard/inventory");
     revalidatePath("/dashboard/products");
     revalidatePath("/");
-    
+
     return { success: true, isSuspended: newSuspendedState };
   } catch (error: any) {
     console.error("Suspend error:", error);
@@ -294,12 +317,12 @@ export async function completeCleanupAction(): Promise<DeleteAllProductsResult> 
 export async function importProductsAction(productsList: any[]) {
   try {
     const { prisma } = await import("@/services/prisma.service");
-    
+
     let createdCount = 0;
-    
+
     for (const prod of productsList) {
       const { productName, description, categoryName, gender: rawGender, basePrice, costPrice, tax, variants: rawVariants } = prod;
-      
+
       // Ensure we have at least one variant record to prevent "no variants" empty states
       const variants = [...(rawVariants || [])];
       if (variants.length === 0) {
@@ -317,13 +340,13 @@ export async function importProductsAction(productsList: any[]) {
       // Normalize targetGender string to database enum constraints (BOYS, GIRLS, BOTH)
       const g = (rawGender || "").trim().toUpperCase();
       const gender = ["GIRLS", "FEMALE", "WOMEN", "WOMAN", "LADY", "LADIES"].includes(g) ? "GIRLS" :
-                     ["BOYS", "MALE", "MEN", "MAN", "GENTLEMEN"].includes(g) ? "BOYS" : "BOTH";
-      
+        ["BOYS", "MALE", "MEN", "MAN", "GENTLEMEN"].includes(g) ? "BOYS" : "BOTH";
+
       // 1. Get or Create Category
       let category = await prisma.category.findUnique({
         where: { name: categoryName }
       });
-      
+
       if (!category) {
         category = await prisma.category.create({
           data: {
@@ -332,12 +355,12 @@ export async function importProductsAction(productsList: any[]) {
           }
         });
       }
-      
+
       // 2. Upsert Product
       let product = await prisma.product.findFirst({
         where: { name: productName }
       });
-      
+
       if (product) {
         product = await prisma.product.update({
           where: { id: product.id },
@@ -347,7 +370,7 @@ export async function importProductsAction(productsList: any[]) {
             costPrice: costPrice,
             tax: tax,
             targetGender: gender,
-            categoryId: category.id
+            categories: { set: [{ id: category.id }] }
           }
         });
       } else {
@@ -359,11 +382,11 @@ export async function importProductsAction(productsList: any[]) {
             costPrice: costPrice,
             tax: tax,
             targetGender: gender,
-            categoryId: category.id
+            categories: { connect: { id: category.id } }
           }
         });
       }
-      
+
       // 3. Process variants and inventories
       for (const v of variants) {
         // Fallback for missing SKU to guarantee unique identity constraint
@@ -372,7 +395,7 @@ export async function importProductsAction(productsList: any[]) {
         let variant = await prisma.productVariant.findUnique({
           where: { sku: variantSku }
         });
-        
+
         if (variant) {
           variant = await prisma.productVariant.update({
             where: { sku: variantSku },
@@ -395,12 +418,12 @@ export async function importProductsAction(productsList: any[]) {
             }
           });
         }
-        
+
         // Upsert Inventory
         let inventory = await prisma.inventory.findUnique({
           where: { variantId: variant.id }
         });
-        
+
         if (inventory) {
           await prisma.inventory.update({
             where: { variantId: variant.id },
@@ -419,14 +442,14 @@ export async function importProductsAction(productsList: any[]) {
           });
         }
       }
-      
+
       createdCount++;
     }
-    
+
     revalidatePath("/inventory");
     revalidatePath("/dashboard/products");
     revalidatePath("/");
-    
+
     return { success: true, count: createdCount };
   } catch (error: any) {
     console.error("Bulk Import action error:", error);
