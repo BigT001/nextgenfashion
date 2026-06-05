@@ -86,7 +86,7 @@ export class CreateProductService {
       tax: (productData as any).tax,
       // Persist uploaded image URLs — unique to this product
       images: (productData as any).images ?? [],
-      ...(categoryIdToUse ? { categories: { connect: [{ id: categoryIdToUse }] } } : {}),
+      ...(categoryIdToUse ? { Category: { connect: { id: categoryIdToUse } } } : {}),
     };
 
     // targetAudience removed from schema — no-op

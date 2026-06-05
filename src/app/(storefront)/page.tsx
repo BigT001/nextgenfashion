@@ -45,14 +45,14 @@ export default async function LandingPage() {
   }
 
   const categoryProducts: ProductWithVariants[] = dbCategories.flatMap((cat) => {
-    const rawProducts = (cat.products ?? []) as unknown as CategoryProductRow[];
+    const rawProducts = (cat.Product ?? []) as unknown as CategoryProductRow[];
 
     return rawProducts.map((product) => ({
       id: product.id,
       name: product.name,
       images: product.images ?? [],
-      categoryId: product.categories?.[0]?.id ?? null,
-      category: product.categories?.[0] ? { name: product.categories[0].name } : null,
+      categoryId: cat.id,
+      category: { name: cat.name },
       variants: (product.ProductVariant ?? []).map((variant) => ({
         sku: variant.sku ?? null,
         barcode: variant.barcode ?? null,
@@ -67,7 +67,7 @@ export default async function LandingPage() {
   const resolvedCategoryImageMap = new Map(resolvedCategoryProducts.map((item) => [item.id, item.resolvedImage]));
 
   const categories = dbCategories.map(cat => {
-    const rawProducts = (cat.products ?? []) as unknown as Array<{ id: string }>;
+    const rawProducts = (cat.Product ?? []) as unknown as Array<{ id: string }>;
     const firstProduct = rawProducts[0];
     const productImage = firstProduct ? resolvedCategoryImageMap.get(firstProduct.id) || "" : "";
     const displayImage = cat.image || productImage;
@@ -150,7 +150,7 @@ export default async function LandingPage() {
     .slice(0, 4);
 
   const discoverCards = discoverProducts.map((product) => ({
-    name: product.categories?.[0]?.name || product.name,
+    name: product.category?.name || product.name,
     img: product.resolvedImage,
     link: product.categoryId ? `/shop?category=${product.categoryId}` : "/shop"
   }));

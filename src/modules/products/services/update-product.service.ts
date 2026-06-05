@@ -51,9 +51,9 @@ export class UpdateProductService {
       updateData.images = [...new Set(images)].slice(0, 5);
     }
     if (categoryId !== undefined && categoryId !== null) {
-      updateData.categories = { set: [{ id: categoryId }] };
+      updateData.Category = { connect: { id: categoryId } };
     } else if (payload.categoryIds !== undefined && payload.categoryIds !== null && payload.categoryIds.length > 0) {
-      updateData.categories = { set: payload.categoryIds.map(id => ({ id })) };
+      updateData.Category = { connect: { id: payload.categoryIds[0] } };
     }
     // targetAudience removed from schema — no-op
 
@@ -62,7 +62,7 @@ export class UpdateProductService {
       data: updateData,
       include: {
         ProductVariant: true,
-        categories: true,
+        Category: true,
       }
     });
 

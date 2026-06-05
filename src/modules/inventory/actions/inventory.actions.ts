@@ -9,7 +9,7 @@ export async function getInventoryDashboardAction() {
   try {
     const products = await prisma.product.findMany({
       include: {
-        categories: true,
+        Category: true,
         ProductVariant: {
           include: {
             Inventory: true
@@ -80,8 +80,8 @@ export async function getInventoryDashboardAction() {
       return {
         id: p.id,
         name: p.name,
-        category: p.categories?.[0]?.name || "",
-        categoryId: p.categories?.[0]?.id || null,
+        category: p.Category?.name || "",
+        categoryId: p.Category?.id || null,
         sku: p.ProductVariant[0]?.sku || "N/A",
         variantId: p.ProductVariant[0]?.id || null,
         stock: totalStock,

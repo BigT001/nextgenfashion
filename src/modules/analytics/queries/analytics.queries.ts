@@ -234,7 +234,7 @@ export const AnalyticsQueries = {
   async getCategoryPerformance() {
     const categories = await prisma.category.findMany({
       include: {
-        products: {
+        Product: {
           include: {
             ProductVariant: {
               include: {
@@ -250,7 +250,7 @@ export const AnalyticsQueries = {
       let unitsSold = 0;
       let revenue = 0;
 
-      cat.products.forEach(product => {
+      cat.Product.forEach(product => {
         product.ProductVariant.forEach(variant => {
           variant.SaleItem.forEach(item => {
             unitsSold += item.quantity;
