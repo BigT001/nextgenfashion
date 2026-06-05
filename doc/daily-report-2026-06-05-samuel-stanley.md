@@ -22,3 +22,5 @@ Detailed notes:
 4. Image resolution service usage was tightened to avoid expensive remote discovery in list views and featured product queries.
 
 This report covers all changes completed today for the storefront, product pages, cart drawer, and performance improvements.
+
+Patching product form, create/update services, and action to support multiple categories and change UI to checkbox list. I'll update four files.

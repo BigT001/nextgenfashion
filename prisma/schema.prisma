@@ -48,7 +48,7 @@ model Category {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   image       String?
-  Product     Product[]
+  Product     Product[]  @relation("ProductToCategory")
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
@@ -84,15 +84,14 @@ model Product {
   name           String
   description    String?
   basePrice      Decimal?         @db.Decimal(10, 2)
-  categoryId     String
-  targetGender   String?
+  targetGender   String?          @default("BOTH")
   createdAt      DateTime         @default(now())
   updatedAt      DateTime        @updatedAt
   costPrice      Decimal?         @db.Decimal(10, 2)
   tax            Decimal?         @db.Decimal(10, 2)
   isSuspended    Boolean          @default(false)
   images         String[]
-  Category       Category         @relation(fields: [categoryId], references: [id])
+  categories     Category[]       @relation("ProductToCategory")
   ProductVariant ProductVariant[]
 }
 

@@ -9,7 +9,7 @@ export async function getInventoryDashboardAction() {
   try {
     const products = await prisma.product.findMany({
       include: {
-        Category: true,
+        categories: true,
         ProductVariant: {
           include: {
             Inventory: true
@@ -77,11 +77,12 @@ export async function getInventoryDashboardAction() {
         ? p.images.filter((image): image is string => Boolean(image && image.trim() !== ""))
         : [];
 
+      const primaryCategory = p.categories?.[0];
       return {
         id: p.id,
         name: p.name,
-        category: p.Category?.name || "",
-        categoryId: p.Category?.id || null,
+        category: primaryCategory?.name || "",
+        categoryId: primaryCategory?.id || null,
         sku: p.ProductVariant[0]?.sku || "N/A",
         variantId: p.ProductVariant[0]?.id || null,
         stock: totalStock,

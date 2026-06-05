@@ -18,18 +18,10 @@ export class ProductQueries {
       where: {
         isSuspended: false,
         ...(params.targetGender && {
-          OR: [
-            { targetGender: params.targetGender as any },
-            { targetGender: "BOTH" }
-          ]
+          targetGender: params.targetGender as any
         }),
         ...(params.categoryId && {
-          Category: {
-            OR: [
-              { id: params.categoryId },
-              { name: { equals: params.categoryId, mode: "insensitive" } }
-            ]
-          }
+          categoryId: params.categoryId
         }),
         ...(params.search && {
           OR: [
@@ -42,7 +34,7 @@ export class ProductQueries {
         }),
       },
       include: {
-        Category: true,
+        categories: true,
         ProductVariant: params.includeVariants ?? true
           ? { include: { Inventory: true } }
           : false,
@@ -55,50 +47,26 @@ export class ProductQueries {
    * Fetch high-visibility featured products for the storefront.
    */
   static async findFeatured(limit = 8) {
-    try {
-      return await prisma.product.findMany({
-        where: {
-          isSuspended: false,
+    return await prisma.product.findMany({
+      where: {
+        isSuspended: false,
+      },
+      take: limit,
+      include: {
+        categories: true,
+        ProductVariant: {
+          include: { Inventory: true }
         },
-        take: limit,
-        include: {
-          Category: true,
-          ProductVariant: {
-            include: { Inventory: true }
-          },
-        },
-        orderBy: { createdAt: "desc" },
-      });
-    } catch (error) {
-      console.error("[ProductQueries.findFeatured] Failed to load featured products:", error);
-
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2022") {
-        try {
-          console.warn("[ProductQueries.findFeatured] Falling back to featured products query without ordering due to schema mismatch.");
-          return await prisma.product.findMany({
-            where: {
-              isSuspended: false,
-            },
-            take: limit,
-            include: {
-              Category: true,
-              ProductVariant: true,
-            },
-          });
-        } catch (fallbackError) {
-          console.error("[ProductQueries.findFeatured] Fallback query also failed:", fallbackError);
-        }
-      }
-
-      return [];
-    }
+      },
+      orderBy: { createdAt: "desc" },
+    });
   }
 
   static async findById(id: string) {
     return await prisma.product.findUnique({
       where: { id },
       include: {
-        Category: true,
+        categories: true,
         ProductVariant: {
           include: {
             Inventory: true,
@@ -109,19 +77,7 @@ export class ProductQueries {
   }
 
   static async findCategories(targetGender?: string) {
-    const genderFilter = targetGender ? {
-      OR: [
-        { targetGender: targetGender as any },
-        { targetGender: "BOTH" as any }
-      ]
-    } : undefined;
-
     return await prisma.category.findMany({
-      where: targetGender ? {
-        Product: {
-          some: genderFilter
-        }
-      } : undefined,
       orderBy: { name: "asc" },
       include: {
         _count: {
@@ -130,8 +86,16 @@ export class ProductQueries {
           },
         },
         Product: {
-          where: genderFilter,
-          take: 1,
+          where: {
+            isSuspended: false,
+          },
+          include: {
+            ProductVariant: {
+              include: {
+                Inventory: true,
+              },
+            },
+          },
         },
       },
     });

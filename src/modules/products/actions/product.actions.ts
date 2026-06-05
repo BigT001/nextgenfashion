@@ -165,8 +165,10 @@ export async function deleteCategoryAction(categoryId: string) {
     // Prevent deletion when products are still assigned to this category
     const productCount = await prisma.product.count({
       where: {
-        Category: {
-          id: categoryId
+        categories: {
+          some: {
+            id: categoryId
+          }
         }
       }
     });
@@ -201,7 +203,7 @@ export async function getProductBySkuAction(sku: string) {
       include: {
         Product: {
           include: {
-            Category: true
+            categories: true
           }
         },
         Inventory: true
@@ -370,7 +372,7 @@ export async function importProductsAction(productsList: any[]) {
             costPrice: costPrice,
             tax: tax,
             targetGender: gender,
-            Category: { connect: { id: category.id } }
+            categories: { connect: { id: category.id } }
           }
         });
       } else {
@@ -382,7 +384,7 @@ export async function importProductsAction(productsList: any[]) {
             costPrice: costPrice,
             tax: tax,
             targetGender: gender,
-            Category: { connect: { id: category.id } }
+            categories: { connect: { id: category.id } }
           }
         });
       }
