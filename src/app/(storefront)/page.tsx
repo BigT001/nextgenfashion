@@ -14,7 +14,9 @@ import { ProductQueries } from "@/modules/products/queries/product.queries";
 import { ResolveProductImagesService, type ProductWithVariants } from "@/modules/media/services/resolve-product-images.service";
 
 type FeaturedProduct = Awaited<ReturnType<typeof GetProductsService.findFeatured>>[number];
-type CategoryWithProducts = Awaited<ReturnType<typeof ProductQueries.findCategories>>[number];
+type CategoryWithProducts = Awaited<ReturnType<typeof ProductQueries.findCategories>>[number] & {
+  products?: CategoryProductRow[];
+};
 type CategoryProductRow = {
   id: string;
   name: string;
