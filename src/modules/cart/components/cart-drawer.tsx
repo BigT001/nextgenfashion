@@ -200,7 +200,7 @@ export function CartDrawer({ open, onOpenChange }: { open: boolean, onOpenChange
                     <ShieldCheck className="size-3.5 text-emerald-600" />
                     Delivery
                   </span>
-                  <span className="text-xs font-black text-muted-foreground/60">Calculated at checkout</span>
+                  <span className="text-xs font-black text-muted-foreground/60"></span>
                 </div>
               </div>
 

@@ -18,10 +18,10 @@ export class ProductQueries {
       where: {
         isSuspended: false,
         ...(params.targetGender && {
-          targetGender: params.targetGender as any
+          targetGender: params.targetGender as any,
         }),
         ...(params.categoryId && {
-          categoryId: params.categoryId
+          categories: { some: { id: params.categoryId } },
         }),
         ...(params.search && {
           OR: [
@@ -30,16 +30,39 @@ export class ProductQueries {
           ],
         }),
         ...(params.maxPrice !== undefined && {
-          basePrice: { lte: new Prisma.Decimal(params.maxPrice) }
+          basePrice: { lte: new Prisma.Decimal(params.maxPrice) },
         }),
       },
-      include: {
-        categories: true,
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        basePrice: true,
+        targetGender: true,
+        categories: { select: { id: true, name: true } },
+        images: true,
+        createdAt: true,
         ProductVariant: params.includeVariants ?? true
-          ? { include: { Inventory: true } }
+          ? {
+              take: 1,
+              include: { Inventory: true },
+            }
           : false,
       },
       orderBy: { createdAt: "desc" },
+    });
+  }
+
+  static async findCategorySummaries(targetGender?: string) {
+    return await prisma.category.findMany({
+      orderBy: { name: "asc" },
+      include: {
+        _count: {
+          select: {
+            Product: true,
+          },
+        },
+      },
     });
   }
 

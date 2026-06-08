@@ -341,8 +341,7 @@ export function OrderReceipt({ orderId, onClose }: OrderReceiptProps) {
             </div>
 
             <div class="totals">
-              <div class="total-row"><span>Subtotal</span><span>₦${(Number(data?.totalAmount) / 1.075).toLocaleString("en-NG", { maximumFractionDigits: 0 })}</span></div>
-              <div class="total-row"><span>VAT (7.5%)</span><span>₦${(Number(data?.totalAmount) - Number(data?.totalAmount) / 1.075).toLocaleString("en-NG", { maximumFractionDigits: 0 })}</span></div>
+              <div class="total-row"><span>Subtotal</span><span>₦${Number(data?.totalAmount).toLocaleString("en-NG", { maximumFractionDigits: 0 })}</span></div>
               <div class="total-row"><span>Shipping</span><span>FREE</span></div>
               <div class="total-row grand"><span>TOTAL</span><span>₦${Number(data?.totalAmount).toLocaleString()}</span></div>
             </div>
@@ -483,11 +482,7 @@ export function OrderReceipt({ orderId, onClose }: OrderReceiptProps) {
               <div className="w-full max-w-xs space-y-3">
                 <div className="flex justify-between text-sm font-bold text-muted-foreground">
                   <span>Subtotal</span>
-                  <span>₦{(Number(data.totalAmount) / 1.075).toLocaleString("en-NG", { maximumFractionDigits: 0 })}</span>
-                </div>
-                <div className="flex justify-between text-sm font-bold text-muted-foreground">
-                  <span>VAT (7.5%)</span>
-                  <span>₦{(Number(data.totalAmount) - Number(data.totalAmount) / 1.075).toLocaleString("en-NG", { maximumFractionDigits: 0 })}</span>
+                  <span>₦{Number(data.totalAmount).toLocaleString("en-NG", { maximumFractionDigits: 0 })}</span>
                 </div>
                 <div className="flex justify-between text-sm font-bold text-emerald-600">
                   <span>Shipping</span>

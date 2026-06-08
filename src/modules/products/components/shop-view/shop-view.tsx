@@ -35,7 +35,7 @@ export async function ShopView({
   let products: ShopProduct[] = [];
 
   try {
-    const rawCategories = await ProductQueries.findCategories(targetGender);
+    const rawCategories = await ProductQueries.findCategorySummaries(targetGender);
     categories = JSON.parse(JSON.stringify(rawCategories.map((cat: Record<string, unknown>) => deepSerialize(cat))));
   } catch (error) {
     console.error("[ShopView] Failed to load categories:", error);

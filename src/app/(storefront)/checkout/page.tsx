@@ -137,9 +137,8 @@ export default function CheckoutPage() {
 
   // Financial Orchestration
   const subtotal = getTotal();
-  const taxRate = 0.075; // 7.5% VAT
-  const taxAmount = subtotal * taxRate;
-  const grandTotal = subtotal + taxAmount;
+  const taxAmount = 0; // VAT disabled
+  const grandTotal = subtotal;
 
   const customerId = (session?.user as any)?.customerId;
 
@@ -578,10 +577,6 @@ export default function CheckoutPage() {
                   <div className="flex justify-between text-xs font-bold uppercase tracking-widest">
                     <span className="text-muted-foreground">Subtotal</span>
                     <span className="font-black">₦{subtotal.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between text-xs font-bold uppercase tracking-widest">
-                    <span className="text-muted-foreground">VAT (7.5%)</span>
-                    <span className="font-black">₦{Math.round(taxAmount).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-xs font-bold uppercase tracking-widest">
                     <span className="text-muted-foreground">Logistics</span>
