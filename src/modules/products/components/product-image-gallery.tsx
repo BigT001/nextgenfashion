@@ -33,6 +33,7 @@ export function ProductImageGallery({ images, alt }: ProductImageGalleryProps) {
 
   return (
     <div className="w-full flex flex-col">
+      {/* Main product image */}
       <div className="relative aspect-square w-full rounded-[2rem] overflow-hidden bg-slate-100 border border-slate-200 shadow-[0_28px_80px_-32px_rgba(15,23,42,0.35)]">
         <Image
           src={activeImage}
@@ -43,42 +44,41 @@ export function ProductImageGallery({ images, alt }: ProductImageGalleryProps) {
           className="object-cover transition-all duration-500"
           priority
         />
-
-        {validImages.length > 1 ? (
-          <div className="absolute bottom-4 left-0 right-0 px-4">
-            <div className="overflow-x-auto">
-              <div className="inline-flex gap-3">
-                {validImages.map((image, index) => {
-                  const isSelected = activeImage === image;
-                  return (
-                    <button
-                      key={`${image}-${index}`}
-                      type="button"
-                      onClick={() => setActiveImage(image)}
-                      className={cn(
-                        "relative flex-shrink-0 aspect-square overflow-hidden rounded-3xl border transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-white/50 w-16 h-16",
-                        isSelected
-                          ? "border-white shadow-xl ring-2 ring-white/70"
-                          : "border-white/40 bg-white/10 hover:border-white/70"
-                      )}
-                    >
-                      <Image
-                        src={image}
-                        alt={`${alt} thumbnail ${index + 1}`}
-                        fill
-                        unoptimized
-                        sizes="64px"
-                        className="object-cover"
-                      />
-                      {isSelected ? <span className="pointer-events-none absolute inset-x-0 bottom-0 h-1 bg-white" /> : null}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        ) : null}
       </div>
+
+      {/* Thumbnail row — outside and below the main image */}
+      {validImages.length > 1 ? (
+        <div className="mt-4 overflow-x-auto">
+          <div className="flex gap-3">
+            {validImages.map((image, index) => {
+              const isSelected = activeImage === image;
+              return (
+                <button
+                  key={`${image}-${index}`}
+                  type="button"
+                  onClick={() => setActiveImage(image)}
+                  className={cn(
+                    "relative flex-shrink-0 aspect-square overflow-hidden rounded-xl border-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand-navy/30 w-16 h-16 sm:w-20 sm:h-20",
+                    isSelected
+                      ? "border-brand-navy shadow-lg ring-2 ring-brand-navy/20"
+                      : "border-slate-200 hover:border-brand-navy/40 bg-slate-50"
+                  )}
+                >
+                  <Image
+                    src={image}
+                    alt={`${alt} thumbnail ${index + 1}`}
+                    fill
+                    unoptimized
+                    sizes="80px"
+                    className="object-cover"
+                  />
+                  {isSelected ? <span className="pointer-events-none absolute inset-x-0 bottom-0 h-1 bg-brand-navy rounded-full" /> : null}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

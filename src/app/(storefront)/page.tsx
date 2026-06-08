@@ -1,5 +1,6 @@
 export const dynamic = "force-dynamic";
 
+import React from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -7,6 +8,7 @@ import {
   RefreshCw, Headphones, ShoppingCart, ShoppingBag, Package, Smartphone, Heart, Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Prisma } from "@prisma/client";
 import { GetProductsService } from "@/modules/products/services/get-products.service";
 import { LiveBrandPulse } from "@/modules/brand/components/live-brand-pulse";
 import { AnimatedSection } from "@/components/ui/animated-section";
@@ -20,12 +22,28 @@ type CategoryWithProducts = Awaited<ReturnType<typeof ProductQueries.findCategor
 type CategoryProductRow = {
   id: string;
   name: string;
+  basePrice?: number | string | Prisma.Decimal | null;
   categories?: Array<{ id: string; name?: string | null }> | null;
   images?: string[] | null;
   ProductVariant?: Array<{
     sku?: string | null;
     barcode?: string | null;
   }> | null;
+};
+
+type CategoryProductWithPrice = ProductWithVariants & {
+  basePrice?: number | string | Prisma.Decimal | null;
+};
+
+const formatCurrency = (value?: number | string | Prisma.Decimal | null) => {
+  if (value === undefined || value === null || value === "") return "";
+  const numeric = typeof value === "object" && value !== null && "toNumber" in value ? Number((value as any).toNumber()) : Number(value);
+  if (!Number.isFinite(numeric)) return "";
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(numeric);
 };
 
 export default async function LandingPage() {
@@ -44,13 +62,14 @@ export default async function LandingPage() {
     dbCategories = [];
   }
 
-  const categoryProducts: ProductWithVariants[] = dbCategories.flatMap((cat) => {
+  const categoryProducts: CategoryProductWithPrice[] = dbCategories.flatMap((cat) => {
     const rawProducts = (cat.Product ?? []) as unknown as CategoryProductRow[];
 
     return rawProducts.map((product) => ({
       id: product.id,
       name: product.name,
       images: product.images ?? [],
+      basePrice: product.basePrice,
       categoryId: cat.id,
       category: { name: cat.name },
       variants: (product.ProductVariant ?? []).map((variant) => ({
@@ -66,18 +85,43 @@ export default async function LandingPage() {
   });
   const resolvedCategoryImageMap = new Map(resolvedCategoryProducts.map((item) => [item.id, item.resolvedImage]));
 
-  const categories = dbCategories.map(cat => {
-    const rawProducts = (cat.Product ?? []) as unknown as Array<{ id: string }>;
-    const firstProduct = rawProducts[0];
-    const productImage = firstProduct ? resolvedCategoryImageMap.get(firstProduct.id) || "" : "";
-    const displayImage = cat.image || productImage;
+  // Helper to shuffle and select N random items
+  const selectRandomItems = <T,>(arr: T[], count: number): T[] => {
+    const shuffled = [...arr].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, Math.min(count, arr.length));
+  };
 
-    return {
-      name: cat.name,
-      image: displayImage,
-      href: `/shop?category=${cat.id}`
-    };
-  });
+  const categories = dbCategories
+    .filter((cat) => (cat.Product ?? []).length > 0) // Only show categories with products
+    .map(cat => {
+      const rawProducts = (cat.Product ?? []) as unknown as CategoryProductRow[];
+      const firstProduct = rawProducts[0];
+      const productImage = firstProduct ? resolvedCategoryImageMap.get(firstProduct.id) || "" : "";
+      const displayImage = cat.image || productImage;
+
+      // Get up to 6 random products from this category, but show 4 per row on mobile
+      const randomProducts = selectRandomItems(rawProducts, 6).map((product) => ({
+        id: product.id,
+        name: product.name,
+        images: product.images ?? [],
+        basePrice: product.basePrice,
+        categoryId: cat.id,
+        category: { name: cat.name },
+        image: resolvedCategoryImageMap.get(product.id) || "",
+        variants: (product.ProductVariant ?? []).map((variant) => ({
+          sku: variant.sku ?? null,
+          barcode: variant.barcode ?? null,
+        })),
+      }));
+
+      return {
+        id: cat.id,
+        name: cat.name,
+        image: displayImage,
+        href: `/shop?category=${cat.id}`,
+        products: randomProducts,
+      };
+    });
 
   // Map category names to icons
   const getCategoryIcon = (name?: string) => {
@@ -291,22 +335,22 @@ export default async function LandingPage() {
       <LiveBrandPulse />
 
       {/* ═══════════════════ CATEGORIES ════════════════════════════════════════ */}
-      <section className="py-8 md:py-16 bg-white">
-        <div className="container mx-auto px-6 md:px-12">
-          <AnimatedSection className="text-center mb-10" animation="fade-up">
+      <section className="py-0 bg-white">
+        <div className="container mx-auto px-0">
+          <AnimatedSection className="text-center mb-4" animation="fade-up">
             <p className="text-sm font-black uppercase tracking-widest text-pink-500 mb-1">Shop by Category</p>
             <h2 className="text-3xl md:text-4xl font-black text-zinc-900">
               Something for <span className="text-pink-500">Every Kid</span>
             </h2>
           </AnimatedSection>
 
-          <div className="grid grid-cols-4 gap-4 sm:gap-6 md:gap-8 lg:grid-cols-8 pt-4 pb-2 md:pb-8 px-6 justify-items-center">
+          <div className="grid grid-cols-4 gap-1 lg:grid-cols-8 pt-0 pb-0 px-0 justify-items-center">
             {categories.map((cat, i) => {
               const shortName = (cat.name || "").length > 12 ? (cat.name || "").slice(0, 12).trim() + "…" : cat.name;
               return (
                 <AnimatedSection key={i} animation="zoom-in" delay={i * 60}>
                   <Link href={cat.href}>
-                    <div className="group flex flex-col items-center gap-2 cursor-pointer">
+                    <div className="group flex flex-col items-center gap-1 cursor-pointer">
                       <div className="w-14 h-14 md:w-16 md:h-16 rounded-full overflow-hidden bg-zinc-100 flex items-center justify-center shadow-md group-hover:scale-110 group-hover:shadow-brand-navy/30 transition-all duration-500 relative border-2 border-transparent group-hover:border-brand-navy">
                         {cat.image ? (
                           <>
@@ -338,7 +382,7 @@ export default async function LandingPage() {
                           })()
                         )}
                       </div>
-                      <p className="font-black text-[9px] md:text-[10px] text-zinc-500 group-hover:text-brand-navy transition-colors uppercase tracking-[0.2em] w-20 md:w-24 text-center truncate">{shortName}</p>
+                              <p className="font-black text-[9px] md:text-[10px] text-zinc-500 group-hover:text-brand-navy transition-colors uppercase tracking-[0.2em] w-20 md:w-24 text-center truncate">{shortName}</p>
                     </div>
                   </Link>
                 </AnimatedSection>
@@ -348,140 +392,158 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* ═══════════════════ TRENDING PRODUCTS ══════════════════════════════════ */}
-      <section className="pt-4 md:pt-16 pb-8 bg-white">
-        <div className="container mx-auto px-6 md:px-12">
-          <AnimatedSection className="text-center mb-10" animation="fade-up">
-            <p className="text-sm font-black uppercase tracking-widest text-pink-500 mb-1">Trending Products</p>
-            <h2 className="text-3xl md:text-4xl font-black text-zinc-900">
-              Kids <span className="text-pink-500">Fashion Picks</span>
-            </h2>
-          </AnimatedSection>
-
-          {visibleFeaturedImages.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 max-w-5xl mx-auto">
-              {visibleFeaturedImages.map((item, i) => (
-                <AnimatedSection key={item.id} animation="fade-up" delay={i * 70}>
-                  <Link href={`/products/${item.product.id}`} className="block group">
-                    <div className="aspect-[3/4] rounded-[2.5rem] overflow-hidden bg-zinc-100 shadow-lg transition-transform duration-500 group-hover:-translate-y-1">
-                      {item.image && item.image.trim() !== "" ? (
-                        <Image
-                          src={item.image}
-                          alt={item.product.name || "Product image"}
-                          fill
-                          className="object-cover transition-transform duration-1000 group-hover:scale-105"
-                        />
-                      ) : (
-                        <div className="flex items-center justify-center h-full opacity-10">
-                          <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <rect width="64" height="64" rx="16" fill="#e0e7ef" />
-                            <path d="M20 44L44 20M44 44L20 20" stroke="#b3b9c9" strokeWidth="4" strokeLinecap="round" />
-                          </svg>
-                        </div>
-                      )}
-                    </div>
-                    <div className="mt-4 text-center">
-                      <p className="font-black text-lg tracking-tight line-clamp-1">{item.product.name}</p>
-                    </div>
+      {/* ═══════════════════ PRODUCTS BY CATEGORY ═════════════════════════════ */}
+      {categories.length > 0 ? (
+        categories.map((category, catIdx) => {
+          // Insert promotional banners after first 3 categories
+          const showPromoAfterThisCategory = catIdx === 2;
+          return (
+            <React.Fragment key={category.id}>
+              <section className="py-4 md:py-6 bg-white">
+              <div className="container mx-auto px-3 md:px-4">
+                <AnimatedSection className="flex items-end justify-between mb-4" animation="fade-up">
+                  <div>
+                    <h2 className="text-2xl md:text-3xl font-black text-zinc-900">
+                      {category.name}
+                    </h2>
+                  </div>
+                  <Link href={category.href}>
+                    <button className="hidden md:flex items-center gap-2 bg-brand-navy text-white font-black text-[10px] uppercase tracking-[0.25em] px-4 py-2 rounded-full hover:scale-105 transition-transform shadow-lg">
+                      View All <ArrowRight className="w-4 h-4" />
+                    </button>
                   </Link>
                 </AnimatedSection>
-              ))}
-            </div>
-          ) : (
-            <div className="max-w-4xl mx-auto py-12 text-center rounded-3xl border border-zinc-200 bg-zinc-50">
-              <p className="text-zinc-500 text-base md:text-lg font-medium">
-                No featured products are available right now.
-              </p>
-            </div>
-          )}
-        </div>
-      </section>
 
-      {/* ═══════════════════ PROMO BANNERS GRID ═════════════════════════════════ */}
-      <AnimatedSection animation="fade-up">
-        <section className="pb-16 bg-white">
-          <div className="container mx-auto px-6 md:px-12">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-
-              {/* Banner 1 — Boys */}
-              <div className="relative rounded-3xl overflow-hidden h-24 md:h-48 flex items-center px-4 md:px-8 shadow-lg group cursor-pointer hover:-translate-y-1 hover:shadow-2xl transition-all duration-500"
-                style={{ background: "linear-gradient(135deg,#ffd600,#ff6f00)" }}>
-                <div className="relative z-10 flex w-full items-center justify-between md:block md:w-auto">
-                  <div>
-                    <p className="text-white/80 font-black text-[10px] md:text-xs uppercase tracking-widest mb-1">Play Like</p>
-                    <h3 className="text-xl md:text-3xl font-black text-white leading-tight whitespace-nowrap">Boy Toys<span className="hidden md:inline"><br /></span><span className="md:hidden"> </span>&amp; Fashion</h3>
+                {category.products.length > 0 ? (
+                  <div className="grid grid-cols-4 gap-1 max-w-6xl mx-auto lg:grid-cols-6">
+                    {category.products.map((product, idx) => (
+                      <AnimatedSection key={product.id} animation="fade-up" delay={idx * 70}>
+                        <Link href={`/products/${product.id}`} className="block group">
+                          <div className="relative aspect-[4/5] rounded-[2rem] overflow-hidden bg-zinc-100 shadow-lg transition-transform duration-500 group-hover:-translate-y-1">
+                            {product.image && product.image.trim() !== "" ? (
+                              <Image
+                                src={product.image}
+                                alt={product.name || "Product image"}
+                                fill
+                                className="object-cover w-full h-full transition-transform duration-1000 group-hover:scale-105"
+                              />
+                            ) : (
+                              <div className="flex items-center justify-center h-full opacity-10">
+                                <Zap className="w-16 h-16" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="mt-3 text-center">
+                            <p className="font-black text-sm md:text-sm tracking-tight text-zinc-900 line-clamp-2">{product.name}</p>
+                            {product.basePrice ? (
+                              <p className="mt-1 text-sm text-zinc-500 font-semibold">{formatCurrency(product.basePrice)}</p>
+                            ) : null}
+                          </div>
+                        </Link>
+                      </AnimatedSection>
+                    ))}
                   </div>
-                  <Link href="/shop?category=boys" className="ml-2 relative z-20 shrink-0">
-                    <button className="md:mt-4 bg-white text-yellow-700 font-black text-[10px] md:text-xs uppercase tracking-widest px-4 py-2 md:px-5 md:py-2 rounded-full group-hover:bg-yellow-50 group-hover:scale-105 transition-all">
-                      SHOP ONLINE
+                ) : null}
+
+                <div className="flex md:hidden justify-center mt-6">
+                  <Link href={category.href}>
+                    <button className="bg-brand-navy text-white font-black text-[10px] uppercase tracking-[0.25em] px-4 py-2 rounded-full hover:scale-105 transition-transform shadow-lg">
+                      View All
                     </button>
                   </Link>
                 </div>
-                <div className="absolute right-4 bottom-0 text-5xl md:text-7xl opacity-70 group-hover:scale-110 group-hover:rotate-6 transition-transform duration-500">🧢</div>
               </div>
+            </section>
+            {showPromoAfterThisCategory && (
+              <AnimatedSection animation="fade-up">
+                <section className="pb-16 bg-white">
+                  <div className="container mx-auto px-6 md:px-12">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
 
-              {/* Banner 2 — Big Discount */}
-              <div className="relative rounded-3xl overflow-hidden h-24 md:h-48 flex items-center px-4 md:px-8 shadow-lg group cursor-pointer hover:-translate-y-1 hover:shadow-2xl transition-all duration-500"
-                style={{ background: "linear-gradient(135deg,#43a047,#1de9b6)" }}>
-                <div className="relative z-10 flex w-full items-center justify-between md:block md:w-auto">
-                  <div>
-                    <p className="text-white/80 font-black text-[10px] md:text-xs uppercase tracking-widest mb-1">Special Deal</p>
-                    <h3 className="text-xl md:text-3xl font-black text-white leading-tight whitespace-nowrap">Big<span className="hidden md:inline"><br /></span><span className="md:hidden"> </span>Discount</h3>
-                    <div className="mt-1 bg-yellow-400 text-yellow-900 font-black text-[10px] md:text-lg px-3 py-0.5 md:px-4 md:py-1 rounded-full inline-block group-hover:scale-110 transition-transform">50% OFF</div>
-                    <div className="hidden md:block h-3" />
+                      {/* Banner 1 — Boys */}
+                      <div className="relative rounded-3xl overflow-hidden h-24 md:h-48 flex items-center px-4 md:px-8 shadow-lg group cursor-pointer hover:-translate-y-1 hover:shadow-2xl transition-all duration-500"
+                        style={{ background: "linear-gradient(135deg,#ffd600,#ff6f00)" }}>
+                        <div className="relative z-10 flex w-full items-center justify-between md:block md:w-auto">
+                          <div>
+                            <p className="text-white/80 font-black text-[10px] md:text-xs uppercase tracking-widest mb-1">Play Like</p>
+                            <h3 className="text-xl md:text-3xl font-black text-white leading-tight whitespace-nowrap">Boy Toys<span className="hidden md:inline"><br /></span><span className="md:hidden"> </span>&amp; Fashion</h3>
+                          </div>
+                          <Link href="/shop?category=boys" className="ml-2 relative z-20 shrink-0">
+                            <button className="md:mt-4 bg-white text-yellow-700 font-black text-[10px] md:text-xs uppercase tracking-widest px-4 py-2 md:px-5 md:py-2 rounded-full group-hover:bg-yellow-50 group-hover:scale-105 transition-all">
+                              SHOP ONLINE
+                            </button>
+                          </Link>
+                        </div>
+                        <div className="absolute right-4 bottom-0 text-5xl md:text-7xl opacity-70 group-hover:scale-110 group-hover:rotate-6 transition-transform duration-500">🧢</div>
+                      </div>
+
+                      {/* Banner 2 — Big Discount */}
+                      <div className="relative rounded-3xl overflow-hidden h-24 md:h-48 flex items-center px-4 md:px-8 shadow-lg group cursor-pointer hover:-translate-y-1 hover:shadow-2xl transition-all duration-500"
+                        style={{ background: "linear-gradient(135deg,#43a047,#1de9b6)" }}>
+                        <div className="relative z-10 flex w-full items-center justify-between md:block md:w-auto">
+                          <div>
+                            <p className="text-white/80 font-black text-[10px] md:text-xs uppercase tracking-widest mb-1">Special Deal</p>
+                            <h3 className="text-xl md:text-3xl font-black text-white leading-tight whitespace-nowrap">Big<span className="hidden md:inline"><br /></span><span className="md:hidden"> </span>Discount</h3>
+                            <div className="mt-1 bg-yellow-400 text-yellow-900 font-black text-[10px] md:text-lg px-3 py-0.5 md:px-4 md:py-1 rounded-full inline-block group-hover:scale-110 transition-transform">50% OFF</div>
+                            <div className="hidden md:block h-3" />
+                          </div>
+                          <Link href="/shop" className="ml-2 relative z-20 shrink-0">
+                            <button className="md:mt-3 bg-white text-green-700 font-black text-[10px] md:text-xs uppercase tracking-widest px-4 py-2 md:px-5 md:py-2 rounded-full group-hover:bg-green-50 group-hover:scale-105 transition-all block">
+                              SHOP NOW
+                            </button>
+                          </Link>
+                        </div>
+                        <div className="absolute right-4 bottom-0 text-5xl md:text-7xl opacity-70 group-hover:scale-110 group-hover:-rotate-12 transition-transform duration-500">🎉</div>
+                      </div>
+
+                      {/* Banner 3 — Elite Selection */}
+                      <div className="relative rounded-3xl overflow-hidden h-24 md:h-48 flex items-center px-4 md:px-8 shadow-lg group cursor-pointer hover:-translate-y-1 hover:shadow-2xl transition-all duration-500"
+                        style={{ background: "linear-gradient(135deg,#ff8a80,#e91e63)" }}>
+                        <div className="relative z-10 flex w-full items-center justify-between md:block md:w-auto">
+                          <div>
+                            <p className="text-white/80 font-black text-[10px] md:text-xs uppercase tracking-widest mb-1">Style Update</p>
+                            <div className="bg-white/30 backdrop-blur-sm px-2 py-0.5 md:px-3 md:py-1 rounded-full text-white font-black text-[10px] md:text-sm mb-1 md:mb-2 inline-block">Premium Range</div>
+                            <h3 className="text-xl md:text-3xl font-black text-white leading-tight whitespace-nowrap">Elite 👗<span className="hidden md:inline"><br /></span><span className="md:hidden"> </span>Selection</h3>
+                          </div>
+                          <Link href="/shop" className="ml-2 relative z-20 shrink-0">
+                            <button className="md:mt-3 bg-white text-pink-700 font-black text-[10px] md:text-xs uppercase tracking-widest px-4 py-2 md:px-5 md:py-2 rounded-full group-hover:bg-pink-50 group-hover:scale-105 transition-all">
+                              SHOP ONLINE
+                            </button>
+                          </Link>
+                        </div>
+                        <div className="absolute right-4 bottom-0 text-5xl md:text-7xl opacity-20 group-hover:opacity-40 transition-opacity">✨</div>
+                      </div>
+                    </div>
+
+                    {/* Full-width banner */}
+                    <div className="mt-5 relative rounded-3xl overflow-hidden h-24 md:h-36 flex flex-row items-center justify-between px-4 md:px-10 shadow-lg group cursor-pointer hover:shadow-2xl transition-all duration-500"
+                      style={{ background: "linear-gradient(90deg,#29b6f6 0%,#0288d1 50%,#01579b 100%)" }}>
+                      <div className="absolute inset-0 bg-brand-mesh opacity-10 group-hover:opacity-20 transition-opacity" />
+                      <div className="relative z-10 text-left mb-0">
+                        <p className="text-white/70 font-black text-[10px] md:text-xs uppercase tracking-widest mb-1">New Arrivals</p>
+                        <h3 className="text-xl sm:text-2xl md:text-4xl font-black text-white whitespace-nowrap">Kids Collection {new Date().getFullYear()}</h3>
+                      </div>
+                      <Link href="/shop" className="relative z-10 flex-shrink-0">
+                        <button className="bg-yellow-400 text-blue-900 font-black text-[10px] md:text-xs uppercase tracking-widest px-4 py-2 md:px-6 md:py-3 rounded-full hover:bg-yellow-300 group-hover:scale-105 transition-all shadow-lg active:scale-95 whitespace-nowrap">
+                          SHOP NOW →
+                        </button>
+                      </Link>
+                      <div className="absolute right-10 top-0 bottom-0 hidden md:flex items-center opacity-10 group-hover:opacity-30 transition-opacity">
+                        <div className="flex gap-4 text-5xl">🎒 👗 👟</div>
+                      </div>
+                    </div>
+                    {/* Decorative emojis */}
+                    <span className="absolute right-32 top-4 text-5xl opacity-60 animate-float">👗</span>
+                    <span className="absolute right-16 bottom-4 text-4xl opacity-60 animate-float-delay-2">👟</span>
+                    <span className="absolute right-56 top-8 text-3xl opacity-40 animate-float-delay-1">🎒</span>
                   </div>
-                  <Link href="/shop" className="ml-2 relative z-20 shrink-0">
-                    <button className="md:mt-3 bg-white text-green-700 font-black text-[10px] md:text-xs uppercase tracking-widest px-4 py-2 md:px-5 md:py-2 rounded-full group-hover:bg-green-50 group-hover:scale-105 transition-all block">
-                      SHOP NOW
-                    </button>
-                  </Link>
-                </div>
-                <div className="absolute right-4 bottom-0 text-5xl md:text-7xl opacity-70 group-hover:scale-110 group-hover:-rotate-12 transition-transform duration-500">🎉</div>
-              </div>
-
-              {/* Banner 3 — Elite Selection */}
-              <div className="relative rounded-3xl overflow-hidden h-24 md:h-48 flex items-center px-4 md:px-8 shadow-lg group cursor-pointer hover:-translate-y-1 hover:shadow-2xl transition-all duration-500"
-                style={{ background: "linear-gradient(135deg,#ff8a80,#e91e63)" }}>
-                <div className="relative z-10 flex w-full items-center justify-between md:block md:w-auto">
-                  <div>
-                    <p className="text-white/80 font-black text-[10px] md:text-xs uppercase tracking-widest mb-1">Style Update</p>
-                    <div className="bg-white/30 backdrop-blur-sm px-2 py-0.5 md:px-3 md:py-1 rounded-full text-white font-black text-[10px] md:text-sm mb-1 md:mb-2 inline-block">Premium Range</div>
-                    <h3 className="text-xl md:text-3xl font-black text-white leading-tight whitespace-nowrap">Elite 👗<span className="hidden md:inline"><br /></span><span className="md:hidden"> </span>Selection</h3>
-                  </div>
-                  <Link href="/shop" className="ml-2 relative z-20 shrink-0">
-                    <button className="md:mt-3 bg-white text-pink-700 font-black text-[10px] md:text-xs uppercase tracking-widest px-4 py-2 md:px-5 md:py-2 rounded-full group-hover:bg-pink-50 group-hover:scale-105 transition-all">
-                      SHOP ONLINE
-                    </button>
-                  </Link>
-                </div>
-                <div className="absolute right-4 bottom-0 text-5xl md:text-7xl opacity-20 group-hover:opacity-40 transition-opacity">✨</div>
-              </div>
-            </div>
-
-            {/* Full-width banner */}
-            <div className="mt-5 relative rounded-3xl overflow-hidden h-24 md:h-36 flex flex-row items-center justify-between px-4 md:px-10 shadow-lg group cursor-pointer hover:shadow-2xl transition-all duration-500"
-              style={{ background: "linear-gradient(90deg,#29b6f6 0%,#0288d1 50%,#01579b 100%)" }}>
-              <div className="absolute inset-0 bg-brand-mesh opacity-10 group-hover:opacity-20 transition-opacity" />
-              <div className="relative z-10 text-left mb-0">
-                <p className="text-white/70 font-black text-[10px] md:text-xs uppercase tracking-widest mb-1">New Arrivals</p>
-                <h3 className="text-xl sm:text-2xl md:text-4xl font-black text-white whitespace-nowrap">Kids Collection {new Date().getFullYear()}</h3>
-              </div>
-              <Link href="/shop" className="relative z-10 flex-shrink-0">
-                <button className="bg-yellow-400 text-blue-900 font-black text-[10px] md:text-xs uppercase tracking-widest px-4 py-2 md:px-6 md:py-3 rounded-full hover:bg-yellow-300 group-hover:scale-105 transition-all shadow-lg active:scale-95 whitespace-nowrap">
-                  SHOP NOW →
-                </button>
-              </Link>
-              <div className="absolute right-10 top-0 bottom-0 hidden md:flex items-center opacity-10 group-hover:opacity-30 transition-opacity">
-                <div className="flex gap-4 text-5xl">🎒 👗 👟</div>
-              </div>
-            </div>
-            {/* Decorative emojis */}
-            <span className="absolute right-32 top-4 text-5xl opacity-60 animate-float">👗</span>
-            <span className="absolute right-16 bottom-4 text-4xl opacity-60 animate-float-delay-2">👟</span>
-            <span className="absolute right-56 top-8 text-3xl opacity-40 animate-float-delay-1">🎒</span>
-          </div>
-        </section>
-      </AnimatedSection>
+                </section>
+              </AnimatedSection>
+            )}
+            </React.Fragment>
+          );
+        })
+      ) : null}
 
 
 

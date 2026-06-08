@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Plus, Trash2, Copy } from "lucide-react";
+import { Plus, Trash2, Copy, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -288,7 +288,7 @@ export function VariantBuilder({
                 <TableHead className="text-[10px] font-black uppercase tracking-[0.35em] text-right">
                   Qty
                 </TableHead>
-                <TableHead className="text-[10px] font-black uppercase tracking-[0.35em]">
+                <TableHead className="text-[10px] font-black uppercase tracking-[0.35em] w-[80px] min-w-[80px]">
                   Action
                 </TableHead>
               </TableRow>
@@ -313,27 +313,27 @@ export function VariantBuilder({
                       {variant.quantity}
                     </span>
                   </TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
+                  <TableCell className="w-[80px] min-w-[80px]">
+                    <div className="flex items-center gap-1.5 whitespace-nowrap">
                       <Button
                         type="button"
                         size="icon"
                         variant="ghost"
                         onClick={() => handleEditVariant(variant)}
-                        className="h-8 w-8 p-0"
+                        className="h-8 w-8 p-0 text-brand-navy hover:text-brand-navy/80 hover:bg-brand-navy/5 flex items-center justify-center rounded-lg"
                         aria-label="Edit variant"
                       >
-                        <span className="text-[10px]">✎</span>
+                        <Pencil className="h-3.5 w-3.5" />
                       </Button>
                       <Button
                         type="button"
                         size="icon"
                         variant="ghost"
                         onClick={() => handleDeleteVariant(variant.id)}
-                        className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                        className="h-8 w-8 p-0 text-rose-600 hover:text-rose-700 hover:bg-rose-50 flex items-center justify-center rounded-lg"
                         aria-label="Delete variant"
                       >
-                        <Trash2 className="h-3 w-3" />
+                        <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </div>
                   </TableCell>

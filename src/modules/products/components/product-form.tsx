@@ -484,6 +484,7 @@ export function ProductForm({
 
       // Build variants payload from the VariantBuilder data
       const variantPayload = variants.map(v => ({
+        id: v.id,
         size: v.size,
         color: v.color,
         sku: v.sku.toUpperCase(),
