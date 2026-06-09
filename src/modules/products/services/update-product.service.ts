@@ -27,163 +27,182 @@ interface ProductUpdatePayload {
  */
 export class UpdateProductService {
   static async execute(id: string, payload: ProductUpdatePayload) {
-    const { name, description, categoryId, sellingPrice, costPrice, tax, images, variants } = payload;
+    const { name, description, categoryId, categoryIds, sellingPrice, costPrice, tax, images, variants, warehouseId } = payload;
+
+    console.log(`[UpdateProduct] Received payload:`, { id, categoryId, categoryIds, hasVariants: !!variants });
 
     const existingProduct = await prisma.product.findUnique({
       where: { id },
+      include: { categories: true, ProductVariant: { include: { _count: { select: { SaleItem: true } } } } }
     });
+    
     if (!existingProduct) {
       throw new Error(`Product with id ${id} not found`);
     }
 
-    console.log(`[UpdateProduct] id=${id} updating product metadata without persisting image URLs`);
+    console.log(`[UpdateProduct] Current categories on product:`, existingProduct.categories.map(c => c.id));
 
-    // 1. Update the parent Product record
-    const updateData: Prisma.ProductUpdateInput = {
-      name,
-      description,
-      basePrice: sellingPrice,
-      costPrice,
-      tax,
-    };
-    // Persist uploaded image URLs — replace the stored list for this product
-    if (images !== undefined) {
-      // Deduplicate and enforce max 5
-      updateData.images = [...new Set(images)].slice(0, 5);
-    }
-    if (categoryId !== undefined && categoryId !== null) {
-      updateData.categories = { connect: { id: categoryId } };
-    } else if (payload.categoryIds !== undefined && payload.categoryIds !== null && payload.categoryIds.length > 0) {
-      updateData.categories = { connect: { id: payload.categoryIds[0] } };
-    }
-    // targetAudience removed from schema — no-op
+    // Determine which categories to set
+    const newCategoryIds = categoryIds && categoryIds.length > 0 
+      ? categoryIds 
+      : (categoryId ? [categoryId] : []);
 
-    const updatedProduct = await prisma.product.update({
+    console.log(`[UpdateProduct] New category IDs to set:`, newCategoryIds);
+
+    // Execute update in a transaction for atomicity
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Update the parent Product record
+      const updateData: Prisma.ProductUpdateInput = {
+        name,
+        description,
+        basePrice: sellingPrice,
+        costPrice,
+        tax,
+      };
+
+      if (images !== undefined) {
+        updateData.images = [...new Set(images)].slice(0, 5);
+      }
+
+      // Disconnect ALL old categories and connect ALL new ones in a single step
+      if (newCategoryIds.length > 0) {
+        updateData.categories = {
+          set: newCategoryIds.map(catId => ({ id: catId }))
+        };
+      } else {
+        // If no categories provided, clear them
+        updateData.categories = { set: [] };
+      }
+
+      const updatedProduct = await tx.product.update({
+        where: { id },
+        data: updateData,
+        include: {
+          ProductVariant: true,
+          categories: true,
+        }
+      });
+
+      console.log(`[UpdateProduct] After category update, product has categories:`, updatedProduct.categories.map(c => c.id));
+
+      // 2. Update ALL variants and inventories if provided
+      if (variants) {
+        const existingVariants = await tx.productVariant.findMany({
+          where: { productId: id },
+          include: {
+            _count: {
+              select: { SaleItem: true }
+            }
+          }
+        });
+
+        const incomingIds = variants
+          .map(v => v.id)
+          .filter((vid): vid is string => typeof vid === "string" && vid.trim().length > 0 && !vid.startsWith("var-"));
+
+        const variantsToDelete = existingVariants.filter(
+          ev => !incomingIds.includes(ev.id)
+        );
+
+        const variantsWithSales = variantsToDelete.filter(v => v._count.SaleItem > 0);
+        if (variantsWithSales.length > 0) {
+          const skus = variantsWithSales.map(v => v.sku).join(", ");
+          throw new Error(`Cannot delete variant(s) with SKU(s) [${skus}] because they have associated sales history.`);
+        }
+
+        if (variantsToDelete.length > 0) {
+          await tx.productVariant.deleteMany({
+            where: {
+              id: { in: variantsToDelete.map(v => v.id) }
+            }
+          });
+        }
+
+        for (const v of variants) {
+          let variantSku = String(v.sku || "").toUpperCase();
+          const isTempId = !v.id || v.id.startsWith("var-");
+          const matchedVariant = isTempId ? null : existingVariants.find(ev => ev.id === v.id);
+
+          if (matchedVariant) {
+            const existingBySku = await tx.productVariant.findUnique({ where: { sku: variantSku } });
+            if (existingBySku && existingBySku.id !== matchedVariant.id) {
+              let candidate = `${variantSku}-${Date.now().toString().slice(-4)}`;
+              while (await tx.productVariant.findUnique({ where: { sku: candidate } })) {
+                candidate = `${variantSku}-${Math.floor(1000 + Math.random() * 9000)}`;
+              }
+              variantSku = candidate;
+            }
+
+            await tx.productVariant.update({
+              where: { id: matchedVariant.id },
+              data: {
+                sku: variantSku,
+                size: v.size || "OS",
+                color: v.color || "Default",
+                price: v.price || sellingPrice
+              }
+            });
+
+            await tx.inventory.upsert({
+              where: { variantId: matchedVariant.id },
+              create: {
+                variantId: matchedVariant.id,
+                quantity: v.stock || 0,
+                warehouseId: warehouseId || null
+              },
+              update: {
+                quantity: v.stock || 0,
+                warehouseId: warehouseId || null
+              }
+            });
+          } else {
+            const existingBySku = await tx.productVariant.findUnique({ where: { sku: variantSku } });
+            if (existingBySku) {
+              let candidate = `${variantSku}-${Date.now().toString().slice(-4)}`;
+              while (await tx.productVariant.findUnique({ where: { sku: candidate } })) {
+                candidate = `${variantSku}-${Math.floor(1000 + Math.random() * 9000)}`;
+              }
+              variantSku = candidate;
+            }
+
+            const createdVariant = await tx.productVariant.create({
+              data: {
+                productId: id,
+                sku: variantSku,
+                size: v.size || "OS",
+                color: v.color || "Default",
+                price: v.price || sellingPrice,
+                barcode: null
+              }
+            });
+
+            await tx.inventory.create({
+              data: {
+                variantId: createdVariant.id,
+                quantity: v.stock || 0,
+                warehouseId: warehouseId || null
+              }
+            });
+          }
+        }
+      }
+
+      return updatedProduct;
+    });
+
+    // Final fetch to ensure everything is committed
+    const finalProduct = await prisma.product.findUnique({
       where: { id },
-      data: updateData,
       include: {
-        ProductVariant: true,
+        ProductVariant: {
+          include: { Inventory: true }
+        },
         categories: true,
       }
     });
 
-    console.log(`[UpdateProduct] Updated product ${updatedProduct.name} without persisting image URLs`);
+    console.log(`[UpdateProduct] Final product categories:`, finalProduct?.categories.map(c => ({ id: c.id, name: c.name })));
 
-    // 2. Update ALL variants and inventories if provided
-    if (variants) {
-      // Get existing variants for this product
-      const existingVariants = await prisma.productVariant.findMany({
-        where: { productId: id },
-        include: {
-          _count: {
-            select: { SaleItem: true }
-          }
-        }
-      });
-
-      const incomingIds = variants
-        .map(v => v.id)
-        .filter((vid): vid is string => typeof vid === "string" && vid.trim().length > 0 && !vid.startsWith("var-"));
-
-      // Identify variants to delete (those existing in DB but not in incoming payload)
-      const variantsToDelete = existingVariants.filter(
-        ev => !incomingIds.includes(ev.id)
-      );
-
-      // Check if any deleted variants have transactional records
-      const variantsWithSales = variantsToDelete.filter(v => v._count.SaleItem > 0);
-      if (variantsWithSales.length > 0) {
-        const skus = variantsWithSales.map(v => v.sku).join(", ");
-        throw new Error(`Cannot delete variant(s) with SKU(s) [${skus}] because they have associated sales history.`);
-      }
-
-      // Delete variants not present in the new payload (and their inventory via cascade delete)
-      if (variantsToDelete.length > 0) {
-        await prisma.productVariant.deleteMany({
-          where: {
-            id: { in: variantsToDelete.map(v => v.id) }
-          }
-        });
-      }
-
-      // Update or create variants in the payload
-      for (const v of variants) {
-        let variantSku = String(v.sku || "").toUpperCase();
-        const isTempId = !v.id || v.id.startsWith("var-");
-
-        // Try to find the existing variant by id (if not a temporary id)
-        const matchedVariant = isTempId ? null : existingVariants.find(ev => ev.id === v.id);
-
-        if (matchedVariant) {
-          // Ensure SKU uniqueness: if desired SKU exists on another variant, generate a safe fallback
-          const existingBySku = await prisma.productVariant.findUnique({ where: { sku: variantSku } });
-          if (existingBySku && existingBySku.id !== matchedVariant.id) {
-            let candidate = `${variantSku}-${Date.now().toString().slice(-4)}`;
-            while (await prisma.productVariant.findUnique({ where: { sku: candidate } })) {
-              candidate = `${variantSku}-${Math.floor(1000 + Math.random() * 9000)}`;
-            }
-            variantSku = candidate;
-          }
-
-          // Update existing variant
-          const updatedVariant = await prisma.productVariant.update({
-            where: { id: matchedVariant.id },
-            data: {
-              sku: variantSku,
-              size: v.size || "OS",
-              color: v.color || "Default",
-              price: v.price || sellingPrice
-            }
-          });
-
-          // Update inventory
-          await prisma.inventory.upsert({
-            where: { variantId: updatedVariant.id },
-            create: {
-              variantId: updatedVariant.id,
-              quantity: v.stock || 0,
-              warehouseId: payload.warehouseId || null
-            },
-            update: {
-              quantity: v.stock || 0,
-              warehouseId: payload.warehouseId || null
-            }
-          });
-        } else {
-          // Double-check if the SKU is already in use by any other variant in database
-          const existingBySku = await prisma.productVariant.findUnique({ where: { sku: variantSku } });
-          if (existingBySku) {
-            let candidate = `${variantSku}-${Date.now().toString().slice(-4)}`;
-            while (await prisma.productVariant.findUnique({ where: { sku: candidate } })) {
-              candidate = `${variantSku}-${Math.floor(1000 + Math.random() * 9000)}`;
-            }
-            variantSku = candidate;
-          }
-
-          // Create new variant
-          const createdVariant = await prisma.productVariant.create({
-            data: {
-              productId: id,
-              sku: variantSku,
-              size: v.size || "OS",
-              color: v.color || "Default",
-              price: v.price || sellingPrice,
-              barcode: null
-            }
-          });
-
-          // Create inventory for new variant
-          await prisma.inventory.create({
-            data: {
-              variantId: createdVariant.id,
-              quantity: v.stock || 0,
-              warehouseId: payload.warehouseId || null
-            }
-          });
-        }
-      }
-    }
-
-    return updatedProduct;
+    return finalProduct;
   }
 }

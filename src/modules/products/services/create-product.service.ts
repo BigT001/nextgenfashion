@@ -76,8 +76,6 @@ export class CreateProductService {
       }
     }
 
-    const categoryIdToUse = productData.categoryId ?? (productData.categoryIds && productData.categoryIds.length > 0 ? productData.categoryIds[0] : undefined);
-
     const createInput: any = {
       name: productData.name,
       description: productData.description,
@@ -86,7 +84,12 @@ export class CreateProductService {
       tax: (productData as any).tax,
       // Persist uploaded image URLs — unique to this product
       images: (productData as any).images ?? [],
-      ...(categoryIdToUse ? { categories: { connect: { id: categoryIdToUse } } } : {}),
+      // Connect ALL categories at creation time
+      ...(productData.categoryIds && productData.categoryIds.length > 0
+        ? { categories: { connect: productData.categoryIds.map(id => ({ id })) } }
+        : productData.categoryId
+          ? { categories: { connect: [{ id: productData.categoryId }] } }
+          : {}),
     };
 
     // targetAudience removed from schema — no-op
@@ -104,6 +107,10 @@ export class CreateProductService {
       })),
     };
 
-    return await ProductQueries.create(createInput);
+    const createdProduct = await ProductQueries.create(createInput);
+    
+    console.log(`[CreateProduct] Created product ${createdProduct.name} with categories:`, createdProduct.categories?.map(c => ({ id: c.id, name: c.name })));
+
+    return createdProduct;
   }
 }

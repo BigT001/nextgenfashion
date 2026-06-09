@@ -130,6 +130,7 @@ export class ProductQueries {
         ...data,
       },
       include: {
+        categories: true,
         ProductVariant: {
           include: {
             Inventory: true,

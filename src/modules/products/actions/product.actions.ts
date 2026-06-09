@@ -10,6 +10,7 @@ import { ProductQueries } from "@/modules/products/queries/product.queries";
 import { CloudinaryService } from "@/integrations/cloudinary/cloudinary.service";
 import { MatchImageFilenamesService } from "@/modules/products/services/match-image-filenames.service";
 import { LinkProductImageService } from "@/modules/products/services/link-product-image.service";
+import { serializeProduct } from "@/modules/products/utils/serialize-product";
 import { revalidatePath } from "next/cache";
 
 /**
@@ -61,7 +62,7 @@ export async function createProductAction(data: any) {
 
     revalidatePath("/inventory");
     revalidatePath("/"); // Update storefront
-    return { success: true, data: JSON.parse(JSON.stringify(product)) };
+    return { success: true, data: serializeProduct(product) };
   } catch (error: any) {
     console.error("Action error:", error);
     return { success: false, error: error.message };
@@ -73,7 +74,7 @@ export async function updateProductAction(id: string, data: any) {
     const result = await UpdateProductService.execute(id, data);
     revalidatePath("/inventory");
     revalidatePath("/");
-    return { success: true, data: JSON.parse(JSON.stringify(result)) };
+    return { success: true, data: serializeProduct(result) };
   } catch (error: any) {
     console.error("Update error:", error);
     return { success: false, error: error.message };
@@ -104,7 +105,7 @@ export async function updateStockAction(variantId: string, quantityChange: numbe
 
     const result = await UpdateStockService.execute(variantId, quantityChange, reason, actor);
     revalidatePath("/inventory");
-    return { success: true, data: JSON.parse(JSON.stringify(result)) };
+    return { success: true, data: serializeProduct(result) };
   } catch (error: any) {
     console.error("Failed to update stock:", error);
     return { success: false, error: error.message || "Failed to update stock" };
@@ -114,7 +115,7 @@ export async function updateStockAction(variantId: string, quantityChange: numbe
 export async function getCategoriesAction() {
   try {
     const categories = await ProductQueries.findCategories();
-    return { success: true, data: JSON.parse(JSON.stringify(categories)) };
+    return { success: true, data: serializeProduct(categories) };
   } catch (error: any) {
     console.error("Fetch categories error:", error);
     return { success: false, error: error.message };
@@ -127,7 +128,7 @@ export async function createCategoryAction(name: string) {
     const category = await prisma.category.create({
       data: { name }
     });
-    return { success: true, data: JSON.parse(JSON.stringify(category)) };
+    return { success: true, data: serializeProduct(category) };
   } catch (error: any) {
     console.error("Create category error:", error);
     return { success: false, error: error.message };
@@ -144,7 +145,7 @@ export async function updateCategoryAction(categoryId: string, name: string) {
     revalidatePath("/dashboard/products");
     revalidatePath("/inventory");
     revalidatePath("/");
-    return { success: true, data: JSON.parse(JSON.stringify(category)) };
+    return { success: true, data: serializeProduct(category) };
   } catch (error: any) {
     console.error("Update category error:", error);
     return { success: false, error: error.message };
@@ -190,6 +191,47 @@ export async function deleteCategoryAction(categoryId: string) {
   }
 }
 
+export async function updateProductCategoriesAction(productId: string, categoryIds: string[]) {
+  try {
+    const { prisma } = await import("@/services/prisma.service");
+
+    console.log(`[updateProductCategories] Updating product ${productId} with categories:`, categoryIds);
+
+    // Get current categories
+    const product = await prisma.product.findUnique({
+      where: { id: productId },
+      include: { categories: true }
+    });
+
+    if (!product) {
+      return { success: false, error: "Product not found" };
+    }
+
+    console.log(`[updateProductCategories] Current categories on product:`, product.categories.map(c => c.id));
+
+    // Update categories using set operation
+    const updated = await prisma.product.update({
+      where: { id: productId },
+      data: {
+        categories: {
+          set: categoryIds.map(id => ({ id }))
+        }
+      },
+      include: { categories: true }
+    });
+
+    console.log(`[updateProductCategories] After update, categories are:`, updated.categories.map(c => ({ id: c.id, name: c.name })));
+
+    revalidatePath("/inventory");
+    revalidatePath("/");
+
+    return { success: true, data: serializeProduct(updated) };
+  } catch (error: any) {
+    console.error("Update product categories error:", error);
+    return { success: false, error: error?.message || "Failed to update categories" };
+  }
+}
+
 export async function getProductBySkuAction(sku: string) {
   try {
     const { prisma } = await import("@/services/prisma.service");
@@ -211,7 +253,7 @@ export async function getProductBySkuAction(sku: string) {
     });
 
     if (!variant) return { success: false, error: "Product not found" };
-    return { success: true, data: JSON.parse(JSON.stringify(variant)) };
+    return { success: true, data: serializeProduct(variant) };
   } catch (error: any) {
     console.error("Fetch by SKU error:", error);
     return { success: false, error: error.message };
@@ -222,7 +264,7 @@ export async function getProductByIdAction(id: string) {
   try {
     const product = await ProductQueries.findById(id);
     if (!product) return { success: false, error: "Product not found" };
-    return { success: true, data: JSON.parse(JSON.stringify(product)) };
+    return { success: true, data: serializeProduct(product) };
   } catch (error: any) {
     console.error("Fetch by ID error:", error);
     return { success: false, error: error.message };
@@ -475,7 +517,7 @@ export async function linkProductImageAction(productId: string, imageUrl: string
     revalidatePath("/dashboard/products");
     revalidatePath("/inventory");
     revalidatePath("/");
-    return { success: true, data: JSON.parse(JSON.stringify(result)) };
+    return { success: true, data: serializeProduct(result) };
   } catch (error: any) {
     console.error("Link product image action error:", error);
     return { success: false, error: error.message };

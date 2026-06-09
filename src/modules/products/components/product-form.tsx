@@ -55,6 +55,7 @@ import {
   createCategoryAction,
   updateCategoryAction,
   deleteCategoryAction,
+  updateProductCategoriesAction,
 } from "@/modules/products/actions/product.actions";
 import { useSession } from "next-auth/react";
 import {
@@ -112,6 +113,7 @@ export function ProductForm({
   const [editingCategoryName, setEditingCategoryName] = useState("");
   const [isUpdatingCategoryId, setIsUpdatingCategoryId] = useState<string | null>(null);
   const [isDeletingCategoryId, setIsDeletingCategoryId] = useState<string | null>(null);
+  const [isUpdatingProductCategories, setIsUpdatingProductCategories] = useState(false);
   const { data: session } = useSession();
   const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false);
 
@@ -431,6 +433,33 @@ export function ProductForm({
     setIsUpdatingCategoryId(null);
   };
 
+  const handleSaveProductCategories = async () => {
+    if (!isEditing) {
+      toast.error("This product hasn't been created yet. Save the product first.");
+      return;
+    }
+    
+    const categoryIds = form.getValues("categoryIds") || [];
+    if (categoryIds.length === 0) {
+      toast.error("Select at least one category");
+      return;
+    }
+
+    setIsUpdatingProductCategories(true);
+    console.log(`[ProductForm] Saving categories to product ${initialData.id}:`, categoryIds);
+    
+    const result = await updateProductCategoriesAction(initialData.id, categoryIds);
+    
+    if (result.success) {
+      console.log(`[ProductForm] Categories saved successfully:`, result.data?.categories);
+      toast.success(`Updated ${categoryIds.length} categor${categoryIds.length === 1 ? 'y' : 'ies'}`);
+    } else {
+      toast.error(result.error || "Failed to save categories");
+    }
+    
+    setIsUpdatingProductCategories(false);
+  };
+
   const handleAddWarehouse = async () => {
     if (!newWhName.trim()) return;
     setIsAddingWarehouse(true);
@@ -725,6 +754,17 @@ export function ProductForm({
                         )}
 
                         <FormMessage />
+                        
+                        {isEditing && (
+                          <Button
+                            type="button"
+                            onClick={handleSaveProductCategories}
+                            disabled={isUpdatingProductCategories}
+                            className="w-full mt-2 h-10 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-[10px] uppercase tracking-widest rounded-xl"
+                          >
+                            {isUpdatingProductCategories ? "UPDATING..." : "✓ UPDATE CATEGORIES"}
+                          </Button>
+                        )}
                       </FormItem>
                     )} />
 
