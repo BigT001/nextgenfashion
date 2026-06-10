@@ -54,27 +54,27 @@ export function CartDrawer({ open, onOpenChange }: { open: boolean, onOpenChange
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-screen h-screen p-0 border-none bg-white dark:bg-zinc-950 shadow-none rounded-none flex flex-col">
-        <SheetHeader className="sticky top-0 z-40 bg-gradient-to-b from-white via-white to-white/95 dark:from-zinc-950 dark:via-zinc-950 dark:to-zinc-950/95 px-6 py-5 border-b border-border/10 shadow-sm">
-          <div className="flex items-center justify-between w-full gap-4">
-            <div className="flex items-center gap-3 flex-1">
-              <div className="size-12 bg-gradient-to-br from-brand-navy to-brand-navy/80 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-brand-navy/20 flex-shrink-0">
-                <ShoppingBag className="size-6" />
+        <SheetHeader className="sticky top-0 z-40 bg-gradient-to-b from-white via-white to-white/95 dark:from-zinc-950 dark:via-zinc-950 dark:to-zinc-950/95 px-4 py-3 border-b border-border/10 shadow-sm">
+          <div className="flex items-center justify-between w-full gap-3">
+            <div className="flex items-center gap-2 flex-1">
+              <div className="size-9 bg-gradient-to-br from-brand-navy to-brand-navy/80 rounded-xl flex items-center justify-center text-white shadow-md shadow-brand-navy/10 flex-shrink-0">
+                <ShoppingBag className="size-4" />
               </div>
               <div className="flex flex-col text-left min-w-0">
-                <SheetTitle className="text-2xl font-black tracking-tighter text-foreground">Your Bag</SheetTitle>
-                <span className="text-xs font-black uppercase tracking-widest text-muted-foreground/70">{itemCount} {itemCount === 1 ? 'ITEM' : 'ITEMS'}</span>
+                <SheetTitle className="text-lg font-black tracking-tighter text-foreground">Your Bag</SheetTitle>
+                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">{itemCount} {itemCount === 1 ? 'ITEM' : 'ITEMS'}</span>
               </div>
             </div>
             <button
               onClick={() => onOpenChange(false)}
-              className="size-10 rounded-xl bg-muted/50 hover:bg-muted/80 flex items-center justify-center transition-colors text-muted-foreground hover:text-foreground flex-shrink-0"
+              className="size-8 rounded-lg bg-muted/50 hover:bg-muted/80 flex items-center justify-center transition-colors text-muted-foreground hover:text-foreground flex-shrink-0"
             >
-              <X className="size-5" />
+              <X className="size-4" />
             </button>
           </div>
         </SheetHeader>
 
-        <div className="flex-1 min-h-0 overflow-y-auto scrollbar-hide pb-36 md:pb-40 overscroll-contain">
+        <div className="flex-1 min-h-0 overflow-y-auto scrollbar-hide pb-28 overscroll-contain">
           {items.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center px-6 py-12 text-center space-y-6 relative overflow-hidden">
               <div className="absolute inset-0 bg-brand-mesh opacity-3 -z-10" />
@@ -95,47 +95,47 @@ export function CartDrawer({ open, onOpenChange }: { open: boolean, onOpenChange
               </Button>
             </div>
           ) : (
-            <div className="px-4 py-4 space-y-3">
+            <div className="px-3 py-3 space-y-2">
               {items.map((item, idx) => (
                 <div 
                   key={item.variantId} 
-                  className="group bg-white dark:bg-zinc-900/50 rounded-xl p-3 border border-border/20 hover:border-border/40 transition-all duration-300 hover:shadow-md animate-in fade-in slide-in-from-bottom-4 duration-500"
+                  className="group bg-white dark:bg-zinc-900/50 rounded-lg p-2 border border-border/20 hover:border-border/40 transition-all duration-300 hover:shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500"
                   style={{ animationDelay: `${idx * 30}ms` }}
                 >
-                  <div className="flex gap-3">
+                  <div className="flex gap-2.5">
                     {/* Product Image */}
-                    <div className="relative w-18 h-18 rounded-lg overflow-hidden bg-gradient-to-br from-muted/30 to-muted/10 flex-shrink-0 shadow-sm group-hover:shadow-md transition-all duration-300">
+                    <div className="relative w-16 h-16 rounded-md overflow-hidden bg-gradient-to-br from-muted/30 to-muted/10 flex-shrink-0 shadow-sm group-hover:shadow-md transition-all duration-300">
                       {item.image ? (
                         <Image src={item.image} alt={item.name} fill className="object-cover group-hover:scale-110 transition-transform duration-500" />
                       ) : (
                         <div className="flex items-center justify-center h-full">
-                          <Zap className="size-6 text-muted-foreground/20" />
+                          <Zap className="size-5 text-muted-foreground/20" />
                         </div>
                       )}
                     </div>
 
                     {/* Product Details */}
-                    <div className="flex-1 flex flex-col justify-between">
-                      <div className="space-y-1">
-                        <div className="flex justify-between items-start gap-2">
-                          <h4 className="font-black text-sm tracking-tight line-clamp-1 group-hover:text-brand-navy transition-colors">{item.name}</h4>
+                    <div className="flex-1 flex flex-col justify-between min-w-0">
+                      <div className="space-y-0.5">
+                        <div className="flex justify-between items-start gap-1.5">
+                          <h4 className="font-black text-[13px] tracking-tight line-clamp-1 group-hover:text-brand-navy transition-colors flex-1 min-w-0">{item.name}</h4>
                           <button 
                             onClick={() => removeItem(item.variantId)}
-                            className="size-7 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 flex items-center justify-center text-rose-600 hover:text-rose-700 transition-all duration-200 flex-shrink-0"
+                            className="size-5 rounded bg-rose-500/10 hover:bg-rose-500/20 flex items-center justify-center text-rose-600 hover:text-rose-700 transition-all duration-200 flex-shrink-0"
                           >
-                            <Trash2 className="size-3.5" />
+                            <Trash2 className="size-3" />
                           </button>
                         </div>
                         <div className="flex flex-wrap gap-1">
                           {item.size && (
-                            <span className="text-[7px] font-black uppercase tracking-widest px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                            <span className="text-[7px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400">
                               {item.size}
                             </span>
                           )}
                           {item.color && (() => {
                             const styles = getColorChipStyles(item.color);
                             return (
-                              <span className={cn("text-[7px] font-black uppercase tracking-widest px-2 py-0.5 rounded", styles.bg, styles.text)}>
+                              <span className={cn("text-[7px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded", styles.bg, styles.text)}>
                                 {item.color}
                               </span>
                             );
@@ -145,14 +145,14 @@ export function CartDrawer({ open, onOpenChange }: { open: boolean, onOpenChange
 
                       {/* Quantity & Price */}
                       <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-1 bg-muted/40 dark:bg-zinc-800/40 rounded-lg p-1">
+                        <div className="flex items-center gap-1 bg-muted/40 dark:bg-zinc-800/40 rounded-md p-0.5">
                           <button 
                             onClick={() => updateQuantity(item.variantId, item.quantity - 1)}
-                            className="size-6 rounded flex items-center justify-center hover:bg-white dark:hover:bg-zinc-700 transition-colors text-foreground"
+                            className="size-5 rounded flex items-center justify-center hover:bg-white dark:hover:bg-zinc-700 transition-colors text-foreground"
                           >
-                            <Minus className="size-3" />
+                            <Minus className="size-2.5" />
                           </button>
-                          <span className="text-xs font-black w-4 text-center">{item.quantity}</span>
+                          <span className="text-[11px] font-black w-4 text-center">{item.quantity}</span>
                           <button 
                             onClick={() => {
                               const max = item.availableStock ?? Infinity;
@@ -163,18 +163,18 @@ export function CartDrawer({ open, onOpenChange }: { open: boolean, onOpenChange
                               updateQuantity(item.variantId, item.quantity + 1);
                             }}
                             className={cn(
-                              "size-6 rounded flex items-center justify-center transition-colors",
+                              "size-5 rounded flex items-center justify-center transition-colors",
                               item.availableStock !== undefined && item.quantity >= item.availableStock 
                                 ? "opacity-40 cursor-not-allowed" 
                                 : "hover:bg-white dark:hover:bg-zinc-700 text-foreground"
                             )}
                             disabled={item.availableStock !== undefined && item.quantity >= item.availableStock}
                           >
-                            <Plus className="size-3" />
+                            <Plus className="size-2.5" />
                           </button>
                         </div>
-                        <div className="text-right space-y-0.5">
-                          <p className="text-sm font-black text-brand-navy">₦{((Number(item.price) || 0) * item.quantity).toLocaleString()}</p>
+                        <div className="text-right">
+                          <p className="text-[13px] font-black text-brand-navy dark:text-zinc-200">₦{((Number(item.price) || 0) * item.quantity).toLocaleString()}</p>
                         </div>
                       </div>
                     </div>
@@ -186,48 +186,37 @@ export function CartDrawer({ open, onOpenChange }: { open: boolean, onOpenChange
         </div>
 
         {items.length > 0 && (
-          <div className="sticky bottom-0 z-40 bg-gradient-to-t from-white via-white to-white/95 dark:from-zinc-950 dark:via-zinc-950 dark:to-zinc-950/95 px-6 py-4 border-t border-border/10 shadow-2xl shadow-brand-navy/5">
-            <div className="space-y-4">
+          <div className="sticky bottom-0 z-40 bg-gradient-to-t from-white via-white to-white/95 dark:from-zinc-950 dark:via-zinc-950 dark:to-zinc-950/95 px-4 py-3 border-t border-border/10 shadow-2xl shadow-brand-navy/5">
+            <div className="space-y-2.5">
               {/* Price Breakdown */}
-              <div className="space-y-3 bg-muted/20 dark:bg-zinc-900/30 rounded-2xl p-3 border border-border/20">
+              <div className="space-y-1.5 bg-muted/20 dark:bg-zinc-900/30 rounded-xl p-2.5 border border-border/20 text-xs">
                 <div className="flex justify-between items-center">
-                  <span className="text-xs font-black uppercase tracking-[0.15em] text-muted-foreground">Subtotal</span>
-                  <span className="text-base font-black text-foreground">₦{subtotal.toLocaleString()}</span>
+                  <span className="font-bold uppercase tracking-wider text-muted-foreground/80">Subtotal</span>
+                  <span className="font-black text-foreground">₦{subtotal.toLocaleString()}</span>
                 </div>
-                <Separator className="bg-border/30" />
                 <div className="flex justify-between items-center">
-                  <span className="text-xs font-black uppercase tracking-[0.15em] text-muted-foreground flex items-center gap-2">
-                    <ShieldCheck className="size-3.5 text-emerald-600" />
+                  <span className="font-bold uppercase tracking-wider text-muted-foreground/80 flex items-center gap-1.5">
+                    <ShieldCheck className="size-3 text-emerald-600" />
                     Delivery
                   </span>
-                  <span className="text-xs font-black text-muted-foreground/60"></span>
+                  <span className="font-black text-emerald-600 uppercase text-[10px]">Free</span>
                 </div>
-              </div>
-
-              {/* Total */}
-              <div className="bg-gradient-to-r from-brand-navy/5 to-brand-navy/10 rounded-2xl p-3 border border-brand-navy/20">
+                <Separator className="bg-border/30 my-1" />
                 <div className="flex justify-between items-center">
-                  <span className="text-sm font-black uppercase tracking-widest text-muted-foreground">Total</span>
-                  <span className="text-2xl font-black text-brand-navy tracking-tighter">₦{subtotal.toLocaleString()}</span>
+                  <span className="font-black uppercase tracking-wider text-foreground">Total</span>
+                  <span className="text-base font-black text-brand-navy dark:text-white tracking-tight">₦{subtotal.toLocaleString()}</span>
                 </div>
               </div>
 
               {/* Checkout Button */}
               <Button 
                 onClick={handleCheckout}
-                className="w-full h-12 bg-gradient-to-r from-brand-navy to-brand-navy/90 hover:from-brand-navy/90 hover:to-brand-navy text-white rounded-2xl text-sm font-black tracking-widest shadow-lg shadow-brand-navy/20 group transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                className="w-full h-10 bg-gradient-to-r from-brand-navy to-brand-navy/90 hover:from-brand-navy/90 hover:to-brand-navy text-white rounded-xl text-xs font-black tracking-widest shadow-lg shadow-brand-navy/20 group transition-all active:scale-[0.98] flex items-center justify-center gap-2"
               >
-                <ShieldCheck className="size-4" />
+                <ShieldCheck className="size-3.5" />
                 SECURE CHECKOUT
-                <ArrowRight className="size-4 group-hover:translate-x-1 transition-transform" />
+                <ArrowRight className="size-3.5 group-hover:translate-x-1 transition-transform" />
               </Button>
-
-              {/* Trust Badge */}
-              <div className="text-center space-y-2 pt-2">
-                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">
-                  ✓ Secure Payment • Free Returns • Premium Quality
-                </p>
-              </div>
             </div>
           </div>
         )}
