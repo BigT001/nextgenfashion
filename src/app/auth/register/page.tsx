@@ -8,7 +8,9 @@ import { ResolveProductImagesService } from "@/modules/media/services/resolve-pr
 
 export default async function RegisterPage() {
   const featuredProducts = await ProductQueries.findFeatured(10);
-  const resolvedProducts = await ResolveProductImagesService.resolve(featuredProducts);
+  const resolvedProducts = await ResolveProductImagesService.resolve(featuredProducts, {
+    allowRemoteImageDiscovery: false,
+  });
   const productWithImage = resolvedProducts.find((product) => Boolean(product.resolvedImage && product.resolvedImage.trim() !== ""));
   const displayImage = productWithImage?.resolvedImage || "https://images.unsplash.com/photo-1519689680058-324335c77eba?auto=format&fit=crop&q=80&w=1000";
 

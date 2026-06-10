@@ -34,25 +34,29 @@ export async function ShopView({
   let categories: Array<Record<string, unknown>> = [];
   let products: ShopProduct[] = [];
 
-  try {
-    const rawCategories = await ProductQueries.findCategorySummaries(targetGender);
-    categories = JSON.parse(JSON.stringify(rawCategories.map((cat: Record<string, unknown>) => deepSerialize(cat))));
-  } catch (error) {
-    console.error("[ShopView] Failed to load categories:", error);
-    categories = [];
-  }
+  const startTime = Date.now();
 
   try {
-    const rawProducts = await GetProductsService.execute({
-      categoryId: category,
-      targetGender: targetGender,
-      search: search,
-      maxPrice: maxPrice,
-    });
+    const [rawCategories, rawProducts] = await Promise.all([
+      ProductQueries.findCategorySummaries(targetGender),
+      GetProductsService.execute({
+        categoryId: category,
+        targetGender: targetGender,
+        search: search,
+        maxPrice: maxPrice,
+      })
+    ]);
+
+    const queryEndTime = Date.now();
+    console.log(`[ShopView Performance] DB Queries finished in ${queryEndTime - startTime}ms`);
+
+    categories = JSON.parse(JSON.stringify(rawCategories.map((cat: Record<string, unknown>) => deepSerialize(cat))));
     products = JSON.parse(JSON.stringify(deepSerialize(rawProducts)));
+
+    const parseEndTime = Date.now();
+    console.log(`[ShopView Performance] Serialization & parsing finished in ${parseEndTime - queryEndTime}ms`);
   } catch (error) {
-    console.error("[ShopView] Failed to load products:", error);
-    products = [];
+    console.error("[ShopView] Parallel fetch failed:", error);
   }
 
   return (

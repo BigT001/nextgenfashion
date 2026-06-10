@@ -13,12 +13,45 @@ export class ProductQueries {
     search?: string;
     maxPrice?: number;
     includeVariants?: boolean;
+    take?: number;
+    skip?: number;
   }) {
+    // Resolve gender category if a gender filter is provided
+    let genderCategoryId: string | undefined = undefined;
+    if (params.targetGender) {
+      const genderName =
+        params.targetGender.toUpperCase() === "BOYS" ? "Boys" : "Girls";
+      try {
+        const cat = await prisma.category.findUnique({
+          where: { name: genderName },
+          select: { id: true },
+        });
+        if (cat) {
+          genderCategoryId = cat.id;
+        }
+      } catch (e) {
+        console.error(
+          "[ProductQueries.findAll] Failed to pre-lookup gender category:",
+          e
+        );
+      }
+    }
+
     return await prisma.product.findMany({
       where: {
         isSuspended: false,
         ...(params.targetGender && {
-          targetGender: params.targetGender as any,
+          OR: [
+            { targetGender: params.targetGender as any },
+            { targetGender: "BOTH" },
+            ...(genderCategoryId
+              ? [
+                  {
+                    categories: { some: { id: genderCategoryId } },
+                  },
+                ]
+              : []),
+          ],
         }),
         ...(params.categoryId && {
           categories: { some: { id: params.categoryId } },
@@ -50,36 +83,37 @@ export class ProductQueries {
           : false,
       },
       orderBy: { createdAt: "desc" },
+      ...(typeof params.take === "number" && { take: params.take }),
+      ...(typeof params.skip === "number" && { skip: params.skip }),
     });
   }
 
   static async findCategorySummaries(targetGender?: string) {
+    // Currently gender is not used for summaries but kept for future extension
     return await prisma.category.findMany({
+      where: {
+        NOT: [
+          { name: { equals: "Boys", mode: "insensitive" } },
+          { name: { equals: "Girls", mode: "insensitive" } },
+        ],
+      },
       orderBy: { name: "asc" },
       include: {
-        _count: {
-          select: {
-            Product: true,
-          },
-        },
+        _count: { select: { Product: true } },
       },
     });
   }
 
   /**
-   * Fetch high-visibility featured products for the storefront.
+   * Fetch high‑visibility featured products for the storefront.
    */
   static async findFeatured(limit = 8) {
     return await prisma.product.findMany({
-      where: {
-        isSuspended: false,
-      },
+      where: { isSuspended: false },
       take: limit,
       include: {
         categories: true,
-        ProductVariant: {
-          include: { Inventory: true }
-        },
+        ProductVariant: { include: { Inventory: true } },
       },
       orderBy: { createdAt: "desc" },
     });
@@ -90,34 +124,21 @@ export class ProductQueries {
       where: { id },
       include: {
         categories: true,
-        ProductVariant: {
-          include: {
-            Inventory: true,
-          },
-        },
+        ProductVariant: { include: { Inventory: true } },
       },
     });
   }
 
   static async findCategories(targetGender?: string) {
+    // Gender filter not applied here; method returns all categories with product counts
     return await prisma.category.findMany({
       orderBy: { name: "asc" },
       include: {
-        _count: {
-          select: {
-            Product: true,
-          },
-        },
+        _count: { select: { Product: true } },
         Product: {
-          where: {
-            isSuspended: false,
-          },
+          where: { isSuspended: false },
           include: {
-            ProductVariant: {
-              include: {
-                Inventory: true,
-              },
-            },
+            ProductVariant: { include: { Inventory: true } },
           },
         },
       },
@@ -126,16 +147,10 @@ export class ProductQueries {
 
   static async create(data: any) {
     return await prisma.product.create({
-      data: {
-        ...data,
-      },
+      data: { ...data },
       include: {
         categories: true,
-        ProductVariant: {
-          include: {
-            Inventory: true,
-          },
-        },
+        ProductVariant: { include: { Inventory: true } },
       },
     });
   }
@@ -144,9 +159,7 @@ export class ProductQueries {
     return await prisma.product.update({
       where: { id },
       data,
-      include: {
-        ProductVariant: true,
-      },
+      include: { ProductVariant: true },
     });
   }
 
@@ -157,19 +170,17 @@ export class ProductQueries {
   }
 
   static async findVariantsByIdentifiers(identifiers: string[]) {
-    const uppercaseIds = identifiers.map(id => id.toUpperCase().trim());
-    const trimmedIds = identifiers.map(id => id.trim());
+    const uppercaseIds = identifiers.map((id) => id.toUpperCase().trim());
+    const trimmedIds = identifiers.map((id) => id.trim());
     return await prisma.productVariant.findMany({
       where: {
         OR: [
           { sku: { in: uppercaseIds } },
           { barcode: { in: trimmedIds } },
-          { sku: { in: trimmedIds } }
-        ]
+          { sku: { in: trimmedIds } },
+        ],
       },
-      include: {
-        Product: true
-      }
+      include: { Product: true },
     });
   }
 }

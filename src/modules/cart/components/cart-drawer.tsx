@@ -194,13 +194,6 @@ export function CartDrawer({ open, onOpenChange }: { open: boolean, onOpenChange
                   <span className="font-bold uppercase tracking-wider text-muted-foreground/80">Subtotal</span>
                   <span className="font-black text-foreground">₦{subtotal.toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="font-bold uppercase tracking-wider text-muted-foreground/80 flex items-center gap-1.5">
-                    <ShieldCheck className="size-3 text-emerald-600" />
-                    Delivery
-                  </span>
-                  <span className="font-black text-emerald-600 uppercase text-[10px]">Free</span>
-                </div>
                 <Separator className="bg-border/30 my-1" />
                 <div className="flex justify-between items-center">
                   <span className="font-black uppercase tracking-wider text-foreground">Total</span>

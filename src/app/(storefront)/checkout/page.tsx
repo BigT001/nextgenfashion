@@ -491,7 +491,7 @@ export default function CheckoutPage() {
                     </div>
 
                     <Button type="submit" className="w-full h-20 bg-zinc-950 text-white rounded-[2rem] font-black text-xs uppercase tracking-[0.3em] shadow-2xl transition-all active:scale-95 group">
-                        PROCEED TO LOGISTICS
+                        PROCEED TO DELIVERY
                         <ArrowLeft className="ml-3 size-5 rotate-180 group-hover:translate-x-1 transition-transform" />
                     </Button>
                 </div>
@@ -516,7 +516,7 @@ export default function CheckoutPage() {
                             <Input id="address" name="address" value={shippingInfo.address} onChange={(e) => setShippingInfo({ ...shippingInfo, address: e.target.value })} placeholder="DESTINATION STREET & HOUSE" required className="h-20 rounded-3xl glass-card border-none bg-zinc-50/50 focus-visible:ring-brand-navy font-bold text-lg px-8" />
                         </div>
                         <div className="space-y-3">
-                            <Label htmlFor="city" className="text-[10px] font-black uppercase tracking-[0.2em] ml-2 opacity-60">Logistics Hub (City)</Label>
+                            <Label htmlFor="city" className="text-[10px] font-black uppercase tracking-[0.2em] ml-2 opacity-60">Delivery Hub (City)</Label>
                             <Input id="city" name="city" value={shippingInfo.city} onChange={(e) => setShippingInfo({ ...shippingInfo, city: e.target.value })} placeholder="LAGOS, ABUJA, ETC." required className="h-20 rounded-3xl glass-card border-none bg-zinc-50/50 focus-visible:ring-brand-navy font-bold text-lg px-8" />
                         </div>
                         <div className="space-y-3">
@@ -579,8 +579,8 @@ export default function CheckoutPage() {
                     <span className="font-black">₦{subtotal.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-xs font-bold uppercase tracking-widest">
-                    <span className="text-muted-foreground">Logistics</span>
-                    <span className="text-emerald-500 font-black tracking-[0.2em]">COMPLIMENTARY</span>
+                    <span className="text-muted-foreground">Delivery</span>
+                    <span className="text-muted-foreground/60 font-black tracking-[0.2em]">—</span>
                   </div>
                   <div className="pt-8 mt-4 border-t border-border/30">
                     <div className="flex justify-between items-end">

@@ -4,6 +4,7 @@ import Link from "next/link";
 import {
   ShoppingCart, Search, User, Menu, X, Phone,
   Globe, Share2, MessageSquare, Sparkles,
+  Home, ShoppingBag, Info, ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
@@ -186,7 +187,7 @@ export default function StoreLayout({ children }: { children: React.ReactNode })
             {/* Drawer Container */}
             <div 
               className={cn(
-                "fixed top-0 bottom-0 left-0 z-[101] w-[280px] bg-white lg:hidden transition-all duration-300 ease-out transform shadow-2xl flex flex-col -translate-x-full",
+                "fixed top-0 bottom-0 left-0 z-[101] w-[300px] sm:w-[340px] bg-white lg:hidden transition-all duration-300 ease-out transform shadow-2xl flex flex-col -translate-x-full",
                 mobileOpen && "translate-x-0"
               )}
             >
@@ -203,39 +204,137 @@ export default function StoreLayout({ children }: { children: React.ReactNode })
                 </Link>
                 <button
                   onClick={() => setMobileOpen(false)}
-                  className="p-2 rounded-xl text-zinc-600 hover:bg-zinc-100 transition-colors"
+                  className="p-2 rounded-full text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 transition-colors"
                 >
-                  <X className="size-6" />
+                  <X className="size-5" />
                 </button>
               </div>
 
-              {/* Drawer Links */}
-              <div className="flex-1 overflow-y-auto px-6 py-6 space-y-2">
-                {navLinks.map((link, i) => (
-                  <Link
-                    key={i}
-                    href={link.href}
-                    onClick={() => setMobileOpen(false)}
-                    className={cn(
-                      "block py-3 px-4 text-xs font-black uppercase tracking-widest rounded-xl transition-all",
-                      pathname === link.href 
-                        ? "text-white bg-[#0B1E3F] shadow-md shadow-[#0B1E3F]/20" 
-                        : "text-zinc-700 hover:bg-zinc-50"
-                    )}
-                  >
-                    {link.label}
-                  </Link>
-                ))}
+              {/* Drawer Content */}
+              <div className="flex-1 overflow-y-auto px-5 py-6 space-y-6">
+                
+                {/* Visual Category Blocks: Boys & Girls */}
+                <div className="space-y-3">
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-400 px-1">Shop by Category</h4>
+                  <div className="grid grid-cols-2 gap-3">
+                    {/* Boys Box */}
+                    <Link
+                      href="/boys"
+                      onClick={() => setMobileOpen(false)}
+                      className="relative overflow-hidden rounded-2xl h-24 flex flex-col justify-end p-3 shadow-md hover:shadow-lg transition-all group"
+                      style={{ background: "linear-gradient(135deg, #ffd600 0%, #ff6f00 100%)" }}
+                    >
+                      <div className="absolute top-2 right-2 text-2xl group-hover:scale-110 transition-transform">🧢</div>
+                      <div className="relative z-10">
+                        <span className="text-[10px] font-black text-white/80 uppercase tracking-wider block">Shop</span>
+                        <span className="text-base font-black text-white leading-tight">Boys</span>
+                      </div>
+                    </Link>
+
+                    {/* Girls Box */}
+                    <Link
+                      href="/girls"
+                      onClick={() => setMobileOpen(false)}
+                      className="relative overflow-hidden rounded-2xl h-24 flex flex-col justify-end p-3 shadow-md hover:shadow-lg transition-all group"
+                      style={{ background: "linear-gradient(135deg, #ff8a80 0%, #e91e63 100%)" }}
+                    >
+                      <div className="absolute top-2 right-2 text-2xl group-hover:scale-110 transition-transform">👗</div>
+                      <div className="relative z-10">
+                        <span className="text-[10px] font-black text-white/80 uppercase tracking-wider block">Shop</span>
+                        <span className="text-base font-black text-white leading-tight">Girls</span>
+                      </div>
+                    </Link>
+                  </div>
+                </div>
+
+                {/* Primary Navigation Links */}
+                <div className="space-y-1">
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-400 px-1 mb-2">Explore</h4>
+                  {[
+                    { label: "Home", href: "/", icon: Home },
+                    { label: "All Products", href: "/shop", icon: ShoppingBag },
+                    { label: "About Us", href: "/about", icon: Info },
+                    { label: "Contact Us", href: "/contact", icon: Phone },
+                  ].map((link, idx) => {
+                    const LinkIcon = link.icon;
+                    const isActive = pathname === link.href || (link.href !== "/" && pathname.includes(link.href));
+                    return (
+                      <Link
+                        key={idx}
+                        href={link.href}
+                        onClick={() => setMobileOpen(false)}
+                        className={cn(
+                          "flex items-center justify-between py-3.5 px-4 text-xs font-black uppercase tracking-widest rounded-xl transition-all border border-transparent",
+                          isActive 
+                            ? "text-[#0B1E3F] bg-zinc-50 border-zinc-100 font-extrabold" 
+                            : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-50/50"
+                        )}
+                      >
+                        <div className="flex items-center gap-3">
+                          <LinkIcon className={cn("size-4", isActive ? "text-[#0B1E3F]" : "text-zinc-400")} />
+                          <span>{link.label}</span>
+                        </div>
+                        <ChevronRight className="size-4 text-zinc-400" />
+                      </Link>
+                    );
+                  })}
+                </div>
+
+                {/* Call & Support Section */}
+                <div className="pt-2 border-t border-zinc-100">
+                  <div className="bg-zinc-50 rounded-2xl p-4 flex items-center gap-3">
+                    <div className="bg-[#0B1E3F] text-white p-2.5 rounded-xl shadow-md">
+                      <Phone className="size-4" />
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider">Need Assistance?</p>
+                      <a href="tel:07040913003" className="text-xs font-black text-[#0B1E3F] hover:underline">07040913003</a>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Socials Section */}
+                <div className="space-y-2.5">
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-400 px-1">Connect With Us</h4>
+                  <div className="flex gap-3 px-1">
+                    <a 
+                      href="https://www.facebook.com/share/1ESMAQhQjd/" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="size-9 rounded-xl bg-zinc-50 hover:bg-[#0B1E3F] hover:text-white text-zinc-600 flex items-center justify-center transition-all shadow-sm border border-zinc-100 active:scale-95"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg>
+                    </a>
+                    <a 
+                      href="https://www.instagram.com/nextgenfashion_official?igsh=MWlzbWV3bG1iZHc4eg==" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="size-9 rounded-xl bg-zinc-50 hover:bg-[#0B1E3F] hover:text-white text-zinc-600 flex items-center justify-center transition-all shadow-sm border border-zinc-100 active:scale-95"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
+                    </a>
+                    <a 
+                      href="https://t.me/+yhEgNe0Ir4tkMTgx" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="size-9 rounded-xl bg-zinc-50 hover:bg-[#0B1E3F] hover:text-white text-zinc-600 flex items-center justify-center transition-all shadow-sm border border-zinc-100 active:scale-95"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+                    </a>
+                  </div>
+                </div>
+
               </div>
 
               {/* Drawer Footer Account CTA */}
-              <div className="p-6 border-t border-zinc-100">
+              <div className="p-5 border-t border-zinc-100">
                 <Link
                   href={status === "authenticated" ? "/account" : "/auth/login"}
                   onClick={() => setMobileOpen(false)}
-                  className="block py-4 px-4 text-xs font-black uppercase tracking-widest text-white bg-brand-navy rounded-xl transition-all text-center shadow-lg hover:bg-brand-navy/90 active:scale-95"
+                  className="flex items-center justify-center gap-2.5 py-4 px-4 text-xs font-black uppercase tracking-widest text-white bg-[#0B1E3F] rounded-xl transition-all text-center shadow-lg hover:bg-[#0b1e3f]/90 active:scale-95 w-full"
                 >
-                  MY ACCOUNT
+                  <User className="size-4" />
+                  <span>{status === "authenticated" ? "My Account" : "Sign In / Register"}</span>
                 </Link>
               </div>
             </div>

@@ -91,7 +91,7 @@ export function ShopFilters({ categories, category, targetGender }: { categories
                 )}
               >
                 {cat.name}
-                <span className={cn("text-[10px]", isActive ? "text-brand-navy" : "opacity-40 group-hover:opacity-100")}>{cat._count.products}</span>
+                <span className={cn("text-[10px]", isActive ? "text-brand-navy" : "opacity-40 group-hover:opacity-100")}>{cat._count.Product}</span>
               </Link>
             );
           })}

@@ -12,16 +12,11 @@ import { ResolveProductImagesService } from "@/modules/media/services/resolve-pr
 export class GetProductsService {
   private static normalizeProduct(product: any) {
     if (!product) return product;
-
     const variants = (product.ProductVariant ?? []).map((variant: any) => ({
       ...variant,
       inventory: variant.Inventory ?? variant.inventory,
     }));
-
-    return {
-      ...product,
-      variants,
-    };
+    return { ...product, variants };
   }
 
   private static normalizeProducts(products: any[]) {
@@ -34,6 +29,8 @@ export class GetProductsService {
     search?: string;
     maxPrice?: number;
     includeVariants?: boolean;
+    limit?: number;
+    offset?: number;
   }) {
     try {
       const searchParams = {
@@ -42,10 +39,11 @@ export class GetProductsService {
         search: params?.search,
         maxPrice: params?.maxPrice,
         includeVariants: params?.includeVariants,
+        limit: params?.limit ?? 30,
+        offset: params?.offset ?? 0,
       };
       const result = await ProductQueries.findAll(searchParams);
       const normalized = this.normalizeProducts(result);
-      // Skip remote image discovery for shop/category views - use DB images only for blazing fast load
       const resolved = await ResolveProductImagesService.resolve(normalized, {
         allowRemoteImageDiscovery: false,
       });
@@ -58,7 +56,6 @@ export class GetProductsService {
 
   static async byId(id: string, options?: { allowRemoteImageDiscovery?: boolean }) {
     if (!id) throw new Error("Product ID is required");
-
     try {
       const result = await ProductQueries.findById(id);
       if (!result) return null;
@@ -77,7 +74,6 @@ export class GetProductsService {
     try {
       const result = await ProductQueries.findFeatured(limit);
       const normalized = this.normalizeProducts(result);
-      // Skip remote image discovery for featured products - use DB images only for blazing fast load
       const resolved = await ResolveProductImagesService.resolve(normalized, {
         allowRemoteImageDiscovery: false,
       });

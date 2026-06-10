@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { ShoppingCart, Share2, Minus, Plus, Zap } from "lucide-react";
+import { useEffect, useMemo, useState, useCallback } from "react";
+import { ShoppingCart, Share2, Minus, Plus, Zap, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCartStore } from "@/modules/cart/store/cart.store";
 import { toast } from "sonner";
@@ -11,631 +11,627 @@ interface ProductActionsProps {
   product: any;
 }
 
+// ─── helpers ────────────────────────────────────────────────────────────────
+const normalize = (v?: string) => v?.toString().trim() ?? "";
+
+const splitSizes = (raw?: string): string[] => {
+  if (!raw) return [];
+  return raw
+    .toString()
+    .split(/[,\/|]+/)
+    .map((s) => normalize(s))
+    .filter(Boolean);
+};
+
+const isValidCssColor = (c: string) => {
+  if (!c || typeof window === "undefined") return false;
+  return CSS.supports("color", c.trim());
+};
+
+// Well-known color name → CSS mapping for common fashion colors
+const COLOR_MAP: Record<string, string> = {
+  "brown": "#795548",
+  "green moss": "#6B7B3A",
+  "moss": "#6B7B3A",
+  "olive": "#808000",
+  "navy": "#0B1E3F",
+  "black": "#212121",
+  "white": "#FAFAFA",
+  "grey": "#9E9E9E",
+  "gray": "#9E9E9E",
+  "red": "#D32F2F",
+  "blue": "#1565C0",
+  "pink": "#E91E63",
+  "purple": "#7B1FA2",
+  "yellow": "#F9A825",
+  "orange": "#E65100",
+  "cream": "#FFFDD0",
+  "beige": "#F5F5DC",
+  "tan": "#D2B48C",
+  "maroon": "#800000",
+  "teal": "#00695C",
+  "khaki": "#C3B091",
+};
+
+function resolveColor(name: string): string | null {
+  const lower = name.toLowerCase().trim();
+  if (COLOR_MAP[lower]) return COLOR_MAP[lower];
+  // try partial match
+  for (const [key, val] of Object.entries(COLOR_MAP)) {
+    if (lower.includes(key) || key.includes(lower)) return val;
+  }
+  if (isValidCssColor(name)) return name;
+  return null;
+}
+
+// ─── component ──────────────────────────────────────────────────────────────
 export function ProductActions({ product }: ProductActionsProps) {
-  const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
-  const [selectedColor, setSelectedColor] = useState<string | null>(null);
-  const [quantityByVariantId, setQuantityByVariantId] = useState<Record<string, number>>({});
-  const items = useCartStore((state) => state.items);
-  const addItem = useCartStore((state) => state.addItem);
-  const updateQuantity = useCartStore((state) => state.updateQuantity);
+  const addItem = useCartStore((s) => s.addItem);
+  const updateQuantity = useCartStore((s) => s.updateQuantity);
+  const items = useCartStore((s) => s.items);
 
-  const variants = product.variants ?? [];
-  const normalize = (value?: string) => value?.toString().trim() ?? "";
-  const splitSizes = (raw?: string): string[] => {
-    if (!raw) return [];
-    return raw
-      .toString()
-      .split(/[,\/|]+/) // split on comma, slash, or pipe
-      .map((s: string) => normalize(s))
-      .filter(Boolean);
-  };
+  const variants: any[] = product.variants ?? [];
 
-  const uniqueColors = useMemo<string[]>(() =>
-    Array.from<string>(
-      new Set(
-        variants
-          .map((v: any) => normalize(v.color))
-          .filter((color: string) => color.length > 0)
-      )
-    ) as string[],
+  // All unique colors
+  const uniqueColors = useMemo<string[]>(
+    () =>
+      Array.from(
+        new Set(
+          variants
+            .map((v) => normalize(v.color))
+            .filter((c) => c.length > 0)
+        )
+      ),
     [variants]
   );
 
-  const uniqueSizes = useMemo<string[]>(() => {
-    const all = variants.flatMap((v: any) => splitSizes(v.size));
+  // All unique sizes (global, shown when no color is selected yet)
+  const allSizes = useMemo<string[]>(() => {
+    const all = variants.flatMap((v) => splitSizes(v.size));
     return Array.from(
-      new Set(all.filter((sz: string) => sz.length > 0 && !/^\s*(os|one[\s-]*size|onesize)\s*$/i.test(sz)))
+      new Set(
+        all.filter(
+          (s) => s.length > 0 && !/^\s*(os|one[\s-]*size|onesize)\s*$/i.test(s)
+        )
+      )
     );
   }, [variants]);
 
-  const findVariantForSize = (size: string) => {
-    return variants.find(
-      (v: any) =>
-        splitSizes(v.size).includes(size) &&
-        (!selectedColor || normalize(v.color) === selectedColor) &&
-        (v.inventory?.quantity ?? 0) > 0
-    ) ?? variants.find(
-      (v: any) =>
-        splitSizes(v.size).includes(size) &&
-        (!selectedColor || normalize(v.color) === selectedColor)
-    );
-  };
+  const hasColors = uniqueColors.length > 0;
+  const hasSizes = allSizes.length > 0;
 
-  const selectedVariants = useMemo(() => {
-    if (selectedSizes.length > 0) {
-      if (selectedColor) {
-        return variants.filter(
-          (v: any) =>
-            normalize(v.color) === selectedColor &&
-            splitSizes(v.size).some((size) => selectedSizes.includes(size))
-        );
-      }
+  /**
+   * Core state: selectedSizesByColor
+   * { [colorName]: string[] }   — for a product WITH colors
+   * { "__no_color__": string[] } — for a product WITHOUT colors
+   */
+  const NO_COLOR_KEY = "__no_color__";
+  const [selectedSizesByColor, setSelectedSizesByColor] = useState<
+    Record<string, string[]>
+  >({});
 
-      return selectedSizes
-        .map(findVariantForSize)
-        .filter(Boolean)
-        .reduce((unique: any[], variant: any) => {
-          if (!unique.some((existing) => existing.id === variant.id)) {
-            unique.push(variant);
-          }
-          return unique;
-        }, [] as any[]);
-    }
+  // Which color tab is currently being viewed/edited (UI focus, not selection)
+  const [activeTab, setActiveTab] = useState<string | null>(null);
 
-    if (selectedColor) {
-      return variants.filter((v: any) => normalize(v.color) === selectedColor);
-    }
+  // Per-variant quantity map: { variantId: number }
+  const [qtyMap, setQtyMap] = useState<Record<string, number>>({});
 
-    return [];
-  }, [variants, selectedSizes, selectedColor]);
-
-  const selectedVariantIds = useMemo(
-    () => selectedVariants.map((v: any) => v.id),
-    [selectedVariants]
-  );
-
-  const getQuantityForVariant = (variantId: string) => Math.max(1, quantityByVariantId[variantId] ?? 1);
-
-  const setQuantityForVariant = (variantId: string, quantity: number) => {
-    setQuantityByVariantId((current) => ({
-      ...current,
-      [variantId]: Math.max(1, quantity),
-    }));
-  };
-
+  // ── derived: initialize activeTab when colors load ──────────────────────
   useEffect(() => {
-    if (!selectedVariants.length) return;
-    setQuantityByVariantId((current) => {
+    if (hasColors && activeTab === null && uniqueColors.length > 0) {
+      setActiveTab(uniqueColors[0]);
+    }
+  }, [hasColors, uniqueColors, activeTab]);
+
+  // ── Sizes available for the currently active tab ─────────────────────────
+  const sizesForTab = useMemo<string[]>(() => {
+    if (!hasColors) return allSizes;
+    if (!activeTab) return allSizes;
+    return Array.from(
+      new Set(
+        variants
+          .filter((v) => normalize(v.color) === activeTab)
+          .flatMap((v) => splitSizes(v.size))
+          .filter((s) => s.length > 0)
+      )
+    );
+  }, [hasColors, activeTab, variants, allSizes]);
+
+  // ── selected sizes for current tab ───────────────────────────────────────
+  const tabKey = hasColors ? (activeTab ?? "") : NO_COLOR_KEY;
+  const selectedSizesForTab: string[] = selectedSizesByColor[tabKey] ?? [];
+
+  const toggleSizeForTab = (size: string) => {
+    setSelectedSizesByColor((prev) => {
+      const current = prev[tabKey] ?? [];
+      const next = current.includes(size)
+        ? current.filter((s) => s !== size)
+        : [...current, size];
+      return { ...prev, [tabKey]: next };
+    });
+  };
+
+  // ── compute all selected variants (across ALL colors) ────────────────────
+  const selectedVariants = useMemo(() => {
+    const result: any[] = [];
+    const seen = new Set<string>();
+
+    const pushVariant = (v: any) => {
+      if (!seen.has(v.id)) {
+        seen.add(v.id);
+        result.push(v);
+      }
+    };
+
+    if (hasColors) {
+      for (const [color, sizes] of Object.entries(selectedSizesByColor)) {
+        if (!sizes || sizes.length === 0) continue;
+        for (const size of sizes) {
+          // find best matching variant: in-stock first, then any
+          const v =
+            variants.find(
+              (vv) =>
+                normalize(vv.color) === color &&
+                splitSizes(vv.size).includes(size) &&
+                (vv.inventory?.quantity ?? 0) > 0
+            ) ??
+            variants.find(
+              (vv) =>
+                normalize(vv.color) === color &&
+                splitSizes(vv.size).includes(size)
+            );
+          if (v) pushVariant(v);
+        }
+      }
+    } else {
+      const sizes = selectedSizesByColor[NO_COLOR_KEY] ?? [];
+      for (const size of sizes) {
+        const v =
+          variants.find(
+            (vv) =>
+              splitSizes(vv.size).includes(size) &&
+              (vv.inventory?.quantity ?? 0) > 0
+          ) ??
+          variants.find((vv) => splitSizes(vv.size).includes(size));
+        if (v) pushVariant(v);
+      }
+    }
+
+    return result;
+  }, [hasColors, selectedSizesByColor, variants]);
+
+  // sync qty map when selected variants change
+  useEffect(() => {
+    setQtyMap((prev) => {
       const next: Record<string, number> = {};
-      selectedVariants.forEach((variant: any) => {
-        const existing = current[variant.id] ?? 1;
-        const capped = Math.min(Math.max(1, existing), variant.inventory?.quantity ?? existing);
-        next[variant.id] = capped;
+      selectedVariants.forEach((v) => {
+        const max = Math.max(0, v.inventory?.quantity ?? 0);
+        const prev_ = prev[v.id] ?? 1;
+        next[v.id] = Math.max(1, Math.min(prev_, max || 1));
       });
       return next;
     });
   }, [selectedVariants]);
 
-  const colors = useMemo<string[]>(() => {
-    return Array.from(
-      new Set(
-        variants
-          .filter((v: any) => {
-            if (selectedSizes.length === 0) return true;
-            return splitSizes(v.size).some((size) => selectedSizes.includes(size));
-          })
-          .map((v: any) => normalize(v.color))
-          .filter((color: string) => color.length > 0)
-      )
-    ) as string[];
-  }, [variants, selectedSizes]);
+  // ── stock helpers ─────────────────────────────────────────────────────────
+  const getStockForColor = useCallback(
+    (color: string) =>
+      variants
+        .filter((v) => normalize(v.color) === color)
+        .reduce((acc, v) => acc + (v.inventory?.quantity ?? 0), 0),
+    [variants]
+  );
 
-  const sizes = useMemo<string[]>(() => {
-    if (!selectedColor) return uniqueSizes;
-    return Array.from(
-      new Set(
-        variants
-          .filter((v: any) => normalize(v.color) === selectedColor)
-          .flatMap((v: any) => splitSizes(v.size))
-          .filter((size: string) => size.length > 0)
-      )
-    );
-  }, [variants, selectedColor, uniqueSizes]);
-
-  const getStockForSize = (size: string) => {
-    const variantsWithSize = variants.filter((v: any) => splitSizes(v.size).includes(size));
-    if (!variantsWithSize.length) return 0;
-
-    if (selectedColor) {
-      const variant = variantsWithSize.find((v: any) => normalize(v.color) === selectedColor);
-      return variant ? variant.inventory?.quantity ?? 0 : 0;
-    }
-
-    return Math.max(...variantsWithSize.map((v: any) => v.inventory?.quantity ?? 0));
-  };
-
-  const getStockForColor = (color: string) => {
-    const variantsWithColor = variants.filter((v: any) => normalize(v.color) === color);
-    if (!variantsWithColor.length) return 0;
-
-    if (selectedSizes.length > 0) {
-      const matching = variantsWithColor.filter((v: any) => splitSizes(v.size).some((size) => selectedSizes.includes(size)));
+  const getStockForSize = useCallback(
+    (size: string, color?: string | null) => {
+      const pool = color
+        ? variants.filter((v) => normalize(v.color) === color)
+        : variants;
+      const matching = pool.filter((v) => splitSizes(v.size).includes(size));
       if (!matching.length) return 0;
-      return matching.reduce((acc: number, v: any) => acc + (v.inventory?.quantity ?? 0), 0);
-    }
+      return matching.reduce(
+        (acc, v) => acc + (v.inventory?.quantity ?? 0),
+        0
+      );
+    },
+    [variants]
+  );
 
-    return Math.max(...variantsWithColor.map((v: any) => v.inventory?.quantity ?? 0));
-  };
-
-  const totalStock = variants.reduce((acc: number, v: any) => acc + (v.inventory?.quantity || 0), 0);
+  const totalStock = variants.reduce(
+    (acc, v) => acc + (v.inventory?.quantity || 0),
+    0
+  );
   const isOutOfStock = totalStock <= 0;
 
-  const sameProductCartItems = useMemo(
-    () => items.filter((item: any) => item.id === product.id),
-    [items, product.id]
+  const totalSelectedStock = selectedVariants.reduce(
+    (acc, v) => acc + (v.inventory?.quantity || 0),
+    0
   );
 
-  useEffect(() => {
-    if (!selectedColor && uniqueColors.length === 1) {
-      setSelectedColor(uniqueColors[0]);
-    }
-  }, [uniqueColors, selectedColor]);
-
-  useEffect(() => {
-    if (!selectedSizes.length && uniqueSizes.length === 1) {
-      setSelectedSizes([uniqueSizes[0]]);
-    }
-  }, [uniqueSizes, selectedSizes.length]);
-
-  useEffect(() => {
-    if (!selectedSizes.length && sameProductCartItems.length === 1) {
-      const cartSize = sameProductCartItems[0].size;
-      if (cartSize) {
-        setSelectedSizes([cartSize]);
-      }
-    }
-  }, [sameProductCartItems, selectedSizes.length]);
-
-  useEffect(() => {
-    if (!selectedColor && sameProductCartItems.length === 1) {
-      const cartColor = sameProductCartItems[0].color;
-      if (cartColor) {
-        setSelectedColor(cartColor);
-      }
-    }
-  }, [sameProductCartItems, selectedColor]);
-
-  useEffect(() => {
-    if (selectedColor && selectedSizes.length > 0) {
-      const validSizes = sizes;
-      const filteredSizes = selectedSizes.filter((size) => validSizes.includes(size));
-      if (filteredSizes.length !== selectedSizes.length) {
-        setSelectedSizes(filteredSizes);
-      }
-    }
-  }, [selectedColor, selectedSizes, sizes]);
-
-  useEffect(() => {
-    if (!selectedColor && selectedSizes.length > 0 && colors.length === 1) {
-      setSelectedColor(colors[0]);
-    }
-  }, [colors, selectedColor, selectedSizes.length]);
-
-  useEffect(() => {
-    if (!selectedSizes.length && selectedColor && sizes.length === 1) {
-      setSelectedSizes([sizes[0]]);
-    }
-  }, [sizes, selectedColor, selectedSizes.length]);
-
-  const selectedVariant = useMemo(() => {
-    if (selectedVariants.length > 0) {
-      return selectedVariants.find((v: any) => (v.inventory?.quantity ?? 0) > 0) || selectedVariants[0];
-    }
-
-    if (selectedColor) {
-      return (
-        variants.find((v: any) => normalize(v.color) === selectedColor && (v.inventory?.quantity ?? 0) > 0) ??
-        variants.find((v: any) => normalize(v.color) === selectedColor) ??
-        null
-      );
-    }
-
-    if (selectedSizes.length > 0) {
-      return (
-        variants.find((v: any) => splitSizes(v.size).some((size) => selectedSizes.includes(size)) && (v.inventory?.quantity ?? 0) > 0) ??
-        variants.find((v: any) => splitSizes(v.size).some((size) => selectedSizes.includes(size))) ??
-        null
-      );
-    }
-
-    return variants.find((v: any) => (v.inventory?.quantity || 0) > 0) || variants[0] || null;
-  }, [variants, selectedColor, selectedSizes, selectedVariants]);
-
-  const selectedVariantQuantity = selectedVariants.length > 1
-    ? selectedVariants.reduce((acc: number, v: any) => acc + (v.inventory?.quantity || 0), 0)
-    : selectedVariant
-      ? Number(selectedVariant.inventory?.quantity ?? 0)
-      : totalStock;
-
-  const maxAvailableForSingleVariant = selectedVariants.length === 1
-    ? Math.max(0, selectedVariantQuantity)
-    : 0;
-
-  const totalSelectedStock = selectedVariants.length > 0
-    ? selectedVariants.reduce((acc: number, v: any) => acc + (v.inventory?.quantity || 0), 0)
-    : totalStock;
-
-  const existingCartItems = useMemo(
-    () => (selectedVariantIds.length > 0 ? items.filter((it: any) => selectedVariantIds.includes(it.variantId)) : []),
-    [items, selectedVariantIds]
+  // ── how many colors have sizes selected ──────────────────────────────────
+  const colorsWithSelections = Object.entries(selectedSizesByColor).filter(
+    ([, sizes]) => sizes && sizes.length > 0
   );
 
-  const toggleSelectedSize = (size: string) => {
-    setSelectedSizes((current) =>
-      current.includes(size) ? current.filter((value) => value !== size) : [...current, size]
-    );
-  };
+  // ── existing cart items for selected variants ─────────────────────────────
+  const existingCartItems = useMemo(() => {
+    const selectedIds = new Set(selectedVariants.map((v) => v.id));
+    return items.filter((it: any) => selectedIds.has(it.variantId));
+  }, [items, selectedVariants]);
 
-  const activeVariantId = selectedVariants.length === 1
-    ? selectedVariants[0]?.id
-    : selectedVariant?.id ?? null;
-
-  const activeVariantQuantity = activeVariantId ? getQuantityForVariant(activeVariantId) : 1;
-  const activeVariantStock = activeVariantId
-    ? Math.max(0, selectedVariants.length === 1 ? selectedVariants[0]?.inventory?.quantity ?? 0 : selectedVariant?.inventory?.quantity ?? 0)
-    : 0;
-
-  const decreaseQuantityForVariant = (variantId: string) => {
-    const current = getQuantityForVariant(variantId);
-    const next = Math.max(1, current - 1);
-    setQuantityForVariant(variantId, next);
-    if (selectedVariants.length === 1 && existingCartItems.length === 1) {
-      updateQuantity(variantId, next);
-    }
-  };
-
-  const increaseQuantityForVariant = (variantId: string) => {
-    const current = getQuantityForVariant(variantId);
-    const variant = selectedVariants.find((v: any) => v.id === variantId);
-    const maxQty = Math.max(0, variant?.inventory?.quantity ?? 0);
-    const next = Math.min(current + 1, maxQty);
-    setQuantityForVariant(variantId, next);
-    if (selectedVariants.length === 1 && existingCartItems.length === 1) {
-      updateQuantity(variantId, next);
-    }
-  };
-
+  // ── add to cart ───────────────────────────────────────────────────────────
   const handleAddToCart = () => {
     if (isOutOfStock) {
-      toast.error(`"${product.name}" is completely out of stock!`, {
-        duration: 5000,
-      });
+      toast.error(`"${product.name}" is completely out of stock!`);
       return;
     }
-    if (sizes.length > 0 && selectedSizes.length === 0) {
+    if (hasSizes && selectedVariants.length === 0) {
       toast.error("Please select at least one size to continue.");
       return;
     }
-    if (colors.length > 0 && !selectedColor) {
-      toast.error("Please select a color to continue.");
+    if (hasColors && colorsWithSelections.length === 0 && hasSizes) {
+      toast.error("Please select a color and size to continue.");
       return;
     }
 
-    const targetVariants = selectedVariants.length > 0
-      ? selectedVariants
-      : selectedVariant
-        ? [selectedVariant]
-        : [];
+    const targetVariants =
+      selectedVariants.length > 0
+        ? selectedVariants
+        : variants.filter((v) => (v.inventory?.quantity ?? 0) > 0).slice(0, 1);
 
     if (!targetVariants.length) {
-      toast.error("Unable to determine a valid product variant. Please choose another option.");
+      toast.error("Unable to determine a valid variant. Please try again.");
       return;
     }
 
-    const hasOutOfStock = targetVariants.some((variant: any) => {
-      const desiredQty = getQuantityForVariant(variant.id);
-      return desiredQty > (variant.inventory?.quantity ?? 0);
-    });
-
-    if (hasOutOfStock) {
-      toast.error(`One or more selected options do not have enough stock.`);
+    const overStock = targetVariants.find(
+      (v) => (qtyMap[v.id] ?? 1) > (v.inventory?.quantity ?? 0)
+    );
+    if (overStock) {
+      toast.error("One or more selected options don't have enough stock.");
       return;
     }
 
-    targetVariants.forEach((variant: any) => {
-      const desiredQty = getQuantityForVariant(variant.id);
+    targetVariants.forEach((v) => {
       addItem({
         id: product.id,
-        variantId: variant.id,
+        variantId: v.id,
         name: product.name,
-        price: Number(variant.price ?? product.basePrice) || 0,
-        quantity: desiredQty,
+        price: Number(v.price ?? product.basePrice) || 0,
+        quantity: qtyMap[v.id] ?? 1,
         image: product.images?.[0],
-        size: splitSizes(variant.size)[0] || undefined,
-        color: normalize(variant.color) || selectedColor || undefined,
-        availableStock: variant.inventory?.quantity ?? 0,
+        size: splitSizes(v.size)[0] || undefined,
+        color: normalize(v.color) || undefined,
+        availableStock: v.inventory?.quantity ?? 0,
       });
     });
 
     if (targetVariants.length === 1) {
-      toast.success(`${product.name} added to your bag.`);
+      toast.success(`${product.name} added to your bag! 🎉`);
     } else {
-      toast.success(`${product.name} added to your bag for ${targetVariants.length} sizes.`);
+      toast.success(
+        `${product.name} added to your bag — ${targetVariants.length} variants! 🎉`
+      );
     }
   };
 
+  // ── share ─────────────────────────────────────────────────────────────────
   const handleShare = async () => {
     try {
-      const url = typeof window !== "undefined" ? window.location.href : `/products/${product.id}`;
+      const url =
+        typeof window !== "undefined"
+          ? window.location.href
+          : `/products/${product.id}`;
       if (navigator.share) {
-        await navigator.share({
-          title: product.name,
-          text: product.description || undefined,
-          url,
-        });
+        await navigator.share({ title: product.name, url });
         return;
       }
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(url);
-        toast.success("Product link copied to clipboard.");
-        return;
-      }
-      window.prompt("Copy this product link:", url);
+      await navigator.clipboard.writeText(url);
+      toast.success("Link copied to clipboard.");
     } catch (err: any) {
-      if (err && (err.name === "AbortError" || err.name === "NotAllowedError")) return;
-      console.error("Share failed:", err);
+      if (err?.name === "AbortError" || err?.name === "NotAllowedError") return;
       toast.error("Could not share the product.");
     }
   };
 
-  const isCssColor = (color: string) => {
-    if (!color || typeof window === "undefined") return false;
-    return CSS.supports("color", color.trim());
-  };
-
-  const renderColorChip = (color: string) => {
-    const value = color?.trim();
-    const valid = isCssColor(value);
-
-    return (
-      <span
-        key={value}
-        className={cn(
-          "inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.2em] font-black",
-          valid ? "border-transparent text-white" : "border-border/40 bg-muted/10 text-muted-foreground"
-        )}
-        style={valid ? { backgroundColor: value } : undefined}
-      >
-        {valid ? <span className="h-2.5 w-2.5 rounded-full border border-white/30" style={{ backgroundColor: value }} /> : null}
-        {value || "Unknown"}
-      </span>
-    );
-  };
-
+  // ─────────────────────────────────────────────────────────────────────────
+  // RENDER
+  // ─────────────────────────────────────────────────────────────────────────
   return (
-    <div className="space-y-6">
-      {/* Variants Selection */}
-      <div className="space-y-6 sm:space-y-8">
-        {sizes.length > 0 && (
-          <div className="space-y-3">
-            <h3 className="text-[11px] sm:text-xs font-black uppercase tracking-[0.3em] text-muted-foreground/60">Select Size</h3>
-            <div className="flex flex-wrap gap-2 sm:gap-3">
-              {sizes.map((size: any) => {
-                const stock = getStockForSize(size);
-                const isOutOfStockVariant = stock <= 0;
-                const isSelected = selectedSizes.includes(size);
-                return (
-                  <div key={size} className="flex flex-col items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={() => toggleSelectedSize(size)}
-                      disabled={isOutOfStockVariant}
-                      className={cn(
-                        "h-11 sm:h-10 min-w-[3rem] px-4 rounded-lg sm:rounded-xl border-2 font-black text-xs sm:text-xs transition-all active:scale-95 touch-manipulation disabled:opacity-50 disabled:cursor-not-allowed",
-                        isSelected
-                          ? "border-brand-navy bg-brand-navy/5 text-brand-navy shadow-lg shadow-brand-navy/10"
-                          : "border-border/50 hover:border-brand-navy/50 glass-card"
-                      )}
-                      aria-pressed={isSelected}
-                    >
-                      {size}
-                    </button>
-                    <span className={cn(
-                      "text-[9px] font-black uppercase tracking-widest",
-                      isOutOfStockVariant ? "text-rose-500" : "text-emerald-600"
-                    )}>
-                      {stock} {stock === 1 ? "item" : "items"}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
+    <div className="space-y-7">
 
-        {colors.length > 0 && (
-          <div className="space-y-3">
-            <h3 className="text-[11px] sm:text-xs font-black uppercase tracking-[0.3em] text-muted-foreground/60">Select Color</h3>
-            <div className="flex flex-wrap gap-2 sm:gap-3">
-              {colors.map((color: any) => {
-                const stock = getStockForColor(color);
-                const isOutOfStockVariant = stock <= 0;
-                return (
-                  <div key={color} className="flex flex-col items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedColor(color)}
-                      disabled={isOutOfStockVariant}
-                      className={cn(
-                        "inline-flex items-center gap-2 rounded-full border px-3 py-2 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.18em] transition-all touch-manipulation disabled:opacity-50 disabled:cursor-not-allowed",
-                        selectedColor === color
-                          ? "border-brand-navy bg-brand-navy/5 text-brand-navy shadow-lg shadow-brand-navy/10"
-                          : "border-border/40 bg-white/90 hover:border-brand-navy/50"
-                      )}
-                    >
-                      <span
-                        className={cn(
-                          "h-3 w-3 sm:h-3.5 sm:w-3.5 rounded-full border",
-                          isOutOfStockVariant ? "border-rose-500/40" : "border-border/50"
-                        )}
-                        style={{ backgroundColor: color || "transparent" }}
-                      />
-                      {color}
-                    </button>
-                    <span className={cn(
-                      "text-[8px] font-black uppercase tracking-widest",
-                      isOutOfStockVariant ? "text-rose-500" : "text-emerald-600"
-                    )}>
-                      {stock} {stock === 1 ? "item" : "items"}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {selectedColor && colors.length > 0 && (
-          <div className="flex items-center gap-2 sm:gap-3">
-            <span className="text-[9px] sm:text-[10px] uppercase tracking-[0.25em] text-muted-foreground/80 font-black">Color</span>
-            <div className="inline-flex items-center gap-2 rounded-full px-2 sm:px-3 py-1 bg-muted/10 border border-border/30">
-              <span className="h-3 w-3 sm:h-3.5 sm:w-3.5 rounded-full border border-border/40" style={{ backgroundColor: selectedColor }} />
-              <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.15em] text-foreground">{selectedColor}</span>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Quantity & Actions */}
-      {selectedSizes.length > 0 && (
-        <div className="space-y-4 sm:space-y-6">
-          <div className="flex flex-col gap-3 sm:gap-4">
-            {selectedVariants.length > 1 ? (
-              <div className="space-y-3">
-                {selectedVariants.map((variant: any) => {
-                  const sizeLabel = splitSizes(variant.size).find((size) => selectedSizes.includes(size)) ?? splitSizes(variant.size)[0] ?? "N/A";
-                  const variantQty = getQuantityForVariant(variant.id);
-                  const stock = Math.max(0, variant.inventory?.quantity ?? 0);
-                  return (
-                    <div key={variant.id} className="glass-card rounded-xl sm:rounded-2xl p-3">
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <div className="space-y-1">
-                          <div className="text-[10px] sm:text-xs font-black uppercase tracking-[0.25em] text-muted-foreground/70">
-                            {sizeLabel}{selectedColor ? "" : ` / ${normalize(variant.color)}`}
-                          </div>
-                          <div className="text-[11px] font-black uppercase tracking-[0.18em]">
-                            {stock} {stock === 1 ? "item" : "items"} available
-                          </div>
-                        </div>
-                        <div className="inline-flex items-center gap-2">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="size-11 sm:size-10 rounded-lg sm:rounded-xl hover:bg-white dark:hover:bg-zinc-800 transition-colors touch-manipulation"
-                            onClick={() => decreaseQuantityForVariant(variant.id)}
-                            disabled={variantQty <= 1}
-                            aria-label="Decrease quantity"
-                          >
-                            <Minus className="size-4 sm:size-5" />
-                          </Button>
-                          <span className="w-9 text-center font-black text-lg sm:text-base tracking-tighter">{variantQty}</span>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className={cn("size-11 sm:size-10 rounded-lg sm:rounded-xl transition-colors touch-manipulation", variantQty >= stock || stock <= 0 ? "opacity-40 cursor-not-allowed" : "hover:bg-white dark:hover:bg-zinc-800")}
-                            onClick={() => increaseQuantityForVariant(variant.id)}
-                            disabled={variantQty >= stock || stock <= 0}
-                            aria-label="Increase quantity"
-                          >
-                            <Plus className="size-4 sm:size-5" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="flex items-center gap-3 glass-card rounded-xl sm:rounded-2xl p-1 sm:p-2 min-h-[3.5rem] sm:min-h-[3.75rem]">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="size-11 sm:size-10 rounded-lg sm:rounded-xl hover:bg-white dark:hover:bg-zinc-800 transition-colors touch-manipulation"
-                  onClick={() => activeVariantId && decreaseQuantityForVariant(activeVariantId)}
-                  disabled={!activeVariantId || activeVariantQuantity <= 1}
-                  aria-label="Decrease quantity"
-                >
-                  <Minus className="size-4 sm:size-5" />
-                </Button>
-                <span className="flex-1 text-center font-black text-lg sm:text-base tracking-tighter">{activeVariantQuantity}</span>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className={cn("size-11 sm:size-10 rounded-lg sm:rounded-xl transition-colors touch-manipulation", activeVariantQuantity >= activeVariantStock || activeVariantStock <= 0 ? "opacity-40 cursor-not-allowed" : "hover:bg-white dark:hover:bg-zinc-800")}
-                  onClick={() => activeVariantId && increaseQuantityForVariant(activeVariantId)}
-                  disabled={!activeVariantId || activeVariantQuantity >= activeVariantStock || activeVariantStock <= 0}
-                  aria-label="Increase quantity"
-                >
-                  <Plus className="size-4 sm:size-5" />
-                </Button>
-              </div>
+      {/* ── COLOR TABS ─────────────────────────────────────────────────── */}
+      {hasColors && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground/60">
+              Select Color
+            </h3>
+            {colorsWithSelections.length > 0 && (
+              <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600">
+                {colorsWithSelections.length} color{colorsWithSelections.length > 1 ? "s" : ""} selected
+              </span>
             )}
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center gap-2 text-[10px] sm:text-xs font-black uppercase tracking-widest">
-                <Zap className="size-3.5 sm:size-4 fill-emerald-500" />
-                {selectedVariants.length > 1 ? (
-                  <span className="text-emerald-600">{totalSelectedStock} item{totalSelectedStock === 1 ? "" : "s"} available across selected options</span>
-                ) : selectedVariant ? (
-                  activeVariantStock <= 0 ? (
-                    <span className="text-rose-600">Selected option out of stock</span>
-                  ) : (
-                    <span className="text-emerald-600">Limited stock — {activeVariantStock} left for selected option</span>
-                  )
-                ) : (
-                  <span className="text-emerald-600">{totalStock} item{totalStock === 1 ? "" : "s"} available</span>
-                )}
-              </div>
-              {selectedVariants.length === 1 && existingCartItems.length === 1 && (
-                <div className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em] text-brand-navy">
-                  In cart: {existingCartItems[0].quantity}
-                </div>
-              )}
-            </div>
           </div>
 
-          <div className="flex flex-col gap-2 items-stretch">
-            <Button
-              type="button"
-              size="lg"
-              onClick={handleAddToCart}
-              className={cn(
-                "w-full min-h-[3.5rem] sm:min-h-[4rem] rounded-xl sm:rounded-2xl px-4 sm:px-5 text-sm sm:text-base font-black tracking-widest transition-all touch-manipulation",
-                isOutOfStock
-                  ? "bg-rose-600 hover:bg-rose-700 text-white shadow-xl shadow-rose-600/20 cursor-not-allowed"
-                  : "bg-brand-navy hover:bg-brand-navy/90 text-white shadow-xl shadow-brand-navy/20 active:scale-95 group"
-              )}
-              disabled={isOutOfStock}
-            >
-              <ShoppingCart className="mr-2 sm:mr-3 size-4 sm:size-5 group-hover:scale-110 transition-transform" />
-              {isOutOfStock ? "OUT OF STOCK" : existingCartItems.length === 1 ? "UPDATE CART" : "ADD TO COLLECTION"}
-            </Button>
-            <Button
-              type="button"
-              size="lg"
-              variant="outline"
-              onClick={handleShare}
-              className="w-full min-h-[3rem] sm:min-h-[3.75rem] rounded-xl sm:rounded-2xl border-2 border-border/50 hover:text-brand-silver hover:border-brand-silver/50 transition-all glass-card touch-manipulation text-sm sm:text-base font-black tracking-widest"
-            >
-              <Share2 className="mr-2 sm:mr-3 size-4 sm:size-5" />
-              SHARE
-            </Button>
+          <div className="flex flex-wrap gap-2">
+            {uniqueColors.map((color) => {
+              const css = resolveColor(color);
+              const stock = getStockForColor(color);
+              const outOfStock = stock <= 0;
+              const isActive = activeTab === color;
+              const sizesChosen = (selectedSizesByColor[color] ?? []).length;
+              const isChosen = sizesChosen > 0;
+
+              return (
+                <button
+                  key={color}
+                  type="button"
+                  onClick={() => setActiveTab(color)}
+                  disabled={outOfStock}
+                  className={cn(
+                    "relative flex items-center gap-2.5 rounded-2xl border-2 px-4 py-2.5 text-[11px] font-black uppercase tracking-[0.18em] transition-all duration-200 touch-manipulation",
+                    outOfStock && "opacity-40 cursor-not-allowed",
+                    isActive
+                      ? "border-brand-navy bg-brand-navy text-white shadow-lg shadow-brand-navy/30 scale-[1.02]"
+                      : isChosen
+                      ? "border-emerald-500 bg-emerald-50 text-emerald-800"
+                      : "border-border/40 bg-white/90 text-zinc-700 hover:border-brand-navy/60 hover:bg-zinc-50"
+                  )}
+                >
+                  {/* Color swatch */}
+                  <span
+                    className={cn(
+                      "relative h-4 w-4 flex-shrink-0 rounded-full border-2 transition-all",
+                      isActive ? "border-white/50" : "border-zinc-200"
+                    )}
+                    style={{ backgroundColor: css ?? color ?? "transparent" }}
+                  >
+                    {isChosen && !isActive && (
+                      <Check className="absolute inset-0 m-auto size-2.5 text-white" strokeWidth={3} />
+                    )}
+                  </span>
+
+                  {color}
+
+                  {/* badge: how many sizes selected */}
+                  {isChosen && (
+                    <span
+                      className={cn(
+                        "ml-0.5 flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-black leading-none",
+                        isActive
+                          ? "bg-white text-brand-navy"
+                          : "bg-emerald-500 text-white"
+                      )}
+                    >
+                      {sizesChosen}
+                    </span>
+                  )}
+
+                  {/* stock label */}
+                  {!outOfStock && !isChosen && (
+                    <span
+                      className={cn(
+                        "text-[8px] font-black uppercase tracking-widest",
+                        isActive ? "text-white/70" : "text-zinc-400"
+                      )}
+                    >
+                      {stock} item{stock !== 1 ? "s" : ""}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Active-color label */}
+          {activeTab && (
+            <div className="flex items-center gap-2 pt-0.5">
+              <span className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/60">
+                Selecting sizes for:
+              </span>
+              <span className="flex items-center gap-1.5 rounded-full bg-brand-navy/5 border border-brand-navy/20 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-brand-navy">
+                <span
+                  className="h-2.5 w-2.5 rounded-full"
+                  style={{ backgroundColor: resolveColor(activeTab) ?? activeTab }}
+                />
+                {activeTab}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── SIZE PICKER ────────────────────────────────────────────────── */}
+      {(hasSizes || sizesForTab.length > 0) && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground/60">
+              {hasColors && activeTab
+                ? `Sizes — ${activeTab}`
+                : "Select Size"}
+            </h3>
+            {selectedSizesForTab.length > 0 && (
+              <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600">
+                {selectedSizesForTab.length} selected
+              </span>
+            )}
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {sizesForTab.map((size) => {
+              const stock = getStockForSize(size, hasColors ? activeTab : null);
+              const outOfStock = stock <= 0;
+              const isSelected = selectedSizesForTab.includes(size);
+
+              return (
+                <div key={size} className="flex flex-col items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => toggleSizeForTab(size)}
+                    disabled={outOfStock}
+                    aria-pressed={isSelected}
+                    className={cn(
+                      "relative h-11 min-w-[3rem] px-4 rounded-xl border-2 font-black text-xs transition-all duration-200 active:scale-95 touch-manipulation disabled:opacity-40 disabled:cursor-not-allowed",
+                      isSelected
+                        ? "border-brand-navy bg-brand-navy text-white shadow-lg shadow-brand-navy/25"
+                        : "border-border/50 bg-white/90 text-zinc-700 hover:border-brand-navy/50 hover:bg-zinc-50"
+                    )}
+                  >
+                    {isSelected && (
+                      <span className="absolute -top-1.5 -right-1.5 h-4 w-4 rounded-full bg-emerald-500 border-2 border-white flex items-center justify-center">
+                        <Check className="size-2" strokeWidth={3.5} color="white" />
+                      </span>
+                    )}
+                    {size}
+                  </button>
+                  <span
+                    className={cn(
+                      "text-[9px] font-black uppercase tracking-widest",
+                      outOfStock ? "text-rose-500" : isSelected ? "text-emerald-600" : "text-zinc-400"
+                    )}
+                  >
+                    {outOfStock ? "sold out" : `${stock} left`}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
+
+      {/* ── SELECTION SUMMARY ──────────────────────────────────────────── */}
+      {selectedVariants.length > 0 && (
+        <div className="rounded-2xl border border-border/30 bg-zinc-50/80 p-4 space-y-2">
+          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/60 mb-3">
+            Your Selection
+          </p>
+          <div className="flex flex-col gap-2">
+            {selectedVariants.map((v) => {
+              const size =
+                splitSizes(v.size).find((s) =>
+                  (selectedSizesByColor[normalize(v.color)] ??
+                    selectedSizesByColor[NO_COLOR_KEY] ??
+                    []).includes(s)
+                ) ??
+                splitSizes(v.size)[0] ??
+                "N/A";
+              const color = normalize(v.color);
+              const css = color ? resolveColor(color) : null;
+              const stock = Math.max(0, v.inventory?.quantity ?? 0);
+              const qty = qtyMap[v.id] ?? 1;
+
+              return (
+                <div
+                  key={v.id}
+                  className="flex items-center justify-between rounded-xl bg-white border border-border/30 px-3 py-2.5 shadow-sm"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    {css && (
+                      <span
+                        className="h-4 w-4 flex-shrink-0 rounded-full border border-zinc-200"
+                        style={{ backgroundColor: css }}
+                      />
+                    )}
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-black uppercase tracking-widest text-zinc-900 truncate">
+                        {color ? `${color} / ` : ""}Size {size}
+                      </p>
+                      <p
+                        className={cn(
+                          "text-[9px] font-black uppercase tracking-widest",
+                          stock <= 0
+                            ? "text-rose-500"
+                            : stock <= 3
+                            ? "text-amber-500"
+                            : "text-emerald-600"
+                        )}
+                      >
+                        {stock <= 0
+                          ? "Out of stock"
+                          : `${stock} available`}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Quantity stepper */}
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setQtyMap((p) => ({
+                          ...p,
+                          [v.id]: Math.max(1, qty - 1),
+                        }))
+                      }
+                      disabled={qty <= 1}
+                      className="h-7 w-7 rounded-lg border border-border/50 bg-white flex items-center justify-center text-zinc-600 hover:bg-zinc-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                    >
+                      <Minus className="size-3" />
+                    </button>
+                    <span className="w-6 text-center text-sm font-black text-zinc-900">
+                      {qty}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setQtyMap((p) => ({
+                          ...p,
+                          [v.id]: Math.min(stock || 1, qty + 1),
+                        }))
+                      }
+                      disabled={qty >= stock || stock <= 0}
+                      className="h-7 w-7 rounded-lg border border-border/50 bg-white flex items-center justify-center text-zinc-600 hover:bg-zinc-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                    >
+                      <Plus className="size-3" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* total stock info */}
+          <div className="flex items-center gap-2 pt-1 text-[10px] font-black uppercase tracking-widest text-emerald-700">
+            <Zap className="size-3.5 fill-emerald-500" />
+            {totalSelectedStock} item{totalSelectedStock !== 1 ? "s" : ""} available across your selection
+          </div>
+        </div>
+      )}
+
+      {/* ── ADD TO CART + SHARE ─────────────────────────────────────────── */}
+      <div className="flex flex-col gap-2.5">
+        <Button
+          type="button"
+          size="lg"
+          onClick={handleAddToCart}
+          className={cn(
+            "w-full min-h-[3.5rem] rounded-2xl px-5 text-sm font-black tracking-widest transition-all touch-manipulation group",
+            isOutOfStock
+              ? "bg-rose-600 hover:bg-rose-700 text-white shadow-xl shadow-rose-600/20 cursor-not-allowed"
+              : "bg-brand-navy hover:bg-brand-navy/90 text-white shadow-xl shadow-brand-navy/20 active:scale-95"
+          )}
+          disabled={isOutOfStock}
+        >
+          <ShoppingCart className="mr-3 size-5 group-hover:scale-110 transition-transform" />
+          {isOutOfStock
+            ? "OUT OF STOCK"
+            : existingCartItems.length > 0
+            ? "UPDATE CART"
+            : "ADD TO COLLECTION"}
+        </Button>
+
+        <Button
+          type="button"
+          size="lg"
+          variant="outline"
+          onClick={handleShare}
+          className="w-full min-h-[3rem] rounded-2xl border-2 border-border/50 hover:text-brand-silver hover:border-brand-silver/50 transition-all glass-card touch-manipulation text-sm font-black tracking-widest"
+        >
+          <Share2 className="mr-3 size-4" />
+          SHARE
+        </Button>
+      </div>
     </div>
   );
 }

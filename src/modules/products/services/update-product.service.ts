@@ -51,6 +51,23 @@ export class UpdateProductService {
 
     // Execute update in a transaction for atomicity
     const result = await prisma.$transaction(async (tx) => {
+      let targetGender = "BOTH";
+      if (newCategoryIds.length > 0) {
+        const categories = await tx.category.findMany({
+          where: { id: { in: newCategoryIds } },
+          select: { name: true }
+        });
+        const names = categories.map(c => c.name.toLowerCase().trim());
+        const hasBoys = names.includes("boys");
+        const hasGirls = names.includes("girls");
+        const hasUnisex = names.includes("uni-sex") || names.includes("unisex");
+
+        if (hasBoys && hasGirls) targetGender = "BOTH";
+        else if (hasBoys) targetGender = "BOYS";
+        else if (hasGirls) targetGender = "GIRLS";
+        else if (hasUnisex) targetGender = "BOTH";
+      }
+
       // 1. Update the parent Product record
       const updateData: Prisma.ProductUpdateInput = {
         name,
@@ -58,6 +75,7 @@ export class UpdateProductService {
         basePrice: sellingPrice,
         costPrice,
         tax,
+        targetGender,
       };
 
       if (images !== undefined) {

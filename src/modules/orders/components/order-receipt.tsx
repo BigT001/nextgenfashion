@@ -342,7 +342,6 @@ export function OrderReceipt({ orderId, onClose }: OrderReceiptProps) {
 
             <div class="totals">
               <div class="total-row"><span>Subtotal</span><span>₦${Number(data?.totalAmount).toLocaleString("en-NG", { maximumFractionDigits: 0 })}</span></div>
-              <div class="total-row"><span>Shipping</span><span>FREE</span></div>
               <div class="total-row grand"><span>TOTAL</span><span>₦${Number(data?.totalAmount).toLocaleString()}</span></div>
             </div>
 
@@ -484,10 +483,7 @@ export function OrderReceipt({ orderId, onClose }: OrderReceiptProps) {
                   <span>Subtotal</span>
                   <span>₦{Number(data.totalAmount).toLocaleString("en-NG", { maximumFractionDigits: 0 })}</span>
                 </div>
-                <div className="flex justify-between text-sm font-bold text-emerald-600">
-                  <span>Shipping</span>
-                  <span>FREE</span>
-                </div>
+
                 <div className="flex justify-between items-end pt-4 border-t-2 border-zinc-950 dark:border-white">
                   <span className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground">Grand Total</span>
                   <span className="text-3xl font-black tracking-tighter text-brand-navy">₦{Number(data.totalAmount).toLocaleString()}</span>

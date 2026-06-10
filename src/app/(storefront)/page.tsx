@@ -39,11 +39,7 @@ const formatCurrency = (value?: number | string | Prisma.Decimal | null) => {
   if (value === undefined || value === null || value === "") return "";
   const numeric = typeof value === "object" && value !== null && "toNumber" in value ? Number((value as any).toNumber()) : Number(value);
   if (!Number.isFinite(numeric)) return "";
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(numeric);
+  return `₦${numeric.toLocaleString("en-NG", { maximumFractionDigits: 0 })}`;
 };
 
 export default async function LandingPage() {
@@ -468,7 +464,7 @@ export default async function LandingPage() {
                             <p className="text-white/80 font-black text-[10px] md:text-xs uppercase tracking-widest mb-1">Play Like</p>
                             <h3 className="text-xl md:text-3xl font-black text-white leading-tight whitespace-nowrap">Boy Toys<span className="hidden md:inline"><br /></span><span className="md:hidden"> </span>&amp; Fashion</h3>
                           </div>
-                          <Link href="/shop?category=boys" className="ml-2 relative z-20 shrink-0">
+                          <Link href="/boys" className="ml-2 relative z-20 shrink-0">
                             <button className="md:mt-4 bg-white text-yellow-700 font-black text-[10px] md:text-xs uppercase tracking-widest px-4 py-2 md:px-5 md:py-2 rounded-full group-hover:bg-yellow-50 group-hover:scale-105 transition-all">
                               SHOP ONLINE
                             </button>
@@ -505,7 +501,7 @@ export default async function LandingPage() {
                             <div className="bg-white/30 backdrop-blur-sm px-2 py-0.5 md:px-3 md:py-1 rounded-full text-white font-black text-[10px] md:text-sm mb-1 md:mb-2 inline-block">Premium Range</div>
                             <h3 className="text-xl md:text-3xl font-black text-white leading-tight whitespace-nowrap">Elite 👗<span className="hidden md:inline"><br /></span><span className="md:hidden"> </span>Selection</h3>
                           </div>
-                          <Link href="/shop" className="ml-2 relative z-20 shrink-0">
+                          <Link href="/girls" className="ml-2 relative z-20 shrink-0">
                             <button className="md:mt-3 bg-white text-pink-700 font-black text-[10px] md:text-xs uppercase tracking-widest px-4 py-2 md:px-5 md:py-2 rounded-full group-hover:bg-pink-50 group-hover:scale-105 transition-all">
                               SHOP ONLINE
                             </button>

@@ -76,20 +76,42 @@ export class CreateProductService {
       }
     }
 
+    const categoryIdsToConnect = productData.categoryIds && productData.categoryIds.length > 0
+      ? productData.categoryIds
+      : productData.categoryId
+        ? [productData.categoryId]
+        : [];
+
+    let targetGender = "BOTH";
+    if (categoryIdsToConnect.length > 0) {
+      const categories = await prisma.category.findMany({
+        where: { id: { in: categoryIdsToConnect } },
+        select: { name: true }
+      });
+      const names = categories.map(c => c.name.toLowerCase().trim());
+      const hasBoys = names.includes("boys");
+      const hasGirls = names.includes("girls");
+      const hasUnisex = names.includes("uni-sex") || names.includes("unisex");
+
+      if (hasBoys && hasGirls) targetGender = "BOTH";
+      else if (hasBoys) targetGender = "BOYS";
+      else if (hasGirls) targetGender = "GIRLS";
+      else if (hasUnisex) targetGender = "BOTH";
+    }
+
     const createInput: any = {
       name: productData.name,
       description: productData.description,
       ...(productData.basePrice !== undefined ? { basePrice: productData.basePrice } : {}),
       costPrice: (productData as any).costPrice,
       tax: (productData as any).tax,
+      targetGender,
       // Persist uploaded image URLs — unique to this product
       images: (productData as any).images ?? [],
       // Connect ALL categories at creation time
-      ...(productData.categoryIds && productData.categoryIds.length > 0
-        ? { categories: { connect: productData.categoryIds.map(id => ({ id })) } }
-        : productData.categoryId
-          ? { categories: { connect: [{ id: productData.categoryId }] } }
-          : {}),
+      ...(categoryIdsToConnect.length > 0
+        ? { categories: { connect: categoryIdsToConnect.map(id => ({ id })) } }
+        : {}),
     };
 
     // targetAudience removed from schema — no-op

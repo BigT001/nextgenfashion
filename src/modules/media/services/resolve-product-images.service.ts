@@ -203,7 +203,14 @@ export class ResolveProductImagesService {
       console.warn("[ResolveProductImagesService] Cloudinary environment variables are not fully configured.");
     }
 
-    const shouldCollectRemoteAssets = hasCloudinaryCredentials && allowRemoteImageDiscovery;
+    const allProductsHaveDbImages = products.every((product) => {
+      const fallbackImages = Array.isArray(product.images)
+        ? product.images.filter((image): image is string => Boolean(image && image.trim() !== ""))
+        : [];
+      return fallbackImages.length > 0;
+    });
+
+    const shouldCollectRemoteAssets = hasCloudinaryCredentials && allowRemoteImageDiscovery && !allProductsHaveDbImages;
     const { assetGroups, globalTokenFrequency } = shouldCollectRemoteAssets
       ? await collectCloudinaryAssets(hasCloudinaryCredentials)
       : { assetGroups: new Map(), globalTokenFrequency: new Map() };
