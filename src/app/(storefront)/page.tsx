@@ -1,4 +1,5 @@
-export const dynamic = "force-dynamic";
+// Cache home page for 60 seconds, then revalidate in background for ultra-fast loads
+export const revalidate = 60;
 
 import React from "react";
 import Link from "next/link";

@@ -274,3 +274,29 @@ html.lenis body {
     50%     { box-shadow: 0 0 60px 25px rgba(255,214,0,0.6); }
   }
 }
+
+/* ── Mobile Animation Optimization ── */
+@media (max-width: 767px) {
+  /* Disable floating animations on mobile to prevent scroll jank */
+  .animate-float,
+  .animate-float-delay-1,
+  .animate-float-delay-2,
+  .animate-float-delay-3,
+  .animate-blob-1,
+  .animate-blob-2,
+  .animate-blob-3,
+  .animate-marquee {
+    animation: none !important;
+  }
+  
+  /* Disable hero entrance animations on mobile */
+  .animate-hero-left,
+  .animate-hero-right {
+    animation: none !important;
+  }
+  
+  /* Disable sun pulse on mobile */
+  .animate-sun-pulse {
+    animation: none !important;
+  }
+}

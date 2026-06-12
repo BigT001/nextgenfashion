@@ -102,6 +102,7 @@ export class ProductQueries {
 
   /**
    * Fetch high‑visibility featured products for the storefront.
+   * Optimized to only fetch essential product data for home page rendering.
    */
   static async findFeatured(limit = 8) {
     return await prisma.product.findMany({
@@ -109,7 +110,7 @@ export class ProductQueries {
       take: limit,
       include: {
         categories: true,
-        ProductVariant: { include: { Inventory: true } },
+        ProductVariant: { take: 1, include: { Inventory: true } },
       },
       orderBy: { createdAt: "desc" },
     });
@@ -125,8 +126,9 @@ export class ProductQueries {
     });
   }
 
-  static async findCategories(targetGender?: string) {
-    // Gender filter not applied here; method returns all categories with product counts
+  static async findCategories(targetGender?: string, productsPerCategory = 10) {
+    // Gender filter not applied here; method returns all categories with limited products per category
+    // On home page, we only need a few sample products for display, not all
     return await prisma.category.findMany({
       orderBy: { name: "asc" },
       include: {
@@ -134,8 +136,10 @@ export class ProductQueries {
         Product: {
           where: { isSuspended: false },
           include: {
-            ProductVariant: { include: { Inventory: true } },
+            ProductVariant: { take: 1, include: { Inventory: true } },
           },
+          take: productsPerCategory,
+          orderBy: { createdAt: "desc" },
         },
       },
     });

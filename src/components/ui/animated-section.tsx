@@ -22,10 +22,20 @@ export function AnimatedSection({
 }: AnimatedSectionProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
+    // Detect mobile on mount
+    setIsMobile(window.innerWidth < 768);
+
     const el = ref.current;
     if (!el) return;
+
+    // On mobile, show content immediately without animation
+    if (isMobile) {
+      setVisible(true);
+      return;
+    }
 
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -41,7 +51,7 @@ export function AnimatedSection({
 
     observer.observe(el);
     return () => observer.disconnect();
-  }, [threshold, once]);
+  }, [threshold, once, isMobile]);
 
   const hiddenClass: Record<string, string> = {
     "fade-up":    "opacity-0 translate-y-10",
@@ -62,9 +72,9 @@ export function AnimatedSection({
         className
       )}
       style={{
-        transitionDuration: "700ms",
+        transitionDuration: isMobile ? "0ms" : "700ms",
         transitionDelay: visible ? `${delay}ms` : "0ms",
-        willChange: "transform, opacity",
+        willChange: isMobile ? "auto" : "transform, opacity",
       }}
     >
       {children}
