@@ -7,9 +7,9 @@ import { ShopViewSkeleton } from "@/modules/products/components/shop-view/shop-v
 export default async function GirlsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ category?: string; q?: string; maxPrice?: string }>;
+  searchParams: Promise<{ category?: string; q?: string }>;
 }) {
-  const { category, q, maxPrice } = await searchParams;
+  const { category, q } = await searchParams;
 
   return (
     <Suspense fallback={<ShopViewSkeleton />}>
@@ -20,7 +20,6 @@ export default async function GirlsPage({
         badge="Girls Selection 2026"
         category={category}
         search={q}
-        maxPrice={maxPrice ? parseInt(maxPrice) : undefined}
       />
     </Suspense>
   );

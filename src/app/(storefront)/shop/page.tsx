@@ -7,16 +7,15 @@ import { ShopViewSkeleton } from "@/modules/products/components/shop-view/shop-v
 export default async function ShopPage({
   searchParams,
 }: {
-  searchParams: Promise<{ category?: string; q?: string; maxPrice?: string }>;
+  searchParams: Promise<{ category?: string; q?: string }>;
 }) {
-  const { category, q, maxPrice } = await searchParams;
+  const { category, q } = await searchParams;
 
   return (
     <Suspense fallback={<ShopViewSkeleton />}>
       <ShopView 
         category={category} 
-        search={q} 
-        maxPrice={maxPrice ? parseInt(maxPrice) : undefined}
+        search={q}
       />
     </Suspense>
   );

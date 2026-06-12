@@ -11,7 +11,6 @@ export class ProductQueries {
     categoryId?: string;
     targetGender?: string;
     search?: string;
-    maxPrice?: number;
     includeVariants?: boolean;
     take?: number;
     skip?: number;
@@ -61,9 +60,6 @@ export class ProductQueries {
             { name: { contains: params.search, mode: "insensitive" } },
             { description: { contains: params.search, mode: "insensitive" } },
           ],
-        }),
-        ...(params.maxPrice !== undefined && {
-          basePrice: { lte: new Prisma.Decimal(params.maxPrice) },
         }),
       },
       select: {

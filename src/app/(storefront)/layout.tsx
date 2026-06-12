@@ -37,10 +37,25 @@ export default function StoreLayout({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     setMounted(true);
-    const handleScroll = () => setIsScrolled(window.scrollY > 10);
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+    let timeoutId: NodeJS.Timeout;
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 10);
+    };
+    
+    // Throttle scroll event to every 150ms for better mobile performance
+    let lastCall = 0;
+    const throttledScroll = () => {
+      const now = Date.now();
+      if (now - lastCall >= 150) {
+        handleScroll();
+        lastCall = now;
+      }
+    };
+    
+    window.addEventListener("scroll", throttledScroll, { passive: true });
+    return () => window.removeEventListener("scroll", throttledScroll);
   }, []);
+
 
   const itemCount = mounted ? getItemCount() : 0;
 

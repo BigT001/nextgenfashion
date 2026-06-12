@@ -12,7 +12,6 @@ interface ShopViewProps {
   category?: string;
   targetGender?: string;
   search?: string;
-  maxPrice?: number;
   title?: string;
   description?: string;
   badge?: string;
@@ -29,7 +28,6 @@ export async function ShopView({
   category,
   targetGender,
   search,
-  maxPrice,
 }: ShopViewProps) {
   let categories: Array<Record<string, unknown>> = [];
   let products: ShopProduct[] = [];
@@ -43,7 +41,6 @@ export async function ShopView({
         categoryId: category,
         targetGender: targetGender,
         search: search,
-        maxPrice: maxPrice,
       })
     ]);
 

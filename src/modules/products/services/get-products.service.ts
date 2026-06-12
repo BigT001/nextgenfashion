@@ -27,7 +27,6 @@ export class GetProductsService {
     categoryId?: string;
     targetGender?: string;
     search?: string;
-    maxPrice?: number;
     includeVariants?: boolean;
     limit?: number;
     offset?: number;
@@ -37,7 +36,6 @@ export class GetProductsService {
         categoryId: params?.categoryId,
         targetGender: params?.targetGender,
         search: params?.search,
-        maxPrice: params?.maxPrice,
         includeVariants: params?.includeVariants,
         limit: params?.limit ?? 30,
         offset: params?.offset ?? 0,
