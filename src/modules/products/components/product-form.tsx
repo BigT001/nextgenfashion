@@ -605,113 +605,129 @@ export function ProductForm({
                                 <Plus className="size-3" />
                                 New
                               </DialogTrigger>
-                              <DialogContent className="sm:max-w-md">
-                                <div className="space-y-4">
-                                  <h3 className="text-sm font-bold">Add New Category</h3>
-                                  <Input
-                                    placeholder="e.g. Women's Wear"
-                                    value={newCategoryName}
-                                    onChange={(e) => setNewCategoryName(e.target.value)}
-                                  />
+                              <DialogContent className="sm:max-w-md max-h-[85vh] flex flex-col overflow-hidden">
+                                {/* Fixed Header: Add new category */}
+                                <div className="shrink-0 space-y-3 pb-4 border-b border-border/30">
+                                  <h3 className="text-sm font-black uppercase tracking-wider text-brand-navy">Manage Categories</h3>
                                   <div className="flex gap-2">
+                                    <Input
+                                      placeholder="e.g. Women's Wear"
+                                      value={newCategoryName}
+                                      onChange={(e) => setNewCategoryName(e.target.value)}
+                                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddCategory(); } }}
+                                      className="flex-1 h-10 bg-white border-2 border-brand-navy/10 rounded-xl font-medium text-brand-navy focus:border-brand-navy/30 transition-all"
+                                    />
                                     <Button
                                       type="button"
-                                      variant="outline"
-                                      onClick={() => setIsCategoryDialogOpen(false)}
-                                    >
-                                      Cancel
-                                    </Button>
-                                    <Button
-                                      type="button"
-                                      disabled={isAddingCategory}
+                                      disabled={isAddingCategory || !newCategoryName.trim()}
                                       onClick={handleAddCategory}
+                                      className="h-10 px-5 bg-brand-navy text-white hover:bg-brand-navy/90 rounded-xl font-black text-[10px] uppercase tracking-widest shrink-0"
                                     >
                                       {isAddingCategory ? "Adding..." : "Add"}
                                     </Button>
                                   </div>
+                                </div>
 
-                                  {/* Existing categories with delete option for admins */}
-                                  {categories.length > 0 && (
-                                    <div className="mt-4 space-y-2">
-                                      <h4 className="text-xs font-black uppercase tracking-wider text-muted-foreground">Existing Categories</h4>
-                                      <div className="space-y-2">
-                                        {categories.map((cat) => (
-                                          <div key={cat.id} className="flex items-center justify-between gap-3 p-2 rounded-md border border-border/50 bg-white">
-                                            <div className="flex-1">
+                                {/* Scrollable Body: Existing categories */}
+                                {categories.length > 0 && (
+                                  <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+                                    <div className="flex items-center justify-between py-2 shrink-0">
+                                      <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Existing Categories</h4>
+                                      <span className="text-[10px] font-bold text-muted-foreground/60 tabular-nums">{categories.length} total</span>
+                                    </div>
+                                    <div className="flex-1 min-h-0 overflow-y-auto -mx-1 px-1 space-y-1.5" style={{ maxHeight: "calc(85vh - 180px)" }}>
+                                      {categories.map((cat) => (
+                                        <div key={cat.id} className="flex items-center justify-between gap-3 p-2.5 rounded-xl border border-border/40 bg-white hover:border-brand-navy/20 hover:shadow-sm transition-all group">
+                                          <div className="flex-1 min-w-0">
+                                            {editingCategoryId === cat.id ? (
+                                              <Input
+                                                value={editingCategoryName}
+                                                onChange={(e) => setEditingCategoryName(e.target.value)}
+                                                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleUpdateCategory(cat.id, editingCategoryName); } }}
+                                                className="h-9 border-2 border-brand-navy/20 rounded-lg font-medium"
+                                                autoFocus
+                                              />
+                                            ) : (
+                                              <div className="text-sm font-semibold text-brand-navy truncate">{cat.name}</div>
+                                            )}
+                                          </div>
+                                          {session?.user?.role === "ADMIN" || session?.user?.role === "SUPERADMIN" ? (
+                                            <div className="flex items-center gap-1 shrink-0">
                                               {editingCategoryId === cat.id ? (
-                                                <Input
-                                                  value={editingCategoryName}
-                                                  onChange={(e) => setEditingCategoryName(e.target.value)}
-                                                  className="h-10"
-                                                />
+                                                <>
+                                                  <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    className="h-8 px-2 text-xs rounded-lg"
+                                                    onClick={() => {
+                                                      setEditingCategoryId(null);
+                                                      setEditingCategoryName("");
+                                                    }}
+                                                  >
+                                                    Cancel
+                                                  </Button>
+                                                  <Button
+                                                    size="sm"
+                                                    className="h-8 px-3 bg-brand-navy text-white hover:bg-brand-navy/90 rounded-lg text-xs"
+                                                    disabled={isUpdatingCategoryId === cat.id}
+                                                    onClick={() => handleUpdateCategory(cat.id, editingCategoryName)}
+                                                  >
+                                                    {isUpdatingCategoryId === cat.id ? "..." : <Save className="size-3.5" />}
+                                                  </Button>
+                                                </>
                                               ) : (
-                                                <div className="text-sm font-medium">{cat.name}</div>
+                                                <>
+                                                  <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    className="h-8 px-2.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-brand-navy rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    onClick={() => {
+                                                      setEditingCategoryId(cat.id);
+                                                      setEditingCategoryName(cat.name);
+                                                    }}
+                                                  >
+                                                    Edit
+                                                  </Button>
+                                                  <Button size="sm" variant="ghost" className="h-8 px-2 text-rose-500/60 hover:text-rose-600 hover:bg-rose-50 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity" onClick={async () => {
+                                                    if (!confirm(`Delete category '${cat.name}'? This cannot be undone.`)) return;
+                                                    try {
+                                                      setIsDeletingCategoryId(cat.id);
+                                                      const res = await deleteCategoryAction(cat.id);
+                                                      if (res.success) {
+                                                        setCategories((prev) => prev.filter(c => c.id !== cat.id));
+                                                        toast.success("Category deleted");
+                                                      } else {
+                                                        toast.error(res.error || "Failed to delete category");
+                                                      }
+                                                    } catch (e) {
+                                                      console.error(e);
+                                                      toast.error("Failed to delete category");
+                                                    } finally {
+                                                      setIsDeletingCategoryId(null);
+                                                    }
+                                                  }}>
+                                                    {isDeletingCategoryId === cat.id ? "..." : <Trash2 className="size-3.5" />}
+                                                  </Button>
+                                                </>
                                               )}
                                             </div>
-                                            {session?.user?.role === "ADMIN" || session?.user?.role === "SUPERADMIN" ? (
-                                              <div className="flex items-center gap-2">
-                                                {editingCategoryId === cat.id ? (
-                                                  <>
-                                                    <Button
-                                                      size="sm"
-                                                      variant="outline"
-                                                      onClick={() => {
-                                                        setEditingCategoryId(null);
-                                                        setEditingCategoryName("");
-                                                      }}
-                                                    >
-                                                      Cancel
-                                                    </Button>
-                                                    <Button
-                                                      size="sm"
-                                                      disabled={isUpdatingCategoryId === cat.id}
-                                                      onClick={() => handleUpdateCategory(cat.id, editingCategoryName)}
-                                                    >
-                                                      {isUpdatingCategoryId === cat.id ? "Saving..." : <Save className="size-4" />}
-                                                    </Button>
-                                                  </>
-                                                ) : (
-                                                  <>
-                                                    <Button
-                                                      size="sm"
-                                                      variant="ghost"
-                                                      onClick={() => {
-                                                        setEditingCategoryId(cat.id);
-                                                        setEditingCategoryName(cat.name);
-                                                      }}
-                                                    >
-                                                      Edit
-                                                    </Button>
-                                                    <Button size="sm" variant="ghost" className="text-rose-600" onClick={async () => {
-                                                      if (!confirm(`Delete category '${cat.name}'? This cannot be undone.`)) return;
-                                                      try {
-                                                        setIsDeletingCategoryId(cat.id);
-                                                        const res = await deleteCategoryAction(cat.id);
-                                                        if (res.success) {
-                                                          setCategories((prev) => prev.filter(c => c.id !== cat.id));
-                                                          toast.success("Category deleted");
-                                                        } else {
-                                                          toast.error(res.error || "Failed to delete category");
-                                                        }
-                                                      } catch (e) {
-                                                        console.error(e);
-                                                        toast.error("Failed to delete category");
-                                                      } finally {
-                                                        setIsDeletingCategoryId(null);
-                                                      }
-                                                    }}>
-                                                      {isDeletingCategoryId === cat.id ? "Deleting..." : <Trash2 className="size-4" />}
-                                                    </Button>
-                                                  </>
-                                                )}
-                                              </div>
-                                            ) : null}
-                                          </div>
-                                        ))}
-                                      </div>
+                                          ) : null}
+                                        </div>
+                                      ))}
                                     </div>
-                                  )}
-                                </div>
+                                  </div>
+                                )}
+
+                                {/* Empty state */}
+                                {categories.length === 0 && (
+                                  <div className="flex-1 flex flex-col items-center justify-center py-8 text-center">
+                                    <div className="size-12 rounded-2xl bg-brand-navy/5 flex items-center justify-center mb-3">
+                                      <LayoutGrid className="size-5 text-brand-navy/30" />
+                                    </div>
+                                    <p className="text-xs font-bold text-muted-foreground">No categories yet</p>
+                                    <p className="text-[10px] text-muted-foreground/60 mt-1">Type a name above and click Add</p>
+                                  </div>
+                                )}
                               </DialogContent>
                             </Dialog>
                           </div>
