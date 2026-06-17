@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { sendDirectEmailAction } from "@/modules/email/actions/email.actions";
 import { Send, ArrowLeft, Loader2, Info } from "lucide-react";
@@ -16,6 +16,16 @@ export default function ComposeEmailPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const toParam = params.get("to");
+      const subjectParam = params.get("subject");
+      if (toParam) setTo(toParam);
+      if (subjectParam) setSubject(subjectParam);
+    }
+  }, []);
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();

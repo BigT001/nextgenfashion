@@ -3,12 +3,14 @@
 import { useEffect, useState } from "react";
 import { getInboxMessagesAction, deleteMessageAction } from "@/modules/email/actions/email.actions";
 import { format } from "date-fns";
-import { MailOpen, Inbox, Search, Trash2 } from "lucide-react";
+import { MailOpen, Inbox, Search, Trash2, CornerUpLeft } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 export default function MailroomInboxPage() {
+  const router = useRouter();
   const [messages, setMessages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMessage, setSelectedMessage] = useState<any>(null);
@@ -106,15 +108,30 @@ export default function MailroomInboxPage() {
                     <p className="text-xs text-zinc-500">to {selectedMessage.toEmail}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-4">
-                  <span className="text-sm font-medium text-zinc-500">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-zinc-500 mr-2">
                     {format(new Date(selectedMessage.createdAt), "PPP 'at' p")}
                   </span>
                   <Button
                     variant="ghost"
                     size="icon"
+                    onClick={() => {
+                      const subjectLine = selectedMessage.subject.startsWith("Re:") 
+                        ? selectedMessage.subject 
+                        : `Re: ${selectedMessage.subject}`;
+                      router.push(`/dashboard/mailroom/compose?to=${encodeURIComponent(selectedMessage.fromEmail)}&subject=${encodeURIComponent(subjectLine)}&threadId=${encodeURIComponent(selectedMessage.threadId || selectedMessage.id)}`);
+                    }}
+                    className="text-zinc-500 hover:text-brand-navy hover:bg-zinc-50 rounded-xl"
+                    title="Reply to customer"
+                  >
+                    <CornerUpLeft className="size-5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={() => handleDelete(selectedMessage.id)}
                     className="text-zinc-500 hover:text-red-600 hover:bg-red-50 rounded-xl"
+                    title="Delete email"
                   >
                     <Trash2 className="size-5" />
                   </Button>
@@ -133,8 +150,19 @@ export default function MailroomInboxPage() {
                 </div>
               )}
             </div>
-            <div className="p-4 border-t border-border bg-zinc-50">
-              <p className="text-xs text-zinc-500 text-center">Reply functionality is handled via your official email client.</p>
+            <div className="p-4 border-t border-border bg-zinc-50 flex justify-center">
+              <Button
+                onClick={() => {
+                  const subjectLine = selectedMessage.subject.startsWith("Re:") 
+                    ? selectedMessage.subject 
+                    : `Re: ${selectedMessage.subject}`;
+                  router.push(`/dashboard/mailroom/compose?to=${encodeURIComponent(selectedMessage.fromEmail)}&subject=${encodeURIComponent(subjectLine)}&threadId=${encodeURIComponent(selectedMessage.threadId || selectedMessage.id)}`);
+                }}
+                className="bg-brand-navy hover:bg-brand-navy/90 text-white rounded-lg px-6 flex items-center gap-2 font-bold"
+              >
+                <CornerUpLeft className="size-4" />
+                <span>Reply to Customer</span>
+              </Button>
             </div>
           </div>
         ) : (
