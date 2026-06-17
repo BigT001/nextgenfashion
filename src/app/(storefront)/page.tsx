@@ -118,7 +118,8 @@ export default async function LandingPage() {
         href: `/shop?category=${cat.id}`,
         products: randomProducts,
       };
-    });
+    })
+    .sort((a, b) => b.products.length - a.products.length);
 
   // Map category names to icons
   const getCategoryIcon = (name?: string) => {
