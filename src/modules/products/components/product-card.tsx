@@ -131,15 +131,10 @@ export function ProductCard({ product, className }: ProductCardProps) {
               <ShoppingCart className="size-5" />
             </Button>
           </div>
-          <div className="absolute bottom-6 left-6 z-10">
-            <Badge className="bg-white/90 backdrop-blur-xl text-black border-none font-black text-[10px] px-3 py-1 uppercase tracking-widest rounded-lg">
-              {categoryLabel}
-            </Badge>
-          </div>
         </div>
 
         <Link href={`/products/${product.id}`} className="px-2 space-y-2">
-          <h3 className="font-black text-xl tracking-tight line-clamp-1 group-hover:text-brand-navy transition-colors">{product.name}</h3>
+          <h3 className="font-black text-sm md:text-base tracking-tight line-clamp-1 group-hover:text-brand-navy transition-colors">{product.name}</h3>
           <div className="flex items-center justify-between">
             <span className="text-2xl font-black tracking-tighter">₦{Number(product.basePrice).toLocaleString()}</span>
           </div>

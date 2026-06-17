@@ -41,6 +41,7 @@ export async function ShopView({
         categoryId: category,
         targetGender: targetGender,
         search: search,
+        random: true,
       })
     ]);
 
@@ -84,7 +85,7 @@ export async function ShopView({
                   <p className="text-sm font-medium text-muted-foreground sm:hidden">Showing <span className="font-black text-foreground">{products.length}</span></p>
                   <div className="flex items-center gap-3">
                     <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 hidden sm:inline">Sort By</span>
-                    <Button variant="outline" className="h-10 rounded-xl glass-card border-none text-xs font-bold px-4">Latest Arrivals</Button>
+                    <Button variant="outline" className="h-10 rounded-xl glass-card border-none text-xs font-bold px-4">Curated Selection</Button>
                   </div>
                 </div>
               </div>

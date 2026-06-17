@@ -30,6 +30,7 @@ export class GetProductsService {
     includeVariants?: boolean;
     limit?: number;
     offset?: number;
+    random?: boolean;
   }) {
     try {
       const searchParams = {
@@ -37,8 +38,9 @@ export class GetProductsService {
         targetGender: params?.targetGender,
         search: params?.search,
         includeVariants: params?.includeVariants,
-        limit: params?.limit ?? 30,
-        offset: params?.offset ?? 0,
+        take: params?.limit,
+        skip: params?.offset,
+        random: params?.random,
       };
       const result = await ProductQueries.findAll(searchParams);
       const normalized = this.normalizeProducts(result);

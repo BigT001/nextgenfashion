@@ -14,6 +14,7 @@ export class ProductQueries {
     includeVariants?: boolean;
     take?: number;
     skip?: number;
+    random?: boolean;
   }) {
     // Resolve gender category if a gender filter is provided
     let genderCategoryId: string | undefined = undefined;
@@ -36,7 +37,7 @@ export class ProductQueries {
       }
     }
 
-    return await prisma.product.findMany({
+    const products = await prisma.product.findMany({
       where: {
         isSuspended: false,
         ...(params.targetGender && {
@@ -82,6 +83,17 @@ export class ProductQueries {
       ...(typeof params.take === "number" && { take: params.take }),
       ...(typeof params.skip === "number" && { skip: params.skip }),
     });
+
+    if (params.random) {
+      const shuffled = [...products];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      return shuffled;
+    }
+
+    return products;
   }
 
   static async findCategorySummaries(targetGender?: string) {
