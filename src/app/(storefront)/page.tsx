@@ -333,7 +333,7 @@ export default async function LandingPage() {
       <LiveBrandPulse />
 
       {/* ═══════════════════ CATEGORIES ════════════════════════════════════════ */}
-      <section className="py-0 bg-white">
+      <section className="pt-0 pb-10 md:pb-16 bg-white">
         <div className="container mx-auto px-0">
           <AnimatedSection className="text-center mb-4" animation="fade-up">
             <p className="text-sm font-black uppercase tracking-widest text-pink-500 mb-1">Shop by Category</p>
@@ -413,7 +413,7 @@ export default async function LandingPage() {
                 </AnimatedSection>
 
                 {category.products.length > 0 ? (
-                  <div className="grid grid-cols-4 gap-1 max-w-6xl mx-auto lg:grid-cols-6">
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 sm:gap-4 max-w-6xl mx-auto lg:grid-cols-6">
                     {category.products.map((product, idx) => (
                       <AnimatedSection key={product.id} animation="fade-up" delay={idx * 70}>
                         <Link href={`/products/${product.id}`} className="block group">
