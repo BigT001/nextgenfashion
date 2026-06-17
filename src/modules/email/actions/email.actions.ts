@@ -87,3 +87,28 @@ export async function createAndDispatchCampaignAction(data: {
     return { success: false, error: error.message };
   }
 }
+
+export async function subscribeNewsletterAction(email: string) {
+  if (!email || !email.includes("@")) {
+    return { success: false, error: "Please enter a valid email address." };
+  }
+  try {
+    // 1. Add subscriber to database
+    await EmailQueries.addSubscriber(email);
+
+    // 2. Save an inbound message representing this subscription so it shows in the Mailroom Inbox
+    await EmailQueries.saveInboundMessage({
+      fromEmail: email,
+      toEmail: "newsletter@nextgenkiddies.com",
+      subject: "New Newsletter Subscription",
+      bodyText: `A new user signed up for the newsletter.\n\nEmail: ${email}\nDate: ${new Date().toLocaleString()}`,
+      bodyHtml: `<p>A new user signed up for the newsletter.</p><p><strong>Email:</strong> ${email}</p><p><strong>Date:</strong> ${new Date().toLocaleString()}</p>`,
+      status: "DELIVERED",
+    });
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("Newsletter subscription action failed:", error);
+    return { success: false, error: error.message || "Failed to subscribe." };
+  }
+}

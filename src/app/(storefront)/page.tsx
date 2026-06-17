@@ -15,6 +15,7 @@ import { LiveBrandPulse } from "@/modules/brand/components/live-brand-pulse";
 import { AnimatedSection } from "@/components/ui/animated-section";
 import { ProductQueries } from "@/modules/products/queries/product.queries";
 import { ResolveProductImagesService, type ProductWithVariants } from "@/modules/media/services/resolve-product-images.service";
+import { NewsletterForm } from "@/modules/email/components/newsletter-form";
 
 type FeaturedProduct = Awaited<ReturnType<typeof GetProductsService.findFeatured>>[number];
 type CategoryWithProducts = Awaited<ReturnType<typeof ProductQueries.findCategories>>[number] & {
@@ -544,50 +545,6 @@ export default async function LandingPage() {
       ) : null}
 
 
-
-      {/* ═══════════════════ TOP PERFORMING CATEGORIES ═════════════════════════ */}
-      <section className="py-16 bg-white border-t border-zinc-100">
-        <div className="container mx-auto px-6 md:px-12">
-          <AnimatedSection className="text-center mb-10" animation="fade-up">
-            <p className="text-sm font-black uppercase tracking-widest text-pink-500 mb-1">Discover More</p>
-            <h2 className="text-3xl md:text-4xl font-black text-zinc-900">Top Performing <span className="text-pink-500">Categories</span></h2>
-          </AnimatedSection>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-6xl mx-auto">
-            {discoverCards.length > 0 ? discoverCards.map((card, i) => (
-              <AnimatedSection key={i} animation="fade-up" delay={i * 100}>
-                <Link href={card.link}>
-                  <div className="group relative rounded-3xl overflow-hidden aspect-[4/5] shadow-md hover:shadow-xl transition-all duration-300 bg-zinc-100">
-                    {card.img && card.img.trim() !== "" ? (
-                      <Image
-                        src={card.img}
-                        alt={card.name}
-                        fill
-                        className="object-cover group-hover:scale-110 transition-transform duration-700"
-                      />
-                    ) : (
-                      <div className="flex items-center justify-center h-full opacity-10">
-                        <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <rect width="64" height="64" rx="16" fill="#e0e7ef" />
-                          <path d="M20 44L44 20M44 44L20 20" stroke="#b3b9c9" strokeWidth="4" strokeLinecap="round" />
-                        </svg>
-                      </div>
-                    )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex items-end p-6">
-                      <h3 className="text-white font-black text-xl tracking-wide group-hover:text-pink-300 transition-colors">{card.name}</h3>
-                    </div>
-                  </div>
-                </Link>
-              </AnimatedSection>
-            )) : (
-              <div className="col-span-2 md:col-span-4 rounded-3xl border border-dashed border-zinc-200 bg-zinc-50 py-20 text-center text-zinc-500">
-                No uploaded product images available for Discover More yet.
-              </div>
-            )}
-          </div>
-        </div>
-      </section>
-
       {/* ═══════════════════ NEWSLETTER ══════════════════════════════════════ */}
       <AnimatedSection animation="fade-up">
         <section className="py-20 bg-white">
@@ -597,13 +554,7 @@ export default async function LandingPage() {
             <p className="text-zinc-500 font-medium mb-8 max-w-lg mx-auto">
               Exclusive drops, seasonal sales & style guides — straight to your inbox.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 max-w-lg mx-auto w-full px-4 md:px-0">
-              <input type="email" placeholder="your@email.com"
-                className="w-full sm:flex-1 h-16 md:h-14 px-8 rounded-full bg-zinc-100 border-2 border-zinc-200 text-zinc-900 placeholder:text-zinc-400 text-base font-bold focus:outline-none focus:border-brand-navy focus:ring-4 focus:ring-brand-navy/10 transition-all shadow-inner" />
-              <Button className="h-16 md:h-14 px-10 rounded-full font-black text-sm md:text-base border-0 text-white whitespace-nowrap shadow-lg hover:scale-105 active:scale-95 transition-all bg-brand-navy hover:bg-brand-navy/90 w-full sm:w-auto">
-                JOIN THE CLUB
-              </Button>
-            </div>
+            <NewsletterForm />
             <p className="text-zinc-400 text-xs font-bold mt-4 uppercase tracking-widest">No spam. Unsubscribe anytime.</p>
           </div>
         </section>
