@@ -18,6 +18,7 @@ export async function getNotificationsAction() {
         where: {
           direction: "INBOUND",
           createdAt: { gte: since },
+          status: { not: "OPENED" },
         },
         orderBy: { createdAt: "desc" },
         take: 10,
@@ -85,5 +86,21 @@ export async function getNotificationsAction() {
   } catch (error) {
     console.error("Error fetching notifications:", error);
     return { success: false, error: "Failed to load notifications" };
+  }
+}
+
+export async function markNotificationAsReadAction(id: string) {
+  try {
+    if (id.startsWith("email-")) {
+      const emailId = id.replace("email-", "");
+      await prisma.emailMessage.update({
+        where: { id: emailId },
+        data: { status: "OPENED" },
+      });
+    }
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error marking notification as read:", error);
+    return { success: false, error: error.message };
   }
 }
