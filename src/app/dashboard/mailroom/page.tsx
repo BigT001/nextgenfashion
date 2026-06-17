@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { getInboxMessagesAction, deleteMessageAction } from "@/modules/email/actions/email.actions";
+import { markNotificationAsReadAction } from "@/modules/dashboard/actions/notifications.actions";
 import { format } from "date-fns";
 import { MailOpen, Inbox, Search, Trash2, CornerUpLeft } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { cn } from "@/lib/utils";
 
 export default function MailroomInboxPage() {
   const router = useRouter();
@@ -23,11 +25,46 @@ export default function MailroomInboxPage() {
         toast.success("Email deleted successfully");
         setMessages((prev) => prev.filter((m) => m.id !== id));
         setSelectedMessage(null);
+        // Dispatch custom events to notify layout and navbar counts
+        window.dispatchEvent(new Event("mailroom_updated"));
+        window.dispatchEvent(new Event("notifications_updated"));
       } else {
         toast.error(res.error || "Failed to delete email");
       }
     } catch (err: any) {
       toast.error(err.message || "An error occurred");
+    }
+  };
+
+  const handleSelectMessage = async (msg: any) => {
+    setSelectedMessage(msg);
+    if (msg.status !== "OPENED") {
+      try {
+        // Optimistically update local state status to read
+        setMessages((prev) =>
+          prev.map((m) => (m.id === msg.id ? { ...m, status: "OPENED" } : m))
+        );
+
+        // Save to localStorage read list so Navbar doesn't show it as unread on mount/refetch
+        const saved = localStorage.getItem("read_notifications");
+        let readIds: string[] = [];
+        if (saved) {
+          try {
+            readIds = JSON.parse(saved);
+          } catch {}
+        }
+        if (!readIds.includes(`email-${msg.id}`)) {
+          readIds.push(`email-${msg.id}`);
+          localStorage.setItem("read_notifications", JSON.stringify(readIds));
+        }
+
+        // Trigger updates in database and dispatch custom events
+        await markNotificationAsReadAction(`email-${msg.id}`);
+        window.dispatchEvent(new Event("notifications_updated"));
+        window.dispatchEvent(new Event("mailroom_updated"));
+      } catch (err) {
+        console.error("Failed to mark message as opened:", err);
+      }
     }
   };
 
@@ -70,18 +107,34 @@ export default function MailroomInboxPage() {
               {messages.map((msg) => (
                 <button
                   key={msg.id}
-                  onClick={() => setSelectedMessage(msg)}
-                  className={`w-full text-left p-4 hover:bg-zinc-100 transition-colors ${
-                    selectedMessage?.id === msg.id ? "bg-zinc-100 border-l-4 border-l-brand-navy" : "border-l-4 border-l-transparent"
-                  }`}
+                  onClick={() => handleSelectMessage(msg)}
+                  className={cn(
+                    "w-full text-left p-4 hover:bg-zinc-100 transition-colors relative",
+                    selectedMessage?.id === msg.id
+                      ? "bg-zinc-100 border-l-4 border-l-brand-navy"
+                      : "border-l-4 border-l-transparent"
+                  )}
                 >
                   <div className="flex justify-between items-start mb-1">
-                    <span className="font-bold text-sm text-brand-navy truncate pr-2">{msg.fromEmail}</span>
+                    <span className={cn(
+                      "text-sm text-brand-navy truncate pr-2 flex items-center gap-1.5",
+                      msg.status !== "OPENED" ? "font-extrabold animate-fade-in" : "font-semibold"
+                    )}>
+                      {msg.status !== "OPENED" && (
+                        <span className="size-2 rounded-full bg-rose-500 shrink-0 inline-block animate-pulse" title="Unread" />
+                      )}
+                      {msg.fromEmail}
+                    </span>
                     <span className="text-xs text-zinc-500 whitespace-nowrap">
                       {format(new Date(msg.createdAt), "MMM d")}
                     </span>
                   </div>
-                  <h4 className="text-sm font-semibold text-zinc-800 truncate">{msg.subject}</h4>
+                  <h4 className={cn(
+                    "text-sm truncate",
+                    msg.status !== "OPENED" ? "font-bold text-zinc-900" : "font-medium text-zinc-600"
+                  )}>
+                    {msg.subject}
+                  </h4>
                   <p className="text-xs text-zinc-500 truncate mt-1">
                     {msg.bodyText || "No preview available"}
                   </p>

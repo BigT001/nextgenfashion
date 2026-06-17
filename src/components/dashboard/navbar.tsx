@@ -75,12 +75,30 @@ export function Navbar() {
     setNotifLoading(false);
   }, [notifLoading]);
 
-  // Fetch on mount and every 60 seconds (Only for Admins)
+  // Fetch on mount, every 60 seconds, or on custom notifications_updated event (Only for Admins)
   useEffect(() => {
     if (isAdmin) {
       fetchNotifications();
       const interval = setInterval(fetchNotifications, 60_000);
-      return () => clearInterval(interval);
+
+      const handleUpdate = () => {
+        const saved = localStorage.getItem("read_notifications");
+        if (saved) {
+          try {
+            setReadNotifIds(JSON.parse(saved));
+          } catch (e) {
+            console.error("Failed to parse read notifications", e);
+          }
+        }
+        fetchNotifications();
+      };
+
+      window.addEventListener("notifications_updated", handleUpdate);
+
+      return () => {
+        clearInterval(interval);
+        window.removeEventListener("notifications_updated", handleUpdate);
+      };
     }
   }, [isAdmin, fetchNotifications]);
 

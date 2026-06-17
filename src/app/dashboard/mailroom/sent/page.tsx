@@ -21,6 +21,8 @@ export default function MailroomSentPage() {
         toast.success("Email deleted successfully");
         setMessages((prev) => prev.filter((m) => m.id !== id));
         setSelectedMessage(null);
+        // Dispatch custom events to notify layout
+        window.dispatchEvent(new Event("mailroom_updated"));
       } else {
         toast.error(res.error || "Failed to delete email");
       }
