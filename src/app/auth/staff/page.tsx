@@ -102,7 +102,7 @@ function StaffLoginForm() {
                     <div className="relative group">
                       <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-600 group-focus-within:text-brand-silver transition-colors" />
                       <Input 
-                        placeholder="ADMIN@NEXTGEN.OS" 
+                        placeholder="admin@nextgen.os" 
                         className="pl-12 h-14 bg-black/50 border-white/5 rounded-xl font-bold text-zinc-300 focus-visible:ring-brand-navy/50 focus-visible:border-brand-navy/50 transition-all" 
                         {...field} 
                       />

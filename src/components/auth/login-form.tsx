@@ -184,7 +184,7 @@ export function LoginForm() {
                         <div className="relative">
                           <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                           <Input 
-                            placeholder="ENTER EMAIL ADDRESS" 
+                            placeholder="Enter email address" 
                             className="pl-12 h-12 bg-zinc-50 border-none shadow-sm focus-visible:ring-brand-navy rounded-xl font-bold" 
                             {...field} 
                           />
@@ -244,7 +244,7 @@ export function LoginForm() {
             <div className="mt-8 pt-8 border-t border-zinc-100 flex flex-col items-center gap-4">
                 <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                     New Patron? {" "}
-                    <Link href="/auth/register" className="text-brand-navy hover:underline">Create an Account</Link>
+                    <Link href={`/auth/register${callbackUrl ? `?callbackUrl=${encodeURIComponent(callbackUrl)}` : ""}`} className="text-brand-navy hover:underline">Create an Account</Link>
                 </p>
                 <Link href="/" className="text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:text-brand-navy transition-colors flex items-center gap-2">
                     <ArrowLeft className="size-3" />
@@ -278,7 +278,7 @@ export function LoginForm() {
                     type="email"
                     value={resetEmail}
                     onChange={(e) => setResetEmail(e.target.value)}
-                    placeholder="ENTER EMAIL ADDRESS" 
+                    placeholder="Enter email address" 
                     className="pl-12 h-12 bg-zinc-50 border-none shadow-sm focus-visible:ring-brand-navy rounded-xl font-bold" 
                     required
                   />

@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { UserPlus, Mail, Lock, User, Phone, ArrowRight } from "lucide-react";
 import Link from "next/link";
@@ -41,6 +41,8 @@ type RegisterValues = z.infer<typeof registerSchema>;
 
 export function RegisterForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callbackUrl");
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<RegisterValues>({
@@ -74,9 +76,10 @@ export function RegisterForm() {
         });
         
         if (authResult?.error) {
-            router.push("/auth/login");
+            router.push(`/auth/login${callbackUrl ? `?callbackUrl=${encodeURIComponent(callbackUrl)}` : ""}`);
         } else {
-            router.push("/account");
+            const destination = callbackUrl || "/account";
+            router.push(destination);
             router.refresh();
         }
       } else {
@@ -102,7 +105,7 @@ export function RegisterForm() {
                 <div className="relative">
                   <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input 
-                    placeholder="ENTER FULL NAME" 
+                    placeholder="Enter full name" 
                     className="pl-12 h-12 bg-zinc-50 border-none shadow-sm focus-visible:ring-brand-navy rounded-xl font-bold" 
                     {...field} 
                   />
@@ -124,7 +127,7 @@ export function RegisterForm() {
                     <div className="relative">
                       <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input 
-                        placeholder="NAME@DOMAIN.COM" 
+                        placeholder="name@domain.com" 
                         className="pl-12 h-12 bg-zinc-50 border-none shadow-sm focus-visible:ring-brand-navy rounded-xl font-bold" 
                         {...field} 
                       />
@@ -171,7 +174,7 @@ export function RegisterForm() {
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-2">Secret Code</FormLabel>
+                  <FormLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-2">Password</FormLabel>
                   <FormControl>
                     <div className="relative">
                       <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -193,7 +196,7 @@ export function RegisterForm() {
               name="confirmPassword"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-2">Confirm Code</FormLabel>
+                  <FormLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-2">Confirm Password</FormLabel>
                   <FormControl>
                     <div className="relative">
                       <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -229,7 +232,7 @@ export function RegisterForm() {
         <div className="text-center pt-2">
             <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                 Already have an account? {" "}
-                <Link href="/auth/login" className="text-brand-navy hover:underline">SIGN IN HERE</Link>
+                <Link href={`/auth/login${callbackUrl ? `?callbackUrl=${encodeURIComponent(callbackUrl)}` : ""}`} className="text-brand-navy hover:underline">SIGN IN HERE</Link>
             </p>
         </div>
       </form>

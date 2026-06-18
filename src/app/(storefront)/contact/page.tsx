@@ -58,22 +58,22 @@ export default function ContactPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase tracking-widest ml-1">First Name</label>
-                    <input type="text" className="w-full h-12 px-5 rounded-xl bg-zinc-50 border border-border/50 focus:ring-1 focus:ring-brand-navy outline-none font-bold text-xs" placeholder="PATRON" />
+                    <input type="text" className="w-full h-12 px-5 rounded-xl bg-zinc-50 border border-border/50 focus:ring-1 focus:ring-brand-navy outline-none font-bold text-xs" placeholder="Patron" />
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase tracking-widest ml-1">Last Name</label>
-                    <input type="text" className="w-full h-12 px-5 rounded-xl bg-zinc-50 border border-border/50 focus:ring-1 focus:ring-brand-navy outline-none font-bold text-xs" placeholder="NAME" />
+                    <input type="text" className="w-full h-12 px-5 rounded-xl bg-zinc-50 border border-border/50 focus:ring-1 focus:ring-brand-navy outline-none font-bold text-xs" placeholder="Name" />
                   </div>
                 </div>
 
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase tracking-widest ml-1">Email Address</label>
-                  <input type="email" className="w-full h-12 px-5 rounded-xl bg-zinc-50 border border-border/50 focus:ring-1 focus:ring-brand-navy outline-none font-bold text-xs" placeholder="EMAIL@NEXTGEN.COM" />
+                  <input type="email" className="w-full h-12 px-5 rounded-xl bg-zinc-50 border border-border/50 focus:ring-1 focus:ring-brand-navy outline-none font-bold text-xs" placeholder="email@nextgen.com" />
                 </div>
 
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase tracking-widest ml-1">Message Detail</label>
-                  <textarea className="w-full h-32 px-5 py-4 rounded-xl bg-zinc-50 border border-border/50 focus:ring-1 focus:ring-brand-navy outline-none font-bold text-xs resize-none" placeholder="HOW CAN WE ASSIST YOUR COLLECTION?" />
+                  <textarea className="w-full h-32 px-5 py-4 rounded-xl bg-zinc-50 border border-border/50 focus:ring-1 focus:ring-brand-navy outline-none font-bold text-xs resize-none" placeholder="How can we assist your collection?" />
                 </div>
 
                 <Button className="w-full h-12 bg-brand-navy hover:bg-brand-navy/90 text-white font-black rounded-xl text-[10px] uppercase tracking-widest shadow-2xl shadow-brand-navy/20 group transition-all">

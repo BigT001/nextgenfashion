@@ -197,56 +197,54 @@ export default function AccountClient({ initialPatronData, initialOrders }: Acco
       <div className="container mx-auto px-4 sm:px-6 relative z-10">
         <div className="max-w-6xl mx-auto space-y-6 sm:space-y-10">
           
-          {/* Refined Profile Header - Mobile Optimized */}
-          <div className="bg-white/95 border border-zinc-200 rounded-[2.5rem] shadow-[0_35px_95px_-40px_rgba(15,23,42,0.35)] p-6 sm:p-8 backdrop-blur-xl">
-            <div className="grid gap-6 xl:grid-cols-[auto_1fr_auto] items-center">
-              <div className="relative mx-auto xl:mx-0 w-24 h-24 rounded-full bg-slate-100 shadow-xl overflow-hidden ring-4 ring-white/90">
-                {patronData?.image || session?.user?.image ? (
-                  <NextImage src={patronData?.image || session?.user?.image} alt="Profile" fill className="object-cover" />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center text-brand-navy">
-                    <User className="size-10" />
-                  </div>
-                )}
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="absolute -bottom-1 -right-1 h-10 w-10 rounded-full bg-brand-navy text-white flex items-center justify-center shadow-2xl border-4 border-white hover:scale-105 transition-transform"
-                >
-                  <Camera className="size-4" />
-                </button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleImageUpload}
-                />
-              </div>
+          {/* Refined Profile Header - TikTok Style Centered Layout (Transparent background, no card) */}
+          <div className="flex flex-col items-center text-center space-y-4 py-4 sm:py-6">
+            <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-slate-100 shadow-xl overflow-hidden ring-4 ring-white/90">
+              {patronData?.image || session?.user?.image ? (
+                <NextImage src={patronData?.image || session?.user?.image} alt="Profile" fill className="object-cover" />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-brand-navy">
+                  <User className="size-10 sm:size-12" />
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="absolute -bottom-1 -right-1 h-9 w-9 sm:h-10 sm:w-10 rounded-full bg-brand-navy text-white flex items-center justify-center shadow-2xl border-4 border-white hover:scale-105 transition-transform"
+              >
+                <Camera className="size-3.5 sm:size-4" />
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleImageUpload}
+              />
+            </div>
 
-              <div className="min-w-0">
-                <p className="text-sm font-semibold uppercase tracking-[0.35em] text-brand-navy/70">Your account</p>
-                <h1 className="mt-3 text-3xl sm:text-4xl font-black tracking-tight text-zinc-950 leading-tight">{session?.user?.name || "Customer"}</h1>
-                <p className="mt-3 max-w-2xl text-sm sm:text-base text-muted-foreground">Welcome back! Manage your profile, review your order history, and track all purchases from one premium dashboard.</p>
-              </div>
+            <div className="space-y-1">
+              <h1 className="text-lg sm:text-xl font-black tracking-tight text-zinc-950 leading-tight">
+                {session?.user?.name || "Customer"}
+              </h1>
+            </div>
 
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Button
-                  onClick={() => setIsSettingsOpen(true)}
-                  variant="outline"
-                  className="h-14 rounded-[1.5rem] border border-zinc-200 bg-white text-zinc-950 font-black tracking-[0.24em] uppercase shadow-sm hover:border-brand-navy hover:bg-brand-navy/5"
-                >
-                  <Settings className="mr-2 size-4" />
-                  Settings
-                </Button>
-                <Button
-                  onClick={() => signOut({ callbackUrl: getSignOutRedirectUrl("/") })}
-                  className="h-14 rounded-[1.5rem] bg-zinc-950 text-white font-black tracking-[0.24em] uppercase shadow-xl shadow-zinc-950/20 hover:bg-zinc-800"
-                >
-                  <LogOut className="mr-2 size-4" />
-                  Log out
-                </Button>
-              </div>
+            <div className="flex items-center justify-center gap-3 w-full max-w-sm">
+              <Button
+                onClick={() => setIsSettingsOpen(true)}
+                variant="outline"
+                className="flex-1 h-12 sm:h-14 rounded-2xl border border-zinc-200 bg-white text-zinc-950 font-black tracking-widest text-[10px] sm:text-xs uppercase shadow-sm hover:border-brand-navy hover:bg-brand-navy/5 flex items-center justify-center gap-1.5"
+              >
+                <Settings className="size-4" />
+                Settings
+              </Button>
+              <Button
+                onClick={() => signOut({ callbackUrl: getSignOutRedirectUrl("/") })}
+                className="flex-1 h-12 sm:h-14 rounded-2xl bg-zinc-950 text-white font-black tracking-widest text-[10px] sm:text-xs uppercase shadow-xl shadow-zinc-950/10 hover:bg-zinc-800 flex items-center justify-center gap-1.5"
+              >
+                <LogOut className="size-4" />
+                Log out
+              </Button>
             </div>
           </div>
 
@@ -390,33 +388,6 @@ export default function AccountClient({ initialPatronData, initialOrders }: Acco
                         <p className="text-[11px] leading-6 text-muted-foreground italic bg-zinc-50 p-3 rounded-2xl border border-border/10 break-words">
                             {patronData?.address || "No active address recorded."}
                         </p>
-                    </div>
-
-                    <div className="space-y-4 relative z-10">
-                         <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 rounded-2xl bg-brand-navy/10 flex items-center justify-center text-brand-navy">
-                                <CreditCard className="size-4" />
-                            </div>
-                            <div>
-                              <p className="text-[10px] font-black uppercase tracking-[0.32em] text-muted-foreground">Fulfillment Pulse</p>
-                              <p className="text-sm font-black tracking-tight text-foreground">Order summary</p>
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="bg-zinc-50 p-3 rounded-2xl border border-border/10 text-center">
-                                <p className="text-[9px] font-black uppercase tracking-[0.28em] text-muted-foreground">Orders</p>
-                                <p className="mt-1 text-lg font-black tracking-tight">{orders.length}</p>
-                            </div>
-                            <div className="bg-zinc-50 p-3 rounded-2xl border border-border/10 text-center">
-                                <p className="text-[9px] font-black uppercase tracking-[0.28em] text-muted-foreground">Investment</p>
-                                <p className="mt-1 text-lg font-black tracking-tight">₦{orders.reduce((acc, o) => acc + Number(o.totalAmount), 0).toLocaleString()}</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="pt-2 flex items-center justify-center gap-2 text-[8px] font-black text-muted-foreground/40 uppercase tracking-[0.3em]">
-                        <ShieldCheck className="size-3" />
-                        SECURED ECOSYSTEM
                     </div>
                 </div>
             </div>
