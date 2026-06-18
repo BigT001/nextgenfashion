@@ -28,6 +28,7 @@ import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { getPOSProductsAction } from "@/modules/products/actions/pos.actions";
+import { getAutoVatSetting } from "@/modules/settings/actions/settings.actions";
 import { createSaleAction } from "@/modules/pos/actions/sale.actions";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -52,7 +53,8 @@ export default function POSPage() {
     suspendedSales,
     resumeSale,
     deleteSuspendedSale,
-    calculateTotals
+    calculateTotals,
+    setTaxRate
   } = usePOSStore();
   
   const [search, setSearch] = useState("");
@@ -77,6 +79,14 @@ export default function POSPage() {
     }
     setIsLoading(false);
   }, []);
+
+  useEffect(() => {
+    async function loadVatSetting() {
+      const vatEnabled = await getAutoVatSetting();
+      setTaxRate(vatEnabled ? 0.075 : 0.0);
+    }
+    loadVatSetting();
+  }, [setTaxRate]);
 
   useEffect(() => {
     fetchProducts();

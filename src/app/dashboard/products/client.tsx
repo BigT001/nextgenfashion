@@ -59,7 +59,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { ColumnDef } from "@tanstack/react-table";
 
-export default function ProductsClient({ initialData }: { initialData: any }) {
+export default function ProductsClient({ initialData, vatEnabled }: { initialData: any; vatEnabled?: boolean }) {
   const [data, setData] = useState<any>(initialData);
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
@@ -637,11 +637,28 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
       accessorKey: "retailPrice",
       header: "RETAIL",
       meta: { className: "hidden md:table-cell" },
-      cell: ({ row }) => (
-        <span className="font-black text-sm text-foreground">
-          ₦{Number(row.original.retailPrice || 0).toLocaleString()}
-        </span>
-      ),
+      cell: ({ row }) => {
+        const basePrice = Number(row.original.retailPrice || 0);
+        if (vatEnabled) {
+          const vat = Math.round(basePrice * 0.075);
+          const finalPrice = basePrice + vat;
+          return (
+            <div className="flex flex-col gap-0.5">
+              <span className="font-black text-sm text-foreground">
+                ₦{finalPrice.toLocaleString()}
+              </span>
+              <span className="text-[9px] font-black uppercase text-blue-600 tracking-wider">
+                ₦{basePrice.toLocaleString()} + ₦{vat.toLocaleString()} VAT
+              </span>
+            </div>
+          );
+        }
+        return (
+          <span className="font-black text-sm text-foreground">
+            ₦{basePrice.toLocaleString()}
+          </span>
+        );
+      },
     },
     {
       accessorKey: "status",
@@ -789,7 +806,14 @@ export default function ProductsClient({ initialData }: { initialData: any }) {
           </div>
           <div className="rounded-3xl border border-border/30 bg-muted/10 p-3">
             <p className="text-[9px] uppercase tracking-[0.35em] text-muted-foreground font-black">Retail</p>
-            <p className="mt-1 font-black">₦{Number(item.retailPrice || 0).toLocaleString()}</p>
+            {vatEnabled ? (
+              <div className="space-y-0.5">
+                <p className="mt-1 font-black">₦{(Math.round(Number(item.retailPrice || 0) * 1.075)).toLocaleString()}</p>
+                <p className="text-[9px] font-black text-blue-600 uppercase tracking-widest leading-none">Base: ₦{Number(item.retailPrice || 0).toLocaleString()}<br />VAT: ₦{Math.round(Number(item.retailPrice || 0) * 0.075).toLocaleString()}</p>
+              </div>
+            ) : (
+              <p className="mt-1 font-black">₦{Number(item.retailPrice || 0).toLocaleString()}</p>
+            )}
           </div>
           <div className="rounded-3xl border border-border/30 bg-muted/10 p-3">
             <p className="text-[9px] uppercase tracking-[0.35em] text-muted-foreground font-black">Sizes</p>

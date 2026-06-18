@@ -141,8 +141,7 @@ export const usePOSStore = create<POSState>()(
       }),
 
       calculateTotals: () => {
-        const { cart, discount, discountType } = get();
-        const taxRate = 0.0; // Force tax rate to 0.0 to prevent extra charge on checkout
+        const { cart, discount, discountType, taxRate } = get();
         
         // 1. Calculate Base Subtotal (sum of items * quantity)
         // Note: individual item discounts are subtracted from their respective totals

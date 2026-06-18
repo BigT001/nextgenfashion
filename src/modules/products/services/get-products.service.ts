@@ -1,6 +1,7 @@
 import { ProductQueries } from "../queries/product.queries";
 import { serialize } from "@/lib/server-serialization";
 import { ResolveProductImagesService } from "@/modules/media/services/resolve-product-images.service";
+import { getAutoVatSetting } from "@/modules/settings/actions/settings.actions";
 
 /**
  * GET PRODUCTS SERVICE
@@ -10,17 +11,36 @@ import { ResolveProductImagesService } from "@/modules/media/services/resolve-pr
  * objects into plain JS values safe for the Server→Client boundary.
  */
 export class GetProductsService {
-  private static normalizeProduct(product: any) {
+  private static normalizeProduct(product: any, vatEnabled = false) {
     if (!product) return product;
-    const variants = (product.ProductVariant ?? []).map((variant: any) => ({
-      ...variant,
-      inventory: variant.Inventory ?? variant.inventory,
-    }));
-    return { ...product, variants };
+
+    const basePriceNum = product.basePrice ? Number(product.basePrice) : null;
+    const effectiveBasePrice = basePriceNum !== null 
+      ? (vatEnabled ? Math.round(basePriceNum * 1.075) : basePriceNum)
+      : null;
+
+    const variants = (product.ProductVariant ?? []).map((variant: any) => {
+      const priceNum = variant.price ? Number(variant.price) : null;
+      const effectivePrice = priceNum !== null 
+        ? (vatEnabled ? Math.round(priceNum * 1.075) : priceNum)
+        : null;
+
+      return {
+        ...variant,
+        price: effectivePrice,
+        inventory: variant.Inventory ?? variant.inventory,
+      };
+    });
+
+    return { 
+      ...product, 
+      basePrice: effectiveBasePrice,
+      variants 
+    };
   }
 
-  private static normalizeProducts(products: any[]) {
-    return products.map((product) => this.normalizeProduct(product));
+  private static normalizeProducts(products: any[], vatEnabled = false) {
+    return products.map((product) => this.normalizeProduct(product, vatEnabled));
   }
 
   static async execute(params?: {
@@ -42,8 +62,9 @@ export class GetProductsService {
         skip: params?.offset,
         random: params?.random,
       };
+      const vatEnabled = await getAutoVatSetting();
       const result = await ProductQueries.findAll(searchParams);
-      const normalized = this.normalizeProducts(result);
+      const normalized = this.normalizeProducts(result, vatEnabled);
       const resolved = await ResolveProductImagesService.resolve(normalized, {
         allowRemoteImageDiscovery: false,
       });
@@ -59,7 +80,8 @@ export class GetProductsService {
     try {
       const result = await ProductQueries.findById(id);
       if (!result) return null;
-      const normalized = this.normalizeProduct(result);
+      const vatEnabled = await getAutoVatSetting();
+      const normalized = this.normalizeProduct(result, vatEnabled);
       const [resolved] = await ResolveProductImagesService.resolve([normalized], {
         allowRemoteImageDiscovery: options?.allowRemoteImageDiscovery,
       });
@@ -73,7 +95,8 @@ export class GetProductsService {
   static async findFeatured(limit = 8) {
     try {
       const result = await ProductQueries.findFeatured(limit);
-      const normalized = this.normalizeProducts(result);
+      const vatEnabled = await getAutoVatSetting();
+      const normalized = this.normalizeProducts(result, vatEnabled);
       const resolved = await ResolveProductImagesService.resolve(normalized, {
         allowRemoteImageDiscovery: false,
       });

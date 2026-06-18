@@ -111,16 +111,31 @@ export function POSSummary({ onCheckout, isProcessing }: POSSummaryProps) {
         </CardHeader>
 
         <CardContent className="p-8 space-y-6 overflow-y-auto scrollbar-hide">
-          <div className="pt-6 bg-white/50 p-6 rounded-[2rem] border border-zinc-100">
+          <div className="bg-white/50 p-6 rounded-[2rem] border border-zinc-100 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
-                      <span className="text-[12px] font-black uppercase tracking-widest text-muted-foreground">Total</span>
-                      <p className="text-3xl font-black tracking-tighter text-emerald-500">₦{Math.round(total).toLocaleString()}</p>
+                      <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Total Due</span>
+                      <p className="text-2xl font-black tracking-tighter text-emerald-500">₦{Math.round(total).toLocaleString()}</p>
                   </div>
                   <div className="space-y-1 text-right border-l border-zinc-200 pl-4">
-                      <span className="text-[12px] font-black uppercase tracking-widest text-muted-foreground">Amount Due</span>
-                      <p className="text-3xl font-black tracking-tighter text-orange-500">₦{Math.round(total).toLocaleString()}</p>
+                      <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Subtotal</span>
+                      <p className="text-2xl font-black tracking-tighter text-zinc-700">₦{Math.round(subtotal).toLocaleString()}</p>
                   </div>
+              </div>
+              
+              <div className="space-y-2 pt-4 border-t border-zinc-200/50 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                  {discount > 0 && (
+                      <div className="flex justify-between text-rose-500">
+                          <span>Discount</span>
+                          <span>-{discountType === "PERCENTAGE" ? `${discount}%` : `₦${Math.round(discount).toLocaleString()}`}</span>
+                      </div>
+                  )}
+                  {taxAmount > 0 && (
+                      <div className="flex justify-between text-blue-500">
+                          <span>Auto-VAT (7.5%)</span>
+                          <span>₦{Math.round(taxAmount).toLocaleString()}</span>
+                      </div>
+                  )}
               </div>
           </div>
 
@@ -210,6 +225,23 @@ export function POSSummary({ onCheckout, isProcessing }: POSSummaryProps) {
                   {customer?.name || "OFFLINE"}
                 </span>
               </div>
+
+              {taxAmount > 0 && (
+                <>
+                  <div className="flex justify-between items-center text-xs font-black uppercase tracking-widest">
+                    <span className="text-muted-foreground">Subtotal</span>
+                    <span className="text-foreground font-black">
+                      ₦{Math.round(subtotal).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs font-black uppercase tracking-widest text-blue-600">
+                    <span>Auto-VAT (7.5%)</span>
+                    <span className="font-black">
+                      ₦{Math.round(taxAmount).toLocaleString()}
+                    </span>
+                  </div>
+                </>
+              )}
               
               <div className="flex justify-between items-center pt-2 border-t border-zinc-200">
                 <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">Total Cash Tendered</span>
