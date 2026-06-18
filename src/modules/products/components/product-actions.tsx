@@ -163,7 +163,19 @@ export function ProductActions({ product }: ProductActionsProps) {
       }
     };
 
-    if (hasColors) {
+    if (hasColors && !hasSizes) {
+      // If product has colors but no sizes (One Size), select based on active color tab
+      if (activeTab) {
+        const v =
+          variants.find(
+            (vv) =>
+              normalize(vv.color) === activeTab &&
+              (vv.inventory?.quantity ?? 0) > 0
+          ) ??
+          variants.find((vv) => normalize(vv.color) === activeTab);
+        if (v) pushVariant(v);
+      }
+    } else if (hasColors) {
       for (const [color, sizes] of Object.entries(selectedSizesByColor)) {
         if (!sizes || sizes.length === 0) continue;
         for (const size of sizes) {
@@ -198,7 +210,7 @@ export function ProductActions({ product }: ProductActionsProps) {
     }
 
     return result;
-  }, [hasColors, selectedSizesByColor, variants]);
+  }, [hasColors, hasSizes, activeTab, selectedSizesByColor, variants]);
 
   // sync qty map when selected variants change
   useEffect(() => {
@@ -521,6 +533,14 @@ export function ProductActions({ product }: ProductActionsProps) {
               const stock = Math.max(0, v.inventory?.quantity ?? 0);
               const qty = qtyMap[v.id] ?? 1;
 
+              const showColor = color.length > 0;
+              const showSize = hasSizes && size && size !== "OS";
+              const label = showColor && showSize 
+                ? `${color} / Size ${size}` 
+                : showColor 
+                ? color 
+                : `Size ${size}`;
+
               return (
                 <div
                   key={v.id}
@@ -535,11 +555,14 @@ export function ProductActions({ product }: ProductActionsProps) {
                     )}
                     <div className="min-w-0">
                       <p className="text-[11px] font-black uppercase tracking-widest text-zinc-900 truncate">
-                        {color ? `${color} / ` : ""}Size {size}
+                        {label}
+                      </p>
+                      <p className="text-xs font-black text-brand-navy mt-0.5">
+                        ₦{Number(v.price ?? product.basePrice).toLocaleString()}
                       </p>
                       <p
                         className={cn(
-                          "text-[9px] font-black uppercase tracking-widest",
+                          "text-[9px] font-black uppercase tracking-widest mt-1",
                           stock <= 0
                             ? "text-rose-500"
                             : stock <= 3

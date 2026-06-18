@@ -136,20 +136,33 @@ export class UpdateProductService {
           });
         }
 
+        // Fetch all existing variants in the system to verify SKU collisions in-memory
+        const allExistingVariants = await tx.productVariant.findMany({
+          select: { id: true, sku: true }
+        });
+        const skuToIdMap = new Map<string, string>(
+          allExistingVariants.map(v => [v.sku.toUpperCase(), v.id])
+        );
+
         for (const v of variants) {
           let variantSku = String(v.sku || "").toUpperCase();
           const isTempId = !v.id || v.id.startsWith("var-");
           const matchedVariant = isTempId ? null : existingVariants.find(ev => ev.id === v.id);
 
           if (matchedVariant) {
-            const existingBySku = await tx.productVariant.findUnique({ where: { sku: variantSku } });
-            if (existingBySku && existingBySku.id !== matchedVariant.id) {
+            const existingIdBySku = skuToIdMap.get(variantSku);
+            if (existingIdBySku && existingIdBySku !== matchedVariant.id) {
               let candidate = `${variantSku}-${Date.now().toString().slice(-4)}`;
-              while (await tx.productVariant.findUnique({ where: { sku: candidate } })) {
+              let count = 0;
+              while (skuToIdMap.has(candidate) && count < 100) {
                 candidate = `${variantSku}-${Math.floor(1000 + Math.random() * 9000)}`;
+                count++;
               }
               variantSku = candidate;
             }
+
+            // Update local registry mapping
+            skuToIdMap.set(variantSku, matchedVariant.id);
 
             await tx.productVariant.update({
               where: { id: matchedVariant.id },
@@ -174,11 +187,13 @@ export class UpdateProductService {
               }
             });
           } else {
-            const existingBySku = await tx.productVariant.findUnique({ where: { sku: variantSku } });
-            if (existingBySku) {
+            const existingIdBySku = skuToIdMap.get(variantSku);
+            if (existingIdBySku) {
               let candidate = `${variantSku}-${Date.now().toString().slice(-4)}`;
-              while (await tx.productVariant.findUnique({ where: { sku: candidate } })) {
+              let count = 0;
+              while (skuToIdMap.has(candidate) && count < 100) {
                 candidate = `${variantSku}-${Math.floor(1000 + Math.random() * 9000)}`;
+                count++;
               }
               variantSku = candidate;
             }
@@ -194,6 +209,9 @@ export class UpdateProductService {
               }
             });
 
+            // Register newly created variant locally to prevent self-collision
+            skuToIdMap.set(variantSku, createdVariant.id);
+
             await tx.inventory.create({
               data: {
                 variantId: createdVariant.id,
@@ -206,6 +224,9 @@ export class UpdateProductService {
       }
 
       return updatedProduct;
+    }, {
+      maxWait: 15000,
+      timeout: 30000
     });
 
     // Final fetch to ensure everything is committed
