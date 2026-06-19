@@ -73,16 +73,39 @@ export function VariantBuilder({
       )
     );
 
-  const parseSizes = (value: string) =>
-    Array.from(
-      new Set(
-        value
-          .toString()
-          .split(/[,\/|]+/)
-          .map((size) => size.trim())
-          .filter(Boolean)
-      )
-    );
+  const parseSizesWithQuantities = (value: string, defaultQty: number) => {
+    const rawEntries = value
+      .toString()
+      .split(/[,\/|]+/)
+      .map((entry) => entry.trim())
+      .filter(Boolean);
+
+    const parsed: Array<{ size: string; quantity: number }> = [];
+    const seen = new Set<string>();
+
+    for (const entry of rawEntries) {
+      let sizeName = entry;
+      let quantity = defaultQty;
+
+      // Try split by ":" or "="
+      const parts = entry.split(/[:=]/);
+      if (parts.length === 2) {
+        sizeName = parts[0].trim();
+        const qtyVal = parseInt(parts[1].trim(), 10);
+        if (!isNaN(qtyVal) && qtyVal >= 0) {
+          quantity = qtyVal;
+        }
+      }
+
+      const normalizedName = sizeName.toLowerCase();
+      if (!seen.has(normalizedName) && sizeName.length > 0) {
+        seen.add(normalizedName);
+        parsed.push({ size: sizeName, quantity });
+      }
+    }
+
+    return parsed;
+  };
 
   const handleAddVariant = () => {
     const colors = parseColors(newColor);
@@ -91,13 +114,14 @@ export function VariantBuilder({
       return;
     }
 
-    const sizes = parseSizes(newSizes);
+    const defaultQty = Number(newQuantity) >= 0 ? Number(newQuantity) : 0;
+    const sizes = parseSizesWithQuantities(newSizes, defaultQty);
     if (sizes.length === 0) {
       toast.error("At least one size is required");
       return;
     }
 
-    if (Number(newQuantity) < 0) {
+    if (defaultQty < 0) {
       toast.error("Quantity cannot be negative");
       return;
     }
@@ -109,7 +133,7 @@ export function VariantBuilder({
 
     const newVariants: Variant[] = [];
     for (const color of colors) {
-      for (const size of sizes) {
+      for (const { size, quantity } of sizes) {
         const key = `${color.toLowerCase()}|${size.toLowerCase()}`;
         if (!existingKeys.has(key)) {
           newVariants.push({
@@ -117,7 +141,7 @@ export function VariantBuilder({
             color,
             size,
             sku: generateSku(color, size),
-            quantity: Number(newQuantity),
+            quantity,
           });
         }
       }
@@ -228,18 +252,18 @@ export function VariantBuilder({
                     Separate multiple colors with commas, slashes, or pipes.
                   </p>
                 </div>
-                <div>
+                 <div>
                   <label className="text-xs font-bold uppercase tracking-widest">
                     Sizes
                   </label>
                   <Input
-                    placeholder="e.g. S, M, L or 0-3m | 3-6m"
+                    placeholder="e.g. S:5, M:10, L:15 or S, M, L"
                     value={newSizes}
                     onChange={(e) => setNewSizes(e.target.value)}
                     className="mt-1"
                   />
-                  <p className="mt-1 text-[10px] text-muted-foreground">
-                    Separate multiple sizes with commas, slashes, or pipes.
+                  <p className="mt-1 text-[10px] text-muted-foreground leading-normal">
+                    Separate multiple sizes with commas. To set custom stock per size, use size:quantity (e.g. S:5, M:10).
                   </p>
                 </div>
                 <div>
