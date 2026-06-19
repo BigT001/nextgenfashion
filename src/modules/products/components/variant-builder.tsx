@@ -62,6 +62,17 @@ export function VariantBuilder({
     return `${namePart}-${colorPart}${sizePart}-${random}`;
   };
 
+  const parseColors = (value: string) =>
+    Array.from(
+      new Set(
+        value
+          .toString()
+          .split(/[,\/|]+/)
+          .map((color) => color.trim())
+          .filter(Boolean)
+      )
+    );
+
   const parseSizes = (value: string) =>
     Array.from(
       new Set(
@@ -74,8 +85,9 @@ export function VariantBuilder({
     );
 
   const handleAddVariant = () => {
-    if (!newColor.trim()) {
-      toast.error("Color is required");
+    const colors = parseColors(newColor);
+    if (colors.length === 0) {
+      toast.error("At least one color is required");
       return;
     }
 
@@ -90,25 +102,29 @@ export function VariantBuilder({
       return;
     }
 
-    const normalizedColor = newColor.trim();
     const baseVariants = editingId ? variants.filter((v) => v.id !== editingId) : variants;
     const existingKeys = new Set(
       baseVariants.map((v) => `${v.color.toLowerCase()}|${v.size.toLowerCase()}`)
     );
 
-    const newVariants = sizes
-      .map((size) => ({ size, key: `${normalizedColor.toLowerCase()}|${size.toLowerCase()}` }))
-      .filter((entry) => !existingKeys.has(entry.key))
-      .map((entry) => ({
-        id: `var-${Date.now()}-${Math.random()}`,
-        color: normalizedColor,
-        size: entry.size,
-        sku: generateSku(normalizedColor, entry.size),
-        quantity: Number(newQuantity),
-      }));
+    const newVariants: Variant[] = [];
+    for (const color of colors) {
+      for (const size of sizes) {
+        const key = `${color.toLowerCase()}|${size.toLowerCase()}`;
+        if (!existingKeys.has(key)) {
+          newVariants.push({
+            id: `var-${Date.now()}-${Math.random()}`,
+            color,
+            size,
+            sku: generateSku(color, size),
+            quantity: Number(newQuantity),
+          });
+        }
+      }
+    }
 
     if (newVariants.length === 0) {
-      toast.error("All selected size combinations already exist");
+      toast.error("All selected variant combinations already exist");
       return;
     }
 
@@ -208,6 +224,9 @@ export function VariantBuilder({
                     onChange={(e) => setNewColor(e.target.value)}
                     className="mt-1"
                   />
+                  <p className="mt-1 text-[10px] text-muted-foreground">
+                    Separate multiple colors with commas, slashes, or pipes.
+                  </p>
                 </div>
                 <div>
                   <label className="text-xs font-bold uppercase tracking-widest">
