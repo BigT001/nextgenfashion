@@ -6,6 +6,11 @@ export const UserQueries = {
    */
   async getAllStaff() {
     return prisma.user.findMany({
+      where: {
+        role: {
+          in: ["ADMIN", "SUPERADMIN", "STAFF"],
+        },
+      },
       include: {
         Sale: {
           select: {
@@ -39,8 +44,20 @@ export const UserQueries = {
    */
   async getStaffKPIs() {
     const [totalStaff, adminCount] = await Promise.all([
-      prisma.user.count(),
-      prisma.user.count({ where: { role: "ADMIN" } })
+      prisma.user.count({
+        where: {
+          role: {
+            in: ["ADMIN", "SUPERADMIN", "STAFF"],
+          },
+        },
+      }),
+      prisma.user.count({
+        where: {
+          role: {
+            in: ["ADMIN", "SUPERADMIN"],
+          },
+        },
+      }),
     ]);
 
     return {
