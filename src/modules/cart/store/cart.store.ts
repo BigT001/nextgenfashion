@@ -11,6 +11,8 @@ export type CartItem = {
   size?: string;
   color?: string;
   availableStock?: number;
+  category?: string;
+  weight?: number;
 };
 
 interface CartState {

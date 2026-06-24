@@ -305,6 +305,7 @@ export function ProductActions({ product }: ProductActionsProps) {
     }
 
     targetVariants.forEach((v) => {
+      const primaryCategory = product.categories?.[0]?.name || product.Category?.name || "Apparel";
       addItem({
         id: product.id,
         variantId: v.id,
@@ -315,6 +316,8 @@ export function ProductActions({ product }: ProductActionsProps) {
         size: splitSizes(v.size)[0] || undefined,
         color: normalize(v.color) || undefined,
         availableStock: v.inventory?.quantity ?? 0,
+        category: primaryCategory,
+        weight: Number(product.weight) || 0.5,
       });
     });
 

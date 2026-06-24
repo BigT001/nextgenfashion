@@ -251,6 +251,34 @@ export async function createOrderAction(data: CreateOrderActionPayload) {
     const requestedStatus = String(data.status || "PENDING").toUpperCase();
     const statusValue = KNOWN_STATUSES.includes(requestedStatus) ? requestedStatus : "PENDING";
 
+    // Verify payment BEFORE starting transaction to avoid db locks/timeouts
+    let verifiedPaymentMethod: PaymentMethod = data.paymentMethod;
+    let providerPayload = data.paymentProviderData ?? null;
+
+    if (data.paymentRef) {
+      try {
+        const verified = await PaymentService.verifyTransaction(data.paymentRef);
+        if (verified) {
+          verifiedPaymentMethod = PaymentService.resolvePaymentMethod(verified);
+          providerPayload = verified;
+          console.log("[createOrderAction] verified payment method from provider", { verifiedPaymentMethod, reference: data.paymentRef });
+        }
+      } catch (verifyError) {
+        console.warn("[createOrderAction] unable to verify payment method with provider, falling back to provider payload or provided value", {
+          error: verifyError,
+          providedMethod: data.paymentMethod,
+          paymentRef: data.paymentRef,
+        });
+      }
+    }
+
+    if (providerPayload) {
+      const fallbackMethod = PaymentService.resolvePaymentMethod(providerPayload);
+      if (fallbackMethod !== "CARD" || data.paymentMethod === "TRANSFER") {
+        verifiedPaymentMethod = fallbackMethod;
+      }
+    }
+
     let customer: { id: string; email?: string | null } | null = null;
     // Try the transaction; if the database enum isn't migrated yet and rejects
     // the 'PAID' value, retry once with 'PENDING' as a safe fallback.
@@ -312,33 +340,6 @@ export async function createOrderAction(data: CreateOrderActionPayload) {
         }
 
         // 2. Create Sale
-        let verifiedPaymentMethod: PaymentMethod = data.paymentMethod;
-        let providerPayload = data.paymentProviderData ?? null;
-
-        if (data.paymentRef) {
-          try {
-            const verified = await PaymentService.verifyTransaction(data.paymentRef);
-            if (verified) {
-              verifiedPaymentMethod = PaymentService.resolvePaymentMethod(verified);
-              providerPayload = verified;
-              console.log("[createOrderAction] verified payment method from provider", { verifiedPaymentMethod, reference: data.paymentRef });
-            }
-          } catch (verifyError) {
-            console.warn("[createOrderAction] unable to verify payment method with provider, falling back to provider payload or provided value", {
-              error: verifyError,
-              providedMethod: data.paymentMethod,
-              paymentRef: data.paymentRef,
-            });
-          }
-        }
-
-        if (providerPayload) {
-          const fallbackMethod = PaymentService.resolvePaymentMethod(providerPayload);
-          if (fallbackMethod !== "CARD" || data.paymentMethod === "TRANSFER") {
-            verifiedPaymentMethod = fallbackMethod;
-          }
-        }
-
         console.log("[createOrderAction] creating sale for customer", { customerId: customer.id, totalAmount: data.totalAmount, itemCount: sanitizedItems.length, paymentMethod: verifiedPaymentMethod });
         const sale = await OrderQueries.createSale({
           orderNumber: `NG-${Date.now().toString(36).toUpperCase()}`,
@@ -356,6 +357,7 @@ export async function createOrderAction(data: CreateOrderActionPayload) {
           deliveryDistrictName: data.shippingInfo.districtName || null,
           deliveryFee: data.shippingInfo.deliveryFee || null,
           carrier: data.shippingInfo.provinceCode ? "SPEEDAF" : null,
+          deliveryStatus: data.shippingInfo.provinceCode ? "PENDING" : null,
 
           SaleItem: {
             create: sanitizedItems.map(item => ({
@@ -439,25 +441,11 @@ export async function createOrderAction(data: CreateOrderActionPayload) {
             });
           }
 
-          let retryPaymentMethod: PaymentMethod = data.paymentMethod;
-          if (data.paymentRef) {
-            try {
-              const verified = await PaymentService.verifyTransaction(data.paymentRef);
-              retryPaymentMethod = PaymentService.resolvePaymentMethod(verified);
-              console.log("[createOrderAction] verified payment method on retry", { retryPaymentMethod, reference: data.paymentRef });
-            } catch {
-              console.warn("[createOrderAction] cannot verify payment method on retry, using provided value", {
-                providedMethod: data.paymentMethod,
-                paymentRef: data.paymentRef,
-              });
-            }
-          }
-
           const sale = await OrderQueries.createSale({
             orderNumber: `NG-${Date.now().toString(36).toUpperCase()}`,
             totalAmount: data.totalAmount,
             status: "PENDING",
-            paymentMethod: retryPaymentMethod,
+            paymentMethod: verifiedPaymentMethod,
             paymentRef: data.paymentRef,
             Customer: { connect: { id: customer.id } },
 
@@ -469,6 +457,7 @@ export async function createOrderAction(data: CreateOrderActionPayload) {
             deliveryDistrictName: data.shippingInfo.districtName || null,
             deliveryFee: data.shippingInfo.deliveryFee || null,
             carrier: data.shippingInfo.provinceCode ? "SPEEDAF" : null,
+            deliveryStatus: data.shippingInfo.provinceCode ? "PENDING" : null,
 
             SaleItem: {
               create: sanitizedItems.map(item => ({

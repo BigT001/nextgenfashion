@@ -106,6 +106,7 @@ export class CreateProductService {
       costPrice: (productData as any).costPrice,
       tax: (productData as any).tax,
       targetGender,
+      weight: (productData as any).weight,
       // Persist uploaded image URLs — unique to this product
       images: (productData as any).images ?? [],
       // Connect ALL categories at creation time

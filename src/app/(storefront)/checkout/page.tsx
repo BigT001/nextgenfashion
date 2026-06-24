@@ -142,7 +142,8 @@ export default function CheckoutPage() {
 
   const totalWeight = useMemo(() => {
     return items.reduce((sum, item) => {
-      return sum + 0.5 * item.quantity;
+      const itemWeight = Number(item.weight) || 0.5;
+      return sum + itemWeight * item.quantity;
     }, 0);
   }, [items]);
 

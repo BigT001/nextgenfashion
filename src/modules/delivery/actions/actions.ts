@@ -2,7 +2,6 @@
 
 import { SpeedafService, SpeedafItem } from "../services/speedaf.service";
 import { DeliveryQueries } from "../queries/delivery.queries";
-import { prisma } from "@/services/prisma.service";
 
 interface AreaNode {
   code: string;
@@ -134,7 +133,6 @@ export async function dispatchOrderToSpeedafAction(saleId: string) {
       const variant = item.ProductVariant;
       const product = variant?.Product;
       
-      // Default item weight to 0.5 kg if not specified
       const itemWeight = Number((variant as any)?.weight) || Number((product as any)?.weight) || 0.5;
       totalWeight += itemWeight * item.quantity;
 
@@ -254,27 +252,32 @@ export async function getLogisticsSalesAction() {
 
 /**
  * Server Action: Cancel a Speedaf waybill/order
+ *
+ * Per Speedaf docs: cancellation is only possible BEFORE the parcel is picked up.
+ * Once status is "1" (Picked) or beyond, cancellation must be handled offline with Speedaf.
  */
 export async function cancelWaybillAction(saleId: string, reason: string) {
   try {
-    const sale = await prisma.sale.findUnique({
-      where: { id: saleId },
-      select: { waybillNumber: true },
-    });
+    const sale = await DeliveryQueries.getSaleWaybillNumber(saleId);
 
     if (!sale || !sale.waybillNumber) {
       return { success: false, error: "Order or waybill number not found." };
     }
 
+    // Guard: Speedaf docs say cancellation is only valid BEFORE local pickup.
+    // Status codes ≥ "1" mean the courier has already collected the parcel.
+    const nonCancellableStatuses = ["1", "2", "3", "4", "5", "16", "18", "DELIVERED", "COMPLETED"];
+    if (sale.deliveryStatus && nonCancellableStatuses.includes(sale.deliveryStatus)) {
+      return {
+        success: false,
+        error: `Cannot cancel — the parcel has already been collected by Speedaf courier (status: ${sale.deliveryStatus}). Please contact Speedaf directly.`,
+      };
+    }
+
     await SpeedafService.cancelWaybill(sale.waybillNumber, reason);
 
     // Update DB status
-    await prisma.sale.update({
-      where: { id: saleId },
-      data: {
-        deliveryStatus: "CANCELLED",
-      },
-    });
+    await DeliveryQueries.updateSaleDeliveryStatusById(saleId, "CANCELLED");
 
     return { success: true };
   } catch (error: any) {
@@ -288,10 +291,7 @@ export async function cancelWaybillAction(saleId: string, reason: string) {
  */
 export async function getOrderTrackingAction(orderId: string) {
   try {
-    const sale = await prisma.sale.findUnique({
-      where: { id: orderId },
-      select: { waybillNumber: true, deliveryStatus: true, deliveryHistory: true },
-    });
+    const sale = await DeliveryQueries.getSaleTrackingInfo(orderId);
 
     if (!sale) {
       return { success: false, error: "Order not found." };
@@ -313,35 +313,29 @@ export async function getOrderTrackingAction(orderId: string) {
     let latestStatus: string | null = null;
 
     try {
-      const trackData = await SpeedafService.trackShipment(sale.waybillNumber);
+      // trackShipment now returns the `tracks` array directly (per Speedaf docs)
+      const tracksArray = await SpeedafService.trackShipment(sale.waybillNumber);
 
-      // Speedaf returns scan logs in a trajectoryList or similar field
-      const trajectoryList =
-        trackData?.trajectoryList ??
-        trackData?.traceList ??
-        trackData?.scanList ??
-        (Array.isArray(trackData) ? trackData : null);
-
-      if (Array.isArray(trajectoryList) && trajectoryList.length > 0) {
-        events = trajectoryList.map((scan: any) => ({
-          time: scan.scanTime || scan.time || scan.operateTime || "",
-          status: scan.scanDesc || scan.desc || scan.status || scan.scanType || "",
-          location: scan.location || scan.city || scan.scanCity || "",
+      if (Array.isArray(tracksArray) && tracksArray.length > 0) {
+        events = tracksArray.map((scan: any) => ({
+          // Confirmed Speedaf field names from documentation:
+          time: scan.time || scan.scanTime || scan.operateTime || "",
+          status: scan.msgEng || scan.actionName || scan.message || scan.msgLoc || "",
+          location: scan.optName || scan.location || scan.city || "",
+          action: scan.action || "",
+          pictureUrl: scan.pictureUrl || null,
         }));
 
-        // Determine the latest status from the most recent scan
-        const latestScan = events[0];
-        latestStatus = latestScan?.status || null;
+        // Most recent scan is first — derive latest status from it
+        const latestScan = tracksArray[0];
+        latestStatus = latestScan?.msgEng || latestScan?.actionName || null;
       }
 
       // Persist delivery history into DB for caching
       if (events.length > 0) {
-        await prisma.sale.update({
-          where: { id: orderId },
-          data: {
-            deliveryHistory: events as any,
-            ...(latestStatus ? { deliveryStatus: latestStatus } : {}),
-          },
+        await DeliveryQueries.updateSaleTrackingCache(orderId, {
+          deliveryHistory: events as any,
+          ...(latestStatus ? { deliveryStatus: latestStatus } : {}),
         });
       }
     } catch (trackErr: any) {

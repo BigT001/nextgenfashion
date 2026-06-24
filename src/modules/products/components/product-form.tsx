@@ -81,6 +81,7 @@ const productSchema = z.object({
   tax: z.coerce.number().optional(),
   hasTax: z.boolean().optional(),
   warehouseId: z.string().optional(),
+  weight: z.coerce.number().optional(),
 });
 
 type ProductFormValues = z.infer<typeof productSchema>;
@@ -163,6 +164,7 @@ export function ProductForm({
       tax: initialData.tax || 7.5,
       hasTax: !!initialData.tax && initialData.tax > 0,
       warehouseId: initialData.variants?.[0]?.inventory?.warehouseId || initialData.ProductVariant?.[0]?.Inventory?.warehouseId || "",
+      weight: initialData.weight !== null && initialData.weight !== undefined ? Number(initialData.weight) : undefined,
     } : {
       name: "",
       description: "",
@@ -176,6 +178,7 @@ export function ProductForm({
       tax: 7.5,
       hasTax: false,
       warehouseId: "",
+      weight: undefined,
     },
   });
 
@@ -823,9 +826,17 @@ export function ProductForm({
 
                 <div className="grid grid-cols-2 gap-4">
                   <FormField control={form.control} name="tags" render={({ field }) => (
-                    <FormItem className="col-span-2 space-y-2">
+                    <FormItem className="col-span-1 space-y-2">
                       <FormLabel className="text-[11px] font-black uppercase tracking-widest text-brand-navy">Search Tags</FormLabel>
                       <FormControl><Input placeholder="luxury, summer, silk" className="h-10 bg-white border-2 border-brand-navy/5 rounded-xl font-bold text-brand-navy" {...field} /></FormControl>
+                    </FormItem>
+                  )} />
+
+                  <FormField control={form.control} name="weight" render={({ field }) => (
+                    <FormItem className="col-span-1 space-y-2">
+                      <FormLabel className="text-[11px] font-black uppercase tracking-widest text-brand-navy">Weight (kg)</FormLabel>
+                      <FormControl><Input type="number" step="0.01" placeholder="e.g. 0.5" className="h-10 bg-white border-2 border-brand-navy/5 rounded-xl font-bold text-brand-navy" {...field} /></FormControl>
+                      <FormMessage />
                     </FormItem>
                   )} />
                 </div>

@@ -1,10 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
-import { decryptPayload } from "@/lib/speedaf/crypto";
 import { DeliveryQueries } from "@/modules/delivery/queries/delivery.queries";
 
 /**
  * Speedaf Webhook Tracking Callback Router
  * Exposes POST /api/webhooks/speedaf
+ *
+ * Per official docs: Speedaf pushes plain application/json to this endpoint.
+ * Encryption is only on our requests TO Speedaf, NOT on their push TO us.
+ *
+ * Push payload shape (per docs):
+ * {
+ *   mailNo: string,        // waybill number
+ *   action: string,        // status code e.g. "1", "4", "5"
+ *   actionName: string,    // e.g. "Picked", "In delivery", "Collected"
+ *   msgEng: string,        // English trajectory description
+ *   msgLoc: string,        // Local language description
+ *   time: string,          // "2021-01-21 13:40:28"
+ *   timezone: number,      // 8 = GMT+8
+ *   country: string,
+ *   countryCode: string,
+ * }
  */
 export async function POST(req: NextRequest) {
   try {
@@ -20,57 +35,32 @@ export async function POST(req: NextRequest) {
     const cleanText = rawText.trim();
     let parsedBody: any = null;
 
-    // 1. Try to decrypt incoming payload (Speedaf uses DES-CBC encryption)
+    // Speedaf tracking push is plain application/json (NOT encrypted)
     try {
-      const decrypted = decryptPayload(cleanText, settings.secretKey);
-      if (decrypted) {
-        parsedBody = JSON.parse(decrypted);
-        console.log("[Speedaf Webhook] Decrypted payload success");
-      }
-    } catch (decryptErr: any) {
-      // 2. Fallback: Parse as raw JSON if not encrypted
-      try {
-        parsedBody = JSON.parse(cleanText);
-        console.log("[Speedaf Webhook] Parsing raw JSON success");
-      } catch (jsonErr: any) {
-        console.error(
-          "[Speedaf Webhook] Failed to parse payload as encrypted or plain JSON:",
-          cleanText.slice(0, 200)
-        );
-        return NextResponse.json(
-          { success: false, error: "Invalid payload format" },
-          { status: 400 }
-        );
-      }
+      parsedBody = JSON.parse(cleanText);
+      console.log("[Speedaf Webhook] Parsed plain JSON payload successfully");
+    } catch (jsonErr: any) {
+      console.error(
+        "[Speedaf Webhook] Failed to parse JSON payload:",
+        cleanText.slice(0, 300)
+      );
+      return NextResponse.json(
+        { success: false, error: "Invalid JSON payload" },
+        { status: 400 }
+      );
     }
 
-    // 3. Resolve inner data envelope if present
-    let payload = parsedBody;
-    if (parsedBody && typeof parsedBody === "object" && "data" in parsedBody) {
-      const innerData = parsedBody.data;
-      if (typeof innerData === "string") {
-        try {
-          payload = JSON.parse(innerData);
-        } catch (e) {
-          // Keep as string if it's not JSON
-          payload = innerData;
-        }
-      } else {
-        payload = innerData;
-      }
-    }
-
-    console.log("[Speedaf Webhook] Received tracking payload:", JSON.stringify(payload));
-
-    if (!payload) {
+    if (!parsedBody) {
       return NextResponse.json(
         { success: false, error: "Empty tracking payload" },
         { status: 400 }
       );
     }
 
-    // 4. Standardize format: handle single object or array
-    const events = Array.isArray(payload) ? payload : [payload];
+    console.log("[Speedaf Webhook] Received payload:", JSON.stringify(parsedBody));
+
+    // Handle both single event object and array of events
+    const events = Array.isArray(parsedBody) ? parsedBody : [parsedBody];
 
     // Process each trajectory scan event
     for (const event of events) {
@@ -79,23 +69,23 @@ export async function POST(req: NextRequest) {
       const actionName = event.actionName || event.msgEng || "In Transit";
 
       if (!waybillNumber) {
-        console.warn("[Speedaf Webhook] Skipping event due to missing waybill/mailNo:", event);
+        console.warn("[Speedaf Webhook] Skipping event — missing mailNo:", event);
         continue;
       }
 
-      // Find if sale order exists with this waybill
+      // Find sale order associated with this waybill
       const sale = await DeliveryQueries.findSaleByWaybill(waybillNumber);
       if (!sale) {
-        console.warn(`[Speedaf Webhook] Waybill ${waybillNumber} is not associated with any store order.`);
+        console.warn(`[Speedaf Webhook] Waybill ${waybillNumber} not associated with any store order.`);
         continue;
       }
 
-      // Update database status and trajectory log
+      // Update DB status and trajectory log
       await DeliveryQueries.updateSaleDeliveryStatus(waybillNumber, action, event);
-      console.log(`[Speedaf Webhook] Updated order ${sale.orderNumber} status to ${action} (${actionName})`);
+      console.log(`[Speedaf Webhook] Updated order ${sale.orderNumber} → action=${action} (${actionName})`);
     }
 
-    // Return the response Speedaf expects
+    // Return exactly what Speedaf docs specify for acknowledgement
     return NextResponse.json({
       success: true,
       error: null,
@@ -109,3 +99,4 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+

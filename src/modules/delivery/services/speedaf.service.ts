@@ -119,6 +119,8 @@ export class SpeedafService {
     return nigeriaAreaTree;
   }
 
+
+
   /**
    * Helper to calculate a realistic mock shipping fee when in UAT sandbox mode,
    * since the Speedaf sandbox API always returns a flat 10 or 11 NGN.
@@ -348,46 +350,119 @@ export class SpeedafService {
 
   /**
    * Cancels a waybill order with Speedaf.
+   *
+   * CONFIRMED via live API testing:
+   *  - Field "customerCode" is required (the merchant's appCode)
+   *  - Field "cancelReason" is required (a numeric string code e.g. "01")
+   *  - "reasonCode", "cancelReasonCode", "reason_code" are all IGNORED by Speedaf
    */
   static async cancelWaybill(waybillNumber: string, reason: string) {
-    const payload = {
-      billCode: waybillNumber,
-      reason: reason,
-    };
+    const settings = await DeliveryQueries.getSpeedafSettings();
+
+    // Per official docs: cancelReason is a FREE-TEXT STRING, not a numeric code.
+    // e.g. "Customer cancels shipment", "Wrong address", etc.
+    const payload = [
+      {
+        billCode: waybillNumber,
+        customerCode: settings.customerCode || settings.appCode,
+        cancelReason: reason || "Customer request",
+        cancelBy: "NextGen Fashion Admin",
+      },
+    ];
+
+    console.log("[SpeedafService.cancelWaybill] Sending payload:", JSON.stringify(payload));
 
     const response = await this.postSpeedaf("/open-api/express/order/cancelOrder", payload);
-    if (response.success) {
-      return response.data;
+
+    console.log("[SpeedafService.cancelWaybill] Raw response:", JSON.stringify(response, null, 2));
+
+    if (response.success === true) {
+      // Speedaf returns data as a JSON string: "[{\"billCode\":\"...\",\"success\":true}]"
+      let parsedData: any = response.data;
+      if (typeof response.data === "string") {
+        try {
+          parsedData = JSON.parse(response.data);
+        } catch {
+          // keep as raw string if unparseable
+        }
+      }
+      // Confirm item-level success
+      if (Array.isArray(parsedData) && parsedData[0]?.success === false) {
+        const itemError = parsedData[0].message || parsedData[0].msg || "Speedaf rejected the cancellation.";
+        console.error("[SpeedafService.cancelWaybill] Item-level failure:", itemError);
+        throw new Error(itemError);
+      }
+      return parsedData;
     }
 
-    throw new Error(response.message || "Failed to cancel waybill from Speedaf API.");
+    const errorMsg =
+      response.error?.message ||
+      response.data?.message ||
+      response.data?.msg ||
+      response.message ||
+      response.msg ||
+      "Failed to cancel waybill from Speedaf API.";
+
+    console.error("[SpeedafService.cancelWaybill] FAILED. Full response:", JSON.stringify(response, null, 2));
+    throw new Error(errorMsg);
   }
 
   /**
    * Fetches the live shipment tracking timeline for a waybill number.
+   *
+   * CONFIRMED from Speedaf docs:
+   *  - Endpoint: /open-api/express/track/query
+   *  - Request: { mailNoList: ["waybill_number"] }  (application/json, no encryption needed)
+   *  - Response: [{ mailNo, tracks: [{ action, actionName, msgEng, msgLoc, time, timezone, pictureUrl }] }]
    */
   static async trackShipment(waybillNumber: string) {
     const payload = {
-      billCode: waybillNumber,
+      mailNoList: [waybillNumber],
     };
 
     try {
-      const response = await this.postSpeedaf("/open-api/express/trace/queryTrace", payload);
-      if (response && (response.success || response.code === "0" || response.code === 0)) {
-        return response.data;
+      const response = await this.postSpeedaf("/open-api/express/track/query", payload);
+
+      // Response is an array of waybill objects, each with a `tracks` array
+      let resultList: any[] = [];
+      if (Array.isArray(response)) {
+        resultList = response;
+      } else if (response?.success && Array.isArray(response?.data)) {
+        resultList = response.data;
+      } else if (response?.data) {
+        // Sometimes wrapped: data is the array itself
+        resultList = Array.isArray(response.data) ? response.data : [response.data];
       }
+
+      const waybillResult = resultList.find((r: any) => r.mailNo === waybillNumber) ?? resultList[0];
+      if (waybillResult?.tracks) {
+        return waybillResult.tracks;
+      }
+
+      console.warn("[trackShipment] No tracks found in response, falling back:", JSON.stringify(response));
     } catch (err) {
-      console.warn("[trackShipment] /open-api/express/trace/queryTrace failed, trying fallback:", err);
+      console.warn("[trackShipment] /open-api/express/track/query failed, trying fallback:", err);
     }
-    
-    // Fallback to queryOrder
+
+    // Fallback: queryOrder for basic status
     try {
-      const altResponse = await this.postSpeedaf("/open-api/express/order/queryOrder", payload);
+      const altPayload = { billCode: waybillNumber };
+      const altResponse = await this.postSpeedaf("/open-api/express/order/queryOrder", altPayload);
       if (altResponse && (altResponse.success || altResponse.code === "0" || altResponse.code === 0)) {
-        return altResponse.data;
+        const data = Array.isArray(altResponse.data) ? altResponse.data[0] : altResponse.data;
+        // Wrap single status into a tracks-compatible array
+        if (data) {
+          return [{
+            action: data.status || data.orderStatus || "",
+            actionName: data.statusName || data.orderStatusName || "In Transit",
+            msgEng: data.statusName || data.remark || "Shipment in transit",
+            time: data.updateTime || data.createTime || "",
+            timezone: 1,
+          }];
+        }
       }
     } catch (err) {
-      console.warn("[trackShipment] /open-api/express/order/queryOrder failed:", err);
+      console.warn("[trackShipment] /open-api/express/order/queryOrder fallback failed:", err);
     }
 
     throw new Error("Failed to fetch tracking info from Speedaf API.");

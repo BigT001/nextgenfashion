@@ -91,6 +91,7 @@ model Product {
   tax            Decimal?         @db.Decimal(10, 2)
   isSuspended    Boolean          @default(false)
   images         String[]
+  weight         Decimal?         @db.Decimal(10, 2)
   categories     Category[]       @relation("ProductToCategory")
   ProductVariant ProductVariant[]
 

@@ -189,7 +189,7 @@ export default function LogisticsClient({ initialData }: { initialData: any[] })
       printWindow.document.write(`
         <html>
           <head>
-            <title>Speedaf Packing Label - ${labelOrder?.orderNumber}</title>
+            <title>NextGen Kiddies Shipping Label - ${labelOrder?.orderNumber}</title>
             <style>
               body { font-family: monospace; padding: 20px; color: #000; }
               .label-card { border: 2px solid #000; padding: 15px; width: 400px; margin: 0 auto; }
@@ -243,8 +243,7 @@ export default function LogisticsClient({ initialData }: { initialData: any[] })
           inTransit++;
         }
       } else {
-        // Orders that are paid/completed in checkout but not dispatched yet
-        if (sale.status === "PAID" || sale.status === "COMPLETED" || sale.status === "PROCESSING") {
+        if (sale.status === "PENDING" || sale.status === "PAID" || sale.status === "COMPLETED" || sale.status === "PROCESSING") {
           pendingDispatch++;
         }
       }
@@ -315,7 +314,7 @@ export default function LogisticsClient({ initialData }: { initialData: any[] })
       const status = sale.deliveryStatus || "";
 
       if (activeTab === "PENDING_DISPATCH") {
-        return !hasWaybill && (sale.status === "PAID" || sale.status === "COMPLETED" || sale.status === "PROCESSING");
+        return !hasWaybill && (sale.status === "PENDING" || sale.status === "PAID" || sale.status === "COMPLETED" || sale.status === "PROCESSING");
       }
       if (activeTab === "IN_TRANSIT") {
         return hasWaybill && status !== "200" && status !== "DELIVERED" && status !== "CANCELLED" && sale.status !== "COMPLETED";
@@ -461,6 +460,8 @@ export default function LogisticsClient({ initialData }: { initialData: any[] })
           badgeStyle = "bg-emerald-500/10 text-emerald-600";
         } else if (status === "CANCELLED") {
           badgeStyle = "bg-rose-500/10 text-rose-600";
+        } else if (status === "PENDING") {
+          badgeStyle = "bg-amber-500/10 text-amber-600";
         } else if (status) {
           badgeStyle = "bg-sky-500/10 text-sky-600";
         }
@@ -682,16 +683,16 @@ export default function LogisticsClient({ initialData }: { initialData: any[] })
 
       {/* MODAL 1: Trajectory Scan History Timeline */}
       <Dialog open={trajectoryModalOpen} onOpenChange={setTrajectoryModalOpen}>
-        <DialogContent className="max-w-lg p-6 sm:p-8 rounded-3xl bg-white border-zinc-200">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-black text-brand-navy">Delivery Scan Trajectory</DialogTitle>
-            <DialogDescription className="text-xs uppercase tracking-wider font-bold">
-              Order: {activeOrderNum} | Speedaf Waybill: {activeWaybill}
+        <DialogContent className="max-w-lg p-6 rounded-3xl bg-white border-zinc-200">
+          <DialogHeader className="border-b pb-3">
+            <DialogTitle className="text-base font-black text-brand-navy uppercase tracking-wider">Tracking History</DialogTitle>
+            <DialogDescription className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mt-1">
+              Order: {activeOrderNum} | Waybill: {activeWaybill}
             </DialogDescription>
           </DialogHeader>
 
           {/* Scan updates tree */}
-          <div className="my-6 max-h-[350px] overflow-y-auto pr-2 space-y-6 relative before:absolute before:left-4 before:top-2 before:bottom-2 before:w-[2px] before:bg-zinc-200">
+          <div className="my-2 max-h-[60vh] overflow-y-auto pr-2 space-y-6 relative before:absolute before:left-4 before:top-2 before:bottom-2 before:w-[2px] before:bg-zinc-200">
             {activeTrajectory && activeTrajectory.length > 0 ? (
               activeTrajectory.map((scan, idx) => {
                 const isLatest = idx === activeTrajectory.length - 1;
@@ -704,7 +705,7 @@ export default function LogisticsClient({ initialData }: { initialData: any[] })
                       {isLatest ? <Truck className="size-4" /> : <Clock className="size-4" />}
                     </div>
                     <div className="flex flex-col gap-1">
-                      <span className={cn("text-sm font-black", isLatest ? "text-zinc-950" : "text-zinc-600")}>
+                      <span className={cn("text-xs font-black", isLatest ? "text-zinc-950" : "text-zinc-600")}>
                         {scan.msgEng || scan.actionName || "Hub Check-in"}
                       </span>
                       <span className="text-[10px] text-muted-foreground font-semibold">
@@ -725,12 +726,6 @@ export default function LogisticsClient({ initialData }: { initialData: any[] })
               </div>
             )}
           </div>
-
-          <DialogFooter className="pt-4 border-t border-zinc-100">
-            <Button variant="outline" className="rounded-xl font-bold" onClick={() => setTrajectoryModalOpen(false)}>
-              Close Audit
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -772,20 +767,28 @@ export default function LogisticsClient({ initialData }: { initialData: any[] })
 
       {/* MODAL 3: Print Packing & Shipping Label */}
       <Dialog open={labelModalOpen} onOpenChange={setLabelModalOpen}>
-        <DialogContent className="max-w-xl p-6 sm:p-8 rounded-3xl bg-white border-zinc-200">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-black text-brand-navy">Print Packing / Shipping Label</DialogTitle>
-            <DialogDescription className="text-xs uppercase tracking-wider font-bold">
-              High-Fidelity Storefront Packing Slip
-            </DialogDescription>
+        <DialogContent className="max-w-2xl p-6 rounded-3xl bg-white border-zinc-200">
+          <DialogHeader className="flex flex-row items-center justify-between border-b pb-4 mb-4">
+            <div>
+              <DialogTitle className="text-xl font-black text-brand-navy uppercase tracking-wider">Shipping Label</DialogTitle>
+            </div>
+            <div className="flex items-center gap-2 pr-6">
+              <Button 
+                className="rounded-xl font-bold bg-brand-navy hover:bg-brand-navy/90 text-white flex items-center gap-2 h-10 px-4" 
+                onClick={handlePrintAction}
+              >
+                <Printer className="size-4" />
+                Print Label
+              </Button>
+            </div>
           </DialogHeader>
 
           {/* Packing label mock */}
-          <div className="border border-zinc-200 rounded-2xl bg-zinc-50 p-6 my-4 overflow-y-auto max-h-[400px]">
-            <div id="printable-label" className="bg-white p-6 border-2 border-zinc-950 font-mono text-zinc-950">
+          <div className="py-2 overflow-y-auto max-h-[70vh]">
+            <div id="printable-label" className="bg-white p-8 border-2 border-zinc-950 font-mono text-zinc-950 max-w-lg mx-auto shadow-[0_0_10px_rgba(0,0,0,0.05)] rounded-lg">
               <div className="header text-center border-b-2 border-zinc-900 pb-4 mb-4">
-                <h3 className="font-bold text-lg m-0 uppercase tracking-tighter">SPEEDAF SHIPPING LABEL</h3>
-                <p className="text-[10px] text-zinc-500 mt-1 uppercase">NextGen Luxury Storefront</p>
+                <h3 className="font-bold text-lg m-0 uppercase tracking-tighter">NEXTGEN KIDDIES SHIPPING LABEL</h3>
+                <p className="text-[10px] text-zinc-500 mt-1 uppercase">NextGen Kiddies Storefront</p>
               </div>
 
               {/* Waybill Code and barcode */}
@@ -801,7 +804,7 @@ export default function LogisticsClient({ initialData }: { initialData: any[] })
               {/* Sender info */}
               <div className="section">
                 <div className="section-title text-xs font-black uppercase mb-1">FROM (SENDER):</div>
-                <div className="text-sm font-bold">{settings?.senderName || "NextGen Fashion Store"}</div>
+                <div className="text-sm font-bold">{settings?.senderName || "NextGen Fashion"}</div>
                 <div className="text-xs text-zinc-700">{settings?.senderPhone || "08000000000"}</div>
                 <div className="text-xs text-zinc-700">
                   {settings?.senderAddress || "Lagos Warehouse Hub, Ikeja"}
@@ -866,16 +869,6 @@ export default function LogisticsClient({ initialData }: { initialData: any[] })
               </div>
             </div>
           </div>
-
-          <DialogFooter className="pt-4 border-t border-zinc-100 gap-2">
-            <Button variant="outline" className="rounded-xl font-bold" onClick={() => setLabelModalOpen(false)}>
-              Close
-            </Button>
-            <Button className="rounded-xl font-bold bg-brand-navy hover:bg-brand-navy/90 text-white flex items-center gap-2" onClick={handlePrintAction}>
-              <Printer className="size-4" />
-              Print Label
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

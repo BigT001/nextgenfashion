@@ -9,6 +9,7 @@ interface ProductUpdatePayload {
   sellingPrice?: number;
   costPrice?: number;
   tax?: number;
+  weight?: number | null;
   images?: string[];
   variants?: Array<{
     id?: string;
@@ -27,7 +28,7 @@ interface ProductUpdatePayload {
  */
 export class UpdateProductService {
   static async execute(id: string, payload: ProductUpdatePayload) {
-    const { name, description, categoryId, categoryIds, sellingPrice, costPrice, tax, images, variants, warehouseId } = payload;
+    const { name, description, categoryId, categoryIds, sellingPrice, costPrice, tax, weight, images, variants, warehouseId } = payload;
 
     console.log(`[UpdateProduct] Received payload:`, { id, categoryId, categoryIds, hasVariants: !!variants });
 
@@ -76,6 +77,7 @@ export class UpdateProductService {
         costPrice,
         tax,
         targetGender,
+        weight,
       };
 
       if (images !== undefined) {

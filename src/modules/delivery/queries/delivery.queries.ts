@@ -71,7 +71,11 @@ export class DeliveryQueries {
           include: {
             ProductVariant: {
               include: {
-                Product: true,
+                Product: {
+                  include: {
+                    categories: true,
+                  },
+                },
               },
             },
           },
@@ -167,6 +171,42 @@ export class DeliveryQueries {
           },
         },
       },
+    });
+  }
+
+  static async getSaleWaybillNumber(saleId: string) {
+    return await prisma.sale.findUnique({
+      where: { id: saleId },
+      select: { waybillNumber: true, deliveryStatus: true },
+    });
+  }
+
+  static async updateSaleDeliveryStatusById(saleId: string, deliveryStatus: string) {
+    return await prisma.sale.update({
+      where: { id: saleId },
+      data: {
+        deliveryStatus,
+      },
+    });
+  }
+
+  static async getSaleTrackingInfo(orderId: string) {
+    return await prisma.sale.findUnique({
+      where: { id: orderId },
+      select: { waybillNumber: true, deliveryStatus: true, deliveryHistory: true },
+    });
+  }
+
+  static async updateSaleTrackingCache(
+    orderId: string,
+    data: {
+      deliveryHistory: any;
+      deliveryStatus?: string;
+    }
+  ) {
+    return await prisma.sale.update({
+      where: { id: orderId },
+      data,
     });
   }
 }

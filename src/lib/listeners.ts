@@ -60,7 +60,8 @@ events.on(SYSTEM_EVENTS.SALE.CREATED, async (data) => {
 
     console.log(`[Event Success] Audit log and notification processed for order ${data.orderNumber}`);
 
-    // Reaction C: Speedaf Auto-fulfillment dispatch
+    // Reaction C: Speedaf Auto-fulfillment dispatch (Disabled: orders go to PENDING first until admin manually dispatches)
+    /*
     try {
       const { dispatchOrderToSpeedafAction } = await import("@/modules/delivery/actions/actions");
       const dispatchRes = await dispatchOrderToSpeedafAction(data.saleId);
@@ -72,6 +73,7 @@ events.on(SYSTEM_EVENTS.SALE.CREATED, async (data) => {
     } catch (speedafErr) {
       console.error(`[Event Error] Speedaf auto-fulfillment dispatch threw error:`, speedafErr);
     }
+    */
   } catch (error) {
     console.error(`[Event Error] Failed to process sale:created side-effects:`, error);
   }
