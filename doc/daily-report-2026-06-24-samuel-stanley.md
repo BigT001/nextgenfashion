@@ -13,6 +13,7 @@ Summary of work completed today:
 - Standardized Speedaf tracking queries: Corrected the `/open-api/express/track/query` endpoint request format to wrap the waybill number in the `mailNoList` array and updated `getOrderTrackingAction` to read from the official response `tracks` array rather than incorrect fallback keys.
 - Conducted deep documentation analysis and created production-ready checklists: Documented confirmed API patterns and drafted a comprehensive list of technical integration questions to raise with Speedaf support prior to production deployment.
 - Verified TypeScript codebase integrity: Executed strict checks (`npx tsc --noEmit`) to confirm zero compilation errors.
+- Patched Supabase database security: Resolved a critical Supabase security alert by enabling Row-Level Security (RLS) on the Prisma system metadata table `_prisma_migrations` in the `public` schema, ensuring that 100% of tables in the public schema are now secured against unauthorized REST/GraphQL API access.
 
 Detailed notes:
 
@@ -20,5 +21,7 @@ Detailed notes:
 2. Orders that are physically collected by the Speedaf courier cannot be cancelled via the admin dashboard, protecting against discrepancies with the carrier.
 3. The Speedaf webhook endpoint now handles push updates efficiently by bypassing expensive and unnecessary DES decryption attempts.
 4. Active terminal checkouts and logistics management screens compile clean and pass validation rules.
+5. Enabled Row-Level Security (RLS) on the Prisma migrations metadata table (`_prisma_migrations`), securing the final unshielded table in the public schema and satisfying the Supabase periodic security auditor.
 
 This report summarizes the complete technical implementation, UI validation updates, and API fixes deployed today for the NextGen Fashion storefront logistics pipeline.
+
