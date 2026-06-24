@@ -24,6 +24,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { 
   getProductPriceRequirementSetting, 
   setProductPriceRequirementSetting,
@@ -296,82 +304,86 @@ export default function SettingsPage() {
             />
           </div>
 
-          {/* Staff Grid */}
+          {/* Staff Table */}
           {filteredStaff.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {filteredStaff.map((member: any) => (
-                <Card key={member.id} className="group hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 border-none shadow-sm glass-card overflow-hidden">
-                  <CardHeader className="pb-6 flex flex-row items-start justify-between border-b border-border/30">
-                    <div className="flex items-center gap-4">
-                      <div className="size-16 rounded-3xl bg-brand-navy/10 flex items-center justify-center text-brand-navy font-black text-2xl shadow-inner group-hover:bg-brand-navy group-hover:text-white transition-all duration-500">
-                        {member.name?.charAt(0) || "U"}
-                      </div>
-                      <div className="space-y-1">
-                        <CardTitle className="text-xl font-black tracking-tight group-hover:text-brand-navy transition-colors">{member.name || "Anonymous User"}</CardTitle>
-                        <Badge className={cn(
-                            "border-none font-black text-[10px] px-3 uppercase tracking-widest",
-                            member.role === "ADMIN" || member.role === "SUPERADMIN" 
-                              ? "bg-brand-navy text-white shadow-lg shadow-brand-navy/20" 
-                              : "bg-brand-silver/10 text-brand-silver"
-                        )}>
-                            {member.role}
-                        </Badge>
-                      </div>
-                    </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger className="size-10 rounded-xl inline-flex items-center justify-center hover:bg-brand-navy/5 hover:text-brand-navy transition-colors">
-                          <MoreVertical className="h-5 w-5" />
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="glass-card border-none rounded-2xl shadow-2xl p-2 min-w-[200px]">
-                        <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground p-3">Privileges</DropdownMenuLabel>
-                        <DropdownMenuItem 
-                          onClick={() => handleModifyRoleClick(member)}
-                          className="rounded-xl h-10 font-bold gap-3 focus:bg-brand-navy/5 focus:text-brand-navy cursor-pointer"
-                        >
-                            <Shield className="size-4" /> Modify Role
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          onClick={() => setResetPasswordMember(member)}
-                          className="rounded-xl h-10 font-bold gap-3 focus:bg-brand-navy/5 focus:text-brand-navy cursor-pointer"
-                        >
-                            <Key className="size-4" /> Reset Security Key
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator className="bg-border/30" />
-                        <DropdownMenuItem 
-                          onClick={() => setRevokeAccessMember(member)}
-                          className="rounded-xl h-10 font-bold gap-3 text-destructive focus:bg-destructive/5 cursor-pointer"
-                        >
-                            Revoke Access
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </CardHeader>
-                  <CardContent className="p-8 space-y-6">
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-4 text-sm font-bold text-muted-foreground group-hover:text-foreground transition-colors">
-                        <div className="size-8 rounded-xl bg-muted/30 flex items-center justify-center">
-                            <Mail className="size-4" />
-                        </div>
-                        {member.email}
-                      </div>
-                    </div>
-                    
-                    <div className="pt-6 border-t border-border/30 flex items-center justify-between">
-                      <div className="space-y-1">
-                        <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Revenue Impact</p>
-                        <p className="text-xl font-black text-brand-navy tracking-tighter">₦{member.revenueGenerated?.toLocaleString() || 0}</p>
-                      </div>
-                      <div className="text-right space-y-1">
-                        <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Sale Volume</p>
-                        <div className="flex items-center gap-2 text-xs font-black justify-end">
-                          <TrendingUp className="h-4 w-4 text-brand-navy" />
-                          {member.saleCount || 0} Transactions
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+            <div className="rounded-[2rem] border border-border/30 bg-white/50 backdrop-blur-md shadow-sm overflow-hidden glass-card">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent border-b border-border/30">
+                      <TableHead className="font-black text-xs uppercase tracking-widest text-brand-navy/70 px-6 py-4">Team Member</TableHead>
+                      <TableHead className="font-black text-xs uppercase tracking-widest text-brand-navy/70 px-6 py-4">Email Address</TableHead>
+                      <TableHead className="font-black text-xs uppercase tracking-widest text-brand-navy/70 px-6 py-4">Role</TableHead>
+                      <TableHead className="font-black text-xs uppercase tracking-widest text-brand-navy/70 px-6 py-4 text-right">Revenue Impact</TableHead>
+                      <TableHead className="font-black text-xs uppercase tracking-widest text-brand-navy/70 px-6 py-4 text-right">Sale Volume</TableHead>
+                      <TableHead className="font-black text-xs uppercase tracking-widest text-brand-navy/70 px-6 py-4 text-center w-20">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredStaff.map((member: any) => (
+                      <TableRow key={member.id} className="hover:bg-brand-navy/5 transition-colors border-b border-border/30 last:border-b-0 group">
+                        <TableCell className="px-6 py-4 font-bold text-foreground">
+                          <div className="flex items-center gap-4">
+                            <div className="size-11 rounded-2xl bg-brand-navy/10 flex items-center justify-center text-brand-navy font-black text-lg shadow-inner group-hover:bg-brand-navy group-hover:text-white transition-all duration-300">
+                              {member.name?.charAt(0) || "U"}
+                            </div>
+                            <span className="font-black tracking-tight">{member.name || "Anonymous User"}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="px-6 py-4 font-medium text-muted-foreground">{member.email}</TableCell>
+                        <TableCell className="px-6 py-4">
+                          <Badge className={cn(
+                              "border-none font-black text-[10px] px-3 py-1 uppercase tracking-widest",
+                              member.role === "ADMIN" || member.role === "SUPERADMIN" 
+                                ? "bg-brand-navy text-white shadow-lg shadow-brand-navy/20" 
+                                : "bg-brand-silver/10 text-brand-silver"
+                          )}>
+                              {member.role}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="px-6 py-4 text-right font-black text-brand-navy">
+                          ₦{member.revenueGenerated?.toLocaleString() || 0}
+                        </TableCell>
+                        <TableCell className="px-6 py-4 text-right font-black text-muted-foreground group-hover:text-brand-navy transition-colors">
+                          <div className="flex items-center gap-2 justify-end">
+                            <TrendingUp className="h-4 w-4 text-brand-navy/60 group-hover:text-brand-navy" />
+                            <span>{member.saleCount || 0} Transactions</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="px-6 py-4 text-center">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger className="size-9 rounded-xl inline-flex items-center justify-center hover:bg-brand-navy/10 hover:text-brand-navy transition-colors">
+                                <MoreVertical className="h-5 w-5" />
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="glass-card border-none rounded-2xl shadow-2xl p-2 min-w-[200px]">
+                              <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground p-3">Privileges</DropdownMenuLabel>
+                              <DropdownMenuItem 
+                                onClick={() => handleModifyRoleClick(member)}
+                                className="rounded-xl h-10 font-bold gap-3 focus:bg-brand-navy/5 focus:text-brand-navy cursor-pointer"
+                              >
+                                  <Shield className="size-4" /> Modify Role
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={() => setResetPasswordMember(member)}
+                                className="rounded-xl h-10 font-bold gap-3 focus:bg-brand-navy/5 focus:text-brand-navy cursor-pointer"
+                              >
+                                  <Key className="size-4" /> Reset Security Key
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator className="bg-border/30" />
+                              <DropdownMenuItem 
+                                onClick={() => setRevokeAccessMember(member)}
+                                className="rounded-xl h-10 font-bold gap-3 text-destructive focus:bg-destructive/5 cursor-pointer"
+                              >
+                                  Revoke Access
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center p-16 text-center rounded-[2.5rem] bg-zinc-50/50 border border-dashed border-zinc-200">
