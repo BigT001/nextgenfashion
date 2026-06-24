@@ -41,6 +41,7 @@ import {
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -356,26 +357,28 @@ export default function SettingsPage() {
                                 <MoreVertical className="h-5 w-5" />
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="glass-card border-none rounded-2xl shadow-2xl p-2 min-w-[200px]">
-                              <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground p-3">Privileges</DropdownMenuLabel>
-                              <DropdownMenuItem 
-                                onClick={() => handleModifyRoleClick(member)}
-                                className="rounded-xl h-10 font-bold gap-3 focus:bg-brand-navy/5 focus:text-brand-navy cursor-pointer"
-                              >
-                                  <Shield className="size-4" /> Modify Role
-                              </DropdownMenuItem>
-                              <DropdownMenuItem 
-                                onClick={() => setResetPasswordMember(member)}
-                                className="rounded-xl h-10 font-bold gap-3 focus:bg-brand-navy/5 focus:text-brand-navy cursor-pointer"
-                              >
-                                  <Key className="size-4" /> Reset Security Key
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator className="bg-border/30" />
-                              <DropdownMenuItem 
-                                onClick={() => setRevokeAccessMember(member)}
-                                className="rounded-xl h-10 font-bold gap-3 text-destructive focus:bg-destructive/5 cursor-pointer"
-                              >
-                                  Revoke Access
-                              </DropdownMenuItem>
+                              <DropdownMenuGroup>
+                                <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground p-3">Privileges</DropdownMenuLabel>
+                                <DropdownMenuItem 
+                                  onClick={() => handleModifyRoleClick(member)}
+                                  className="rounded-xl h-10 font-bold gap-3 focus:bg-brand-navy/5 focus:text-brand-navy cursor-pointer"
+                                >
+                                    <Shield className="size-4" /> Modify Role
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                  onClick={() => setResetPasswordMember(member)}
+                                  className="rounded-xl h-10 font-bold gap-3 focus:bg-brand-navy/5 focus:text-brand-navy cursor-pointer"
+                                >
+                                    <Key className="size-4" /> Reset Security Key
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator className="bg-border/30" />
+                                <DropdownMenuItem 
+                                  onClick={() => setRevokeAccessMember(member)}
+                                  className="rounded-xl h-10 font-bold gap-3 text-destructive focus:bg-destructive/5 cursor-pointer"
+                                >
+                                    Revoke Access
+                                </DropdownMenuItem>
+                              </DropdownMenuGroup>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>

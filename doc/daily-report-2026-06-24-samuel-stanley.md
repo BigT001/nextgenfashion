@@ -16,6 +16,7 @@ Summary of work completed today:
 - Patched Supabase database security: Resolved a critical Supabase security alert by enabling Row-Level Security (RLS) on the Prisma system metadata table `_prisma_migrations` in the `public` schema, ensuring that 100% of tables in the public schema are now secured against unauthorized REST/GraphQL API access.
 - Redesigned Platform Control settings UI: Replaced the team directory staff grid card layout with a structured, responsive, glassmorphism-styled table displaying team member avatars, emails, roles, revenue impact, and sales transaction volumes.
 - Filtered customer accounts from Platform Control directory: Added Prisma database query filters in `UserQueries` (`getAllStaff` and `getStaffKPIs`) to restrict retrieval and counts exclusively to `ADMIN`, `SUPERADMIN`, and `STAFF` roles, preventing standard `CUSTOMER` accounts from showing in the directory.
+- Fixed settings page dropdown menu crash: Wrapped `DropdownMenuLabel` and its corresponding options inside `DropdownMenuGroup` to satisfy Base UI grouping constraints, preventing runtime MenuGroupContext context errors when clicking row action menus.
 
 Detailed notes:
 
@@ -26,8 +27,10 @@ Detailed notes:
 5. Enabled Row-Level Security (RLS) on the Prisma migrations metadata table (`_prisma_migrations`), securing the final unshielded table in the public schema and satisfying the Supabase periodic security auditor.
 6. Updated the settings panel team directory directory layout from cards to a streamlined table to improve page scannability and structure.
 7. Ensured the team directory directory on the Platform Control settings page only displays internal staff/administrators rather than general storefront customer accounts.
+8. Resolved Base UI MenuGroupContext crash on setting directory dropdown options trigger by correctly utilizing DropdownMenuGroup wrapping.
 
 This report summarizes the complete technical implementation, UI validation updates, and API fixes deployed today for the NextGen Fashion storefront logistics pipeline.
+
 
 
 
