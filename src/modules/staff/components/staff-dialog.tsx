@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -75,6 +75,19 @@ export function StaffDialog({ open, onOpenChange, staff, onSuccess }: StaffDialo
       permissions: staff?.permissions || [],
     },
   });
+
+  useEffect(() => {
+    if (open) {
+      form.reset({
+        name: staff?.name || "",
+        email: staff?.email || "",
+        password: "",
+        role: staff?.role || UserRole.STAFF,
+        category: staff?.category || "Cashier",
+        permissions: staff?.permissions || [],
+      });
+    }
+  }, [staff, open, form]);
 
   async function onSubmit(data: any) {
     setIsLoading(true);

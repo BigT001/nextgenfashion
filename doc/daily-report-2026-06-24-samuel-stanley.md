@@ -17,6 +17,7 @@ Summary of work completed today:
 - Redesigned Platform Control settings UI: Replaced the team directory staff grid card layout with a structured, responsive, glassmorphism-styled table displaying team member avatars, emails, roles, revenue impact, and sales transaction volumes.
 - Filtered customer accounts from Platform Control directory: Added Prisma database query filters in `UserQueries` (`getAllStaff` and `getStaffKPIs`) to restrict retrieval and counts exclusively to `ADMIN`, `SUPERADMIN`, and `STAFF` roles, preventing standard `CUSTOMER` accounts from showing in the directory.
 - Fixed settings page dropdown menu crash: Wrapped `DropdownMenuLabel` and its corresponding options inside `DropdownMenuGroup` to satisfy Base UI grouping constraints, preventing runtime MenuGroupContext context errors when clicking row action menus.
+- Fixed Staff Dialog form pre-population: Introduced a `useEffect` hook in `StaffDialog` to dynamically trigger `form.reset()` with the latest user properties when the editing `staff` prop changes or the dialog opens, ensuring values are pre-filled instead of showing empty validation errors.
 
 Detailed notes:
 
@@ -28,8 +29,10 @@ Detailed notes:
 6. Updated the settings panel team directory directory layout from cards to a streamlined table to improve page scannability and structure.
 7. Ensured the team directory directory on the Platform Control settings page only displays internal staff/administrators rather than general storefront customer accounts.
 8. Resolved Base UI MenuGroupContext crash on setting directory dropdown options trigger by correctly utilizing DropdownMenuGroup wrapping.
+9. Resolved React Hook Form default value caching bug by using active effect resets, ensuring that editing existing staff records pre-populates details successfully.
 
 This report summarizes the complete technical implementation, UI validation updates, and API fixes deployed today for the NextGen Fashion storefront logistics pipeline.
+
 
 
 
