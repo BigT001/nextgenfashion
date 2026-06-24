@@ -16,7 +16,8 @@ import {
   Sparkles,
   ShieldCheck,
   User,
-  Mailbox
+  Mailbox,
+  Truck
 } from "lucide-react";
 
 import {
@@ -78,6 +79,12 @@ const data = {
           title: "Orders",
           url: "/dashboard/orders",
           icon: ShoppingBag,
+          roles: [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.STAFF],
+        },
+        {
+          title: "Logistics",
+          url: "/dashboard/logistics",
+          icon: Truck,
           roles: [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.STAFF],
         },
       ],
@@ -171,7 +178,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           const userPermissions = Array.isArray(rawPermissions) && rawPermissions.length > 0
             ? rawPermissions
             : userRole === UserRole.STAFF
-              ? ["POS", "PRODUCTS", "INVENTORY", "ORDERS", "CUSTOMERS", "STAFF", "ANALYTICS"]
+              ? ["POS", "PRODUCTS", "INVENTORY", "ORDERS", "LOGISTICS", "CUSTOMERS", "STAFF", "ANALYTICS"]
               : [];
 
           const visibleItems = group.items.filter(item => {
@@ -184,6 +191,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             else if (item.url.includes("/products")) permKey = "PRODUCTS";
             else if (item.url.includes("/inventory")) permKey = "INVENTORY";
             else if (item.url.includes("/orders")) permKey = "ORDERS";
+            else if (item.url.includes("/logistics")) permKey = "LOGISTICS";
             else if (item.url.includes("/customers")) permKey = "CUSTOMERS";
             else if (item.url.includes("/staff")) permKey = "STAFF";
             else if (item.url.includes("/analytics")) permKey = "ANALYTICS";

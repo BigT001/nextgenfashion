@@ -59,6 +59,19 @@ events.on(SYSTEM_EVENTS.SALE.CREATED, async (data) => {
     });
 
     console.log(`[Event Success] Audit log and notification processed for order ${data.orderNumber}`);
+
+    // Reaction C: Speedaf Auto-fulfillment dispatch
+    try {
+      const { dispatchOrderToSpeedafAction } = await import("@/modules/delivery/actions/actions");
+      const dispatchRes = await dispatchOrderToSpeedafAction(data.saleId);
+      if (dispatchRes.success) {
+        console.log(`[Event Success] Speedaf auto-fulfillment waybill created for order ${data.orderNumber}: ${dispatchRes.waybillNumber}`);
+      } else {
+        console.warn(`[Event Warning] Speedaf auto-fulfillment skipped/failed for order ${data.orderNumber}: ${dispatchRes.error}`);
+      }
+    } catch (speedafErr) {
+      console.error(`[Event Error] Speedaf auto-fulfillment dispatch threw error:`, speedafErr);
+    }
   } catch (error) {
     console.error(`[Event Error] Failed to process sale:created side-effects:`, error);
   }

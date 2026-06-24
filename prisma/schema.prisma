@@ -135,6 +135,19 @@ model Sale {
   Customer      Customer?     @relation(fields: [customerId], references: [id])
   User          User?         @relation(fields: [userId], references: [id])
   SaleItem      SaleItem[]
+
+  // Speedaf Logistics fields
+  carrier               String?        @default("SPEEDAF")
+  waybillNumber         String?        @unique
+  deliveryFee           Decimal?       @db.Decimal(10, 2)
+  deliveryStatus        String?
+  deliveryHistory       Json?          // Stores raw trajectory scan logs
+  deliveryProvinceCode  String?
+  deliveryProvinceName  String?
+  deliveryCityCode      String?
+  deliveryCityName      String?
+  deliveryDistrictCode  String?
+  deliveryDistrictName  String?
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.

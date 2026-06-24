@@ -14,6 +14,7 @@ import {
     ShieldCheck,
     ShoppingCart,
     User,
+    ChevronDown,
     type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
@@ -21,6 +22,12 @@ import Image from "next/image";
 import { createOrderAction } from "@/modules/orders/actions/order.actions";
 import { validateCartItemsAction } from "./validate-cart-action";
 import { getCustomerDetailAction } from "@/modules/customers/actions/customer.actions";
+import {
+  getProvincesAction,
+  getCitiesAction,
+  getAreasAction,
+  getShippingFeeAction,
+} from "@/modules/delivery/actions/actions";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
@@ -92,6 +99,13 @@ export default function CheckoutPage() {
     address: "",
     city: "",
     zip: "",
+    provinceCode: "",
+    provinceName: "",
+    cityCode: "",
+    cityName: "",
+    districtCode: "",
+    districtName: "",
+    deliveryFee: 0,
   });
   const [formErrors, setFormErrors] = useState<{ fullName?: string; email?: string; phone?: string }>({});
 
@@ -106,7 +120,141 @@ export default function CheckoutPage() {
     address: profile?.address || current.address,
     city: current.city,
     zip: current.zip,
+    provinceCode: current.provinceCode || "",
+    provinceName: current.provinceName || "",
+    cityCode: current.cityCode || "",
+    cityName: current.cityName || "",
+    districtCode: current.districtCode || "",
+    districtName: current.districtName || "",
+    deliveryFee: current.deliveryFee || 0,
   });
+
+  const [provinces, setProvinces] = useState<{ code: string; name: string }[]>([]);
+  const [cities, setCities] = useState<{ code: string; name: string }[]>([]);
+  const [areas, setAreas] = useState<{ code: string; name: string }[]>([]);
+
+  const [selectedProvince, setSelectedProvince] = useState("");
+  const [selectedCity, setSelectedCity] = useState("");
+  const [selectedArea, setSelectedArea] = useState("");
+
+  const [shippingFee, setShippingFee] = useState(0);
+  const [isFeeLoading, setIsFeeLoading] = useState(false);
+
+  const totalWeight = useMemo(() => {
+    return items.reduce((sum, item) => {
+      return sum + 0.5 * item.quantity;
+    }, 0);
+  }, [items]);
+
+  useEffect(() => {
+    async function loadProvinces() {
+      const res = await getProvincesAction();
+      if (res.success && res.data) {
+        setProvinces(res.data);
+      } else {
+        toast.error("Failed to load provinces.");
+      }
+    }
+    loadProvinces();
+  }, []);
+
+  const handleProvinceChange = async (provCode: string) => {
+    setSelectedProvince(provCode);
+    setSelectedCity("");
+    setSelectedArea("");
+    setCities([]);
+    setAreas([]);
+    setShippingFee(0);
+    setShippingInfo(prev => ({
+      ...prev,
+      provinceCode: provCode,
+      provinceName: provinces.find(p => p.code === provCode)?.name || "",
+      cityCode: "",
+      cityName: "",
+      districtCode: "",
+      districtName: "",
+      deliveryFee: 0,
+    }));
+    
+    if (!provCode) return;
+    const res = await getCitiesAction(provCode);
+    if (res.success && res.data) {
+      setCities(res.data);
+    }
+  };
+
+  const handleCityChange = async (cityCode: string) => {
+    setSelectedCity(cityCode);
+    setSelectedArea("");
+    setAreas([]);
+    setShippingFee(0);
+    setShippingInfo(prev => ({
+      ...prev,
+      cityCode: cityCode,
+      cityName: cities.find(c => c.code === cityCode)?.name || "",
+      districtCode: "",
+      districtName: "",
+      deliveryFee: 0,
+    }));
+
+    if (!cityCode || !selectedProvince) return;
+    const res = await getAreasAction(selectedProvince, cityCode);
+    if (res.success && res.data) {
+      setAreas(res.data);
+    }
+  };
+
+  const handleAreaChange = (areaCode: string) => {
+    setSelectedArea(areaCode);
+    setShippingInfo(prev => ({
+      ...prev,
+      districtCode: areaCode,
+      districtName: areas.find(a => a.code === areaCode)?.name || "",
+    }));
+  };
+
+  useEffect(() => {
+    if (!selectedProvince || !selectedCity || !selectedArea) {
+      setShippingFee(0);
+      return;
+    }
+
+    async function calculateFee() {
+      setIsFeeLoading(true);
+      try {
+        const res = await getShippingFeeAction({
+          receiverProvinceCode: selectedProvince,
+          receiverCityCode: selectedCity,
+          receiverAreaCode: selectedArea,
+          weight: totalWeight,
+        });
+        if (res.success && res.fee !== undefined) {
+          setShippingFee(res.fee);
+          const provName = provinces.find(p => p.code === selectedProvince)?.name || "";
+          const cityName = cities.find(c => c.code === selectedCity)?.name || "";
+          const districtName = areas.find(a => a.code === selectedArea)?.name || "";
+          
+          setShippingInfo(prev => ({
+            ...prev,
+            provinceCode: selectedProvince,
+            provinceName: provName,
+            cityCode: selectedCity,
+            cityName: cityName,
+            districtCode: selectedArea,
+            districtName: districtName,
+            deliveryFee: res.fee,
+            city: cityName, // fallback for legacy views
+          }));
+        }
+      } catch (err) {
+        console.error("Fee calculation error:", err);
+      } finally {
+        setIsFeeLoading(false);
+      }
+    }
+
+    calculateFee();
+  }, [selectedProvince, selectedCity, selectedArea, totalWeight, provinces, cities, areas]);
 
   const validateIdentityStep = () => {
     const errors: typeof formErrors = {};
@@ -138,7 +286,7 @@ export default function CheckoutPage() {
   // Financial Orchestration
   const subtotal = getTotal();
   const taxAmount = 0; // VAT disabled
-  const grandTotal = subtotal;
+  const grandTotal = subtotal + shippingFee;
 
   const customerId = (session?.user as any)?.customerId;
 
@@ -230,6 +378,11 @@ export default function CheckoutPage() {
       return;
     }
 
+    if (!selectedProvince || !selectedCity || !selectedArea) {
+      toast.error("Please select your State, City, and Area to calculate shipping fee.");
+      return;
+    }
+
     setLoading(true);
     const isValidCart = await validateCartBeforeCheckout();
     if (!isValidCart) {
@@ -289,7 +442,7 @@ export default function CheckoutPage() {
               paymentMethod: detectedPaymentMethod,
               paymentRef: paymentRef || undefined,
               paymentProviderData: rawResponse,
-              status: "COMPLETED" as SaleStatusType,
+              status: "PAID" as SaleStatusType,
               customerId: (session?.user as any)?.customerId,
             });
             console.debug("[checkout] createOrderAction result", result);
@@ -298,7 +451,6 @@ export default function CheckoutPage() {
               const orderData = result as { success: true; data: { orderNumber: string } };
               toast.success("Purchase successful! Check your email for your order confirmation and delivery details.");
               setIsNavigatingToSuccess(true);
-              clearCart();
               router.push(`/checkout/success?orderNumber=${encodeURIComponent(orderData.data.orderNumber)}&totalAmount=${Math.round(grandTotal)}`);
             } else {
               const errorResult = result as { success: false; error: string | null };
@@ -347,7 +499,6 @@ export default function CheckoutPage() {
       const orderData = result as { success: true; data: { orderNumber: string } };
       toast.success("Purchase successful! Check your email for your order confirmation and delivery details.");
       setIsNavigatingToSuccess(true);
-      clearCart();
       router.push(`/checkout/success?orderNumber=${encodeURIComponent(orderData.data.orderNumber)}&totalAmount=${Math.round(grandTotal)}`);
     } else {
       const errorResult = result as { success: false; error: string | null };
@@ -515,10 +666,85 @@ export default function CheckoutPage() {
                             <Label htmlFor="address" className="text-[10px] font-black uppercase tracking-[0.2em] ml-2 opacity-60">Fulfillment Address (Physical)</Label>
                             <Input id="address" name="address" value={shippingInfo.address} onChange={(e) => setShippingInfo({ ...shippingInfo, address: e.target.value })} placeholder="DESTINATION STREET & HOUSE" required className="h-20 rounded-3xl glass-card border-none bg-zinc-50/50 focus-visible:ring-brand-navy font-bold text-lg px-8" />
                         </div>
+                        
                         <div className="space-y-3">
-                            <Label htmlFor="city" className="text-[10px] font-black uppercase tracking-[0.2em] ml-2 opacity-60">Delivery Hub (City)</Label>
-                            <Input id="city" name="city" value={shippingInfo.city} onChange={(e) => setShippingInfo({ ...shippingInfo, city: e.target.value })} placeholder="LAGOS, ABUJA, ETC." required className="h-20 rounded-3xl glass-card border-none bg-zinc-50/50 focus-visible:ring-brand-navy font-bold text-lg px-8" />
+                            <Label htmlFor="province" className="text-[10px] font-black uppercase tracking-[0.2em] ml-2 opacity-60">State / Region</Label>
+                            <div className="relative">
+                                <select
+                                    id="province"
+                                    name="province"
+                                    value={selectedProvince}
+                                    onChange={(e) => handleProvinceChange(e.target.value)}
+                                    required
+                                    className="h-20 w-full rounded-3xl glass-card border-none bg-zinc-50/50 focus:ring-2 focus:ring-brand-navy focus-visible:ring-brand-navy font-bold text-lg px-8 appearance-none cursor-pointer outline-none transition-all pr-12 text-zinc-800"
+                                >
+                                    <option value="" disabled className="text-zinc-400 bg-white">Select State</option>
+                                    {provinces.map((p) => (
+                                        <option key={p.code} value={p.code} className="text-zinc-900 bg-white">
+                                            {p.name}
+                                        </option>
+                                    ))}
+                                </select>
+                                <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-500">
+                                    <ChevronDown className="size-5" />
+                                </div>
+                            </div>
                         </div>
+
+                        <div className="space-y-3">
+                            <Label htmlFor="city" className="text-[10px] font-black uppercase tracking-[0.2em] ml-2 opacity-60">LGA / City</Label>
+                            <div className="relative">
+                                <select
+                                    id="city"
+                                    name="city"
+                                    value={selectedCity}
+                                    onChange={(e) => handleCityChange(e.target.value)}
+                                    required
+                                    disabled={!selectedProvince}
+                                    className="h-20 w-full rounded-3xl glass-card border-none bg-zinc-50/50 focus:ring-2 focus:ring-brand-navy focus-visible:ring-brand-navy font-bold text-lg px-8 appearance-none cursor-pointer outline-none transition-all pr-12 disabled:opacity-50 text-zinc-800"
+                                >
+                                    <option value="" disabled className="text-zinc-400 bg-white">
+                                        {selectedProvince ? "Select LGA / City" : "Select State First"}
+                                    </option>
+                                    {cities.map((c) => (
+                                        <option key={c.code} value={c.code} className="text-zinc-900 bg-white">
+                                            {c.name}
+                                        </option>
+                                    ))}
+                                </select>
+                                <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-500">
+                                    <ChevronDown className="size-5" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="space-y-3">
+                            <Label htmlFor="area" className="text-[10px] font-black uppercase tracking-[0.2em] ml-2 opacity-60">Area / District</Label>
+                            <div className="relative">
+                                <select
+                                    id="area"
+                                    name="area"
+                                    value={selectedArea}
+                                    onChange={(e) => handleAreaChange(e.target.value)}
+                                    required
+                                    disabled={!selectedCity}
+                                    className="h-20 w-full rounded-3xl glass-card border-none bg-zinc-50/50 focus:ring-2 focus:ring-brand-navy focus-visible:ring-brand-navy font-bold text-lg px-8 appearance-none cursor-pointer outline-none transition-all pr-12 disabled:opacity-50 text-zinc-800"
+                                >
+                                    <option value="" disabled className="text-zinc-400 bg-white">
+                                        {selectedCity ? "Select Area / District" : "Select City First"}
+                                    </option>
+                                    {areas.map((a) => (
+                                        <option key={a.code} value={a.code} className="text-zinc-900 bg-white">
+                                            {a.name}
+                                        </option>
+                                    ))}
+                                </select>
+                                <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-500">
+                                    <ChevronDown className="size-5" />
+                                </div>
+                            </div>
+                        </div>
+
                         <div className="space-y-3">
                             <Label htmlFor="zip" className="text-[10px] font-black uppercase tracking-[0.2em] ml-2 opacity-60">Postcode (Optional)</Label>
                             <Input id="zip" name="zip" value={shippingInfo.zip} onChange={(e) => setShippingInfo({ ...shippingInfo, zip: e.target.value })} placeholder="000000" className="h-20 rounded-3xl glass-card border-none bg-zinc-50/50 focus-visible:ring-brand-navy font-bold text-lg px-8" />
@@ -580,7 +806,15 @@ export default function CheckoutPage() {
                   </div>
                   <div className="flex justify-between text-xs font-bold uppercase tracking-widest">
                     <span className="text-muted-foreground">Delivery</span>
-                    <span className="text-muted-foreground/60 font-black tracking-[0.2em]">—</span>
+                    <span className="font-black">
+                      {isFeeLoading ? (
+                        <span className="animate-pulse">CALCULATING...</span>
+                      ) : shippingFee > 0 ? (
+                        `₦${shippingFee.toLocaleString()}`
+                      ) : (
+                        "—"
+                      )}
+                    </span>
                   </div>
                   <div className="pt-8 mt-4 border-t border-border/30">
                     <div className="flex justify-between items-end">

@@ -17,7 +17,8 @@ import {
   Palette,
   Cloud,
   Percent,
-  Lock
+  Lock,
+  Truck
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,6 +46,7 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { StaffDialog } from "@/modules/staff/components/staff-dialog";
+import { SpeedafSettingsDialog } from "@/modules/delivery/components/speedaf-settings-dialog";
 import {
   Dialog,
   DialogContent,
@@ -66,6 +68,7 @@ export default function SettingsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isInviteOpen, setIsInviteOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<any>(null);
+  const [isSpeedafOpen, setIsSpeedafOpen] = useState(false);
 
   // Security Credentials Reset States
   const [resetPasswordMember, setResetPasswordMember] = useState<any>(null);
@@ -391,9 +394,10 @@ export default function SettingsPage() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {[
-                { icon: Database, title: "Operational Database", desc: "Configure PostgreSQL synchronization and automated backups.", status: "OPTIMIZED" },
-                { icon: Cloud, title: "Asset Architecture", desc: "Fulfillment and product image orchestration via Cloudinary.", status: "CONNECTED" },
-                { icon: Shield, title: "Security Protocols", desc: "Manage NextAuth v5 session expiration and JWT encryption.", status: "MILITARY-GRADE" }
+                { icon: Database, title: "Operational Database", desc: "Configure PostgreSQL synchronization and automated backups.", status: "OPTIMIZED", onClick: () => toast.info("Operational Database configuration optimized.") },
+                { icon: Cloud, title: "Asset Architecture", desc: "Fulfillment and product image orchestration via Cloudinary.", status: "CONNECTED", onClick: () => toast.info("Asset Architecture connected and operating.") },
+                { icon: Shield, title: "Security Protocols", desc: "Manage NextAuth v5 session expiration and JWT encryption.", status: "MILITARY-GRADE", onClick: () => toast.info("Security Protocols operating at maximum integrity.") },
+                { icon: Truck, title: "Speedaf Logistics", desc: "Orchestrate automated shipping fee calculation, waybills, and tracking webhooks.", status: "INTEGRATED", onClick: () => setIsSpeedafOpen(true) }
               ].map((item, i) => (
                 <Card key={i} className="glass-card border border-white/10 hover:border-brand-navy/10 shadow-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 p-8 rounded-[2rem] group flex flex-col justify-between">
                   <div>
@@ -411,7 +415,11 @@ export default function SettingsPage() {
                     </div>
                   </div>
                   <div className="mt-6">
-                    <Button variant="ghost" className="h-10 rounded-xl font-black text-xs uppercase tracking-widest gap-2 hover:bg-brand-navy/5 hover:text-brand-navy px-0 transition-colors">
+                    <Button 
+                      variant="ghost" 
+                      onClick={item.onClick}
+                      className="h-10 rounded-xl font-black text-xs uppercase tracking-widest gap-2 hover:bg-brand-navy/5 hover:text-brand-navy px-0 transition-colors"
+                    >
                       ORCHESTRATE CONFIG <Plus className="size-4" />
                     </Button>
                   </div>
@@ -624,6 +632,11 @@ export default function SettingsPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <SpeedafSettingsDialog
+        open={isSpeedafOpen}
+        onOpenChange={setIsSpeedafOpen}
+      />
     </div>
   );
 }

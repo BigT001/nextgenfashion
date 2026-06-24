@@ -102,6 +102,13 @@ export type CreateOrderActionPayload = {
     phone: string;
     address: string;
     city: string;
+    provinceCode?: string;
+    provinceName?: string;
+    cityCode?: string;
+    cityName?: string;
+    districtCode?: string;
+    districtName?: string;
+    deliveryFee?: number;
   };
   paymentMethod: "CASH" | "CARD" | "TRANSFER" | "POS";
   paymentRef?: string;
@@ -242,8 +249,7 @@ export async function createOrderAction(data: CreateOrderActionPayload) {
     ];
 
     const requestedStatus = String(data.status || "PENDING").toUpperCase();
-    const normalizedStatus = requestedStatus === "PAID" ? "COMPLETED" : requestedStatus;
-    const statusValue = KNOWN_STATUSES.includes(normalizedStatus) ? normalizedStatus : "PENDING";
+    const statusValue = KNOWN_STATUSES.includes(requestedStatus) ? requestedStatus : "PENDING";
 
     let customer: { id: string; email?: string | null } | null = null;
     // Try the transaction; if the database enum isn't migrated yet and rejects
@@ -255,18 +261,26 @@ export async function createOrderAction(data: CreateOrderActionPayload) {
         const email = data.shippingInfo.email;
         const address = `${data.shippingInfo.address}, ${data.shippingInfo.city}`;
 
+        let customer: any = null;
         if (data.customerId) {
-          console.log("[createOrderAction] updating existing customer by customerId", data.customerId);
-          customer = await tx.customer.update({
-            where: { id: data.customerId },
-            data: {
-              name: data.shippingInfo.fullName,
-              email,
-              phone: data.shippingInfo.phone,
-              address,
-            },
-          });
-        } else {
+          console.log("[createOrderAction] looking up existing customer by customerId", data.customerId);
+          customer = await tx.customer.findUnique({ where: { id: data.customerId } });
+          if (customer) {
+            customer = await tx.customer.update({
+              where: { id: data.customerId },
+              data: {
+                name: data.shippingInfo.fullName,
+                email,
+                phone: data.shippingInfo.phone,
+                address,
+              },
+            });
+          } else {
+            console.warn("[createOrderAction] customerId provided but not found in DB", data.customerId);
+          }
+        }
+
+        if (!customer) {
           console.log("[createOrderAction] looking up customer by email", email);
           customer = await CustomerQueries.findByEmail(email, tx);
           console.log("[createOrderAction] customer lookup result", { found: Boolean(customer), customerId: customer?.id });
@@ -289,7 +303,15 @@ export async function createOrderAction(data: CreateOrderActionPayload) {
           }
         }
 
-            // 2. Create Sale
+        // Ensure the User record is linked to this Customer ID so the session doesn't get stale
+        if (customer && customer.id) {
+          await tx.user.updateMany({
+            where: { email: email },
+            data: { customerId: customer.id }
+          });
+        }
+
+        // 2. Create Sale
         let verifiedPaymentMethod: PaymentMethod = data.paymentMethod;
         let providerPayload = data.paymentProviderData ?? null;
 
@@ -325,6 +347,16 @@ export async function createOrderAction(data: CreateOrderActionPayload) {
           paymentMethod: verifiedPaymentMethod,
           paymentRef: data.paymentRef,
           Customer: { connect: { id: customer.id } },
+          
+          deliveryProvinceCode: data.shippingInfo.provinceCode || null,
+          deliveryProvinceName: data.shippingInfo.provinceName || null,
+          deliveryCityCode: data.shippingInfo.cityCode || null,
+          deliveryCityName: data.shippingInfo.cityName || null,
+          deliveryDistrictCode: data.shippingInfo.districtCode || null,
+          deliveryDistrictName: data.shippingInfo.districtName || null,
+          deliveryFee: data.shippingInfo.deliveryFee || null,
+          carrier: data.shippingInfo.provinceCode ? "SPEEDAF" : null,
+
           SaleItem: {
             create: sanitizedItems.map(item => ({
               variantId: item.variantId,
@@ -363,17 +395,23 @@ export async function createOrderAction(data: CreateOrderActionPayload) {
           const email = data.shippingInfo.email;
           const address = `${data.shippingInfo.address}, ${data.shippingInfo.city}`;
 
+          let customer: any = null;
           if (data.customerId) {
-            customer = await tx.customer.update({
-              where: { id: data.customerId },
-              data: {
-                name: data.shippingInfo.fullName,
-                email,
-                phone: data.shippingInfo.phone,
-                address,
-              },
-            });
-          } else {
+            customer = await tx.customer.findUnique({ where: { id: data.customerId } });
+            if (customer) {
+              customer = await tx.customer.update({
+                where: { id: data.customerId },
+                data: {
+                  name: data.shippingInfo.fullName,
+                  email,
+                  phone: data.shippingInfo.phone,
+                  address,
+                },
+              });
+            }
+          }
+
+          if (!customer) {
             customer = await CustomerQueries.findByEmail(email, tx);
             if (customer) {
               customer = await tx.customer.update({
@@ -392,6 +430,13 @@ export async function createOrderAction(data: CreateOrderActionPayload) {
                 address,
               }, tx);
             }
+          }
+
+          if (customer && customer.id) {
+            await tx.user.updateMany({
+              where: { email: email },
+              data: { customerId: customer.id }
+            });
           }
 
           let retryPaymentMethod: PaymentMethod = data.paymentMethod;
@@ -415,6 +460,16 @@ export async function createOrderAction(data: CreateOrderActionPayload) {
             paymentMethod: retryPaymentMethod,
             paymentRef: data.paymentRef,
             Customer: { connect: { id: customer.id } },
+
+            deliveryProvinceCode: data.shippingInfo.provinceCode || null,
+            deliveryProvinceName: data.shippingInfo.provinceName || null,
+            deliveryCityCode: data.shippingInfo.cityCode || null,
+            deliveryCityName: data.shippingInfo.cityName || null,
+            deliveryDistrictCode: data.shippingInfo.districtCode || null,
+            deliveryDistrictName: data.shippingInfo.districtName || null,
+            deliveryFee: data.shippingInfo.deliveryFee || null,
+            carrier: data.shippingInfo.provinceCode ? "SPEEDAF" : null,
+
             SaleItem: {
               create: sanitizedItems.map(item => ({
                 variantId: item.variantId,

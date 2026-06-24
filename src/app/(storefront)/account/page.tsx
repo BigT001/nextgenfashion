@@ -11,7 +11,18 @@ export default async function AccountPage() {
     redirect("/auth/login?callbackUrl=/account");
   }
 
-  const customerId = (session.user as any)?.customerId;
+  let customerId = (session.user as any)?.customerId;
+  const email = session.user?.email;
+
+  // Since the DB was purged, the session customerId might be stale.
+  // Look up the customer by email to get the true customerId.
+  if (email && customerId) {
+    const { prisma } = await import("@/services/prisma.service");
+    const customer = await prisma.customer.findUnique({ where: { email } });
+    if (customer) {
+      customerId = customer.id;
+    }
+  }
 
   if (!customerId) {
       // It's a staff/admin, they don't have a customer profile

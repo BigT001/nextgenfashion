@@ -6,13 +6,18 @@ import { useSearchParams } from "next/navigation";
 import { CheckCircle2, Package, ArrowRight, ShoppingBag, Sparkles, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import confetti from "canvas-confetti";
+import { useCartStore } from "@/modules/cart/store/cart.store";
 
 function OrderSuccessClient() {
   const searchParams = useSearchParams();
   const orderNumber = searchParams.get("orderNumber");
   const totalAmount = searchParams.get("totalAmount");
+  const { clearCart } = useCartStore();
 
   useEffect(() => {
+    // Clear the cart since checkout was successful
+    clearCart();
+
     // Fire celebratory confetti
     const duration = 3 * 1000;
     const animationEnd = Date.now() + duration;

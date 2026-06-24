@@ -15,8 +15,12 @@ import {
   ShieldCheck,
   MapPin,
   Camera,
-  CreditCard
+  CreditCard,
+  Truck,
+  CheckCircle2,
+  Loader2
 } from "lucide-react";
+import { getOrderTrackingAction } from "@/modules/delivery/actions/actions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
@@ -43,6 +47,7 @@ export default function AccountClient({ initialPatronData, initialOrders }: Acco
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [orderTracking, setOrderTracking] = useState<Record<string, { loading: boolean; data: any | null }>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -60,7 +65,11 @@ export default function AccountClient({ initialPatronData, initialOrders }: Acco
   }, [status, session, router, initialPatronData]);
 
   const loadInitialData = async () => {
-    const customerId = (session?.user as any).customerId;
+    // If we already have patronData loaded (perhaps from initialPatronData or previous loads), use its true ID.
+    // Otherwise fallback to session.
+    let customerId = patronData?.id || (session?.user as any)?.customerId;
+    
+    // Safety check - we can also get the ID from email on the backend, but let's try this first
     try {
       const [patronResult, ordersResult] = await Promise.all([
         getCustomerDetailAction(customerId),
@@ -77,12 +86,14 @@ export default function AccountClient({ initialPatronData, initialOrders }: Acco
   };
 
   const loadPatronData = async () => {
-    const result = await getCustomerDetailAction((session?.user as any).customerId);
+    const customerId = patronData?.id || (session?.user as any)?.customerId;
+    const result = await getCustomerDetailAction(customerId);
     if (result.success) setPatronData(result.data);
   };
 
   const loadOrders = async () => {
-    const result = await getPatronOrdersAction((session?.user as any).customerId);
+    const customerId = patronData?.id || (session?.user as any)?.customerId;
+    const result = await getPatronOrdersAction(customerId);
     if (result.success) setOrders(result.data || []);
   };
 
@@ -301,12 +312,25 @@ export default function AccountClient({ initialPatronData, initialOrders }: Acco
                             </div>
                           </div>
 
-                          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                             <div className="rounded-3xl bg-zinc-50 px-3 py-2 text-[10px] font-black uppercase tracking-[0.28em] text-muted-foreground inline-flex items-center justify-center">
                               {itemCount} {itemCount === 1 ? "item" : "items"}
                             </div>
                             <Button
-                              onClick={() => setExpandedOrderId(isExpanded ? null : order.id)}
+                              onClick={() => {
+                                const newId = isExpanded ? null : order.id;
+                                setExpandedOrderId(newId);
+                                // Fetch live tracking when expanding
+                                if (newId && !orderTracking[newId]) {
+                                  setOrderTracking(prev => ({ ...prev, [newId]: { loading: true, data: null } }));
+                                  getOrderTrackingAction(newId).then(res => {
+                                    setOrderTracking(prev => ({ 
+                                      ...prev, 
+                                      [newId]: { loading: false, data: res.success ? res.data : null } 
+                                    }));
+                                  });
+                                }
+                              }}
                               variant="outline"
                               className="inline-flex h-11 items-center gap-2 rounded-2xl border border-brand-navy/10 bg-white px-4 text-[10px] font-black uppercase tracking-[0.3em] text-brand-navy hover:bg-brand-navy/5"
                             >
@@ -319,6 +343,83 @@ export default function AccountClient({ initialPatronData, initialOrders }: Acco
 
                         {isExpanded && (
                           <div className="border-t border-border/10 bg-zinc-50/70 p-3 sm:p-4 md:p-5">
+                            
+                            {/* Live Shipment Tracking */}
+                            {(() => {
+                              const tracking = orderTracking[order.id];
+                              return (
+                                <div className="mb-4 rounded-2xl bg-white border border-brand-navy/10 shadow-sm overflow-hidden">
+                                  {/* Header */}
+                                  <div className="flex items-center gap-3 p-4 border-b border-zinc-100">
+                                    <div className="h-9 w-9 rounded-xl bg-brand-navy/10 flex items-center justify-center">
+                                      <Truck className="size-4 text-brand-navy" />
+                                    </div>
+                                    <div className="flex-1">
+                                      <p className="text-[10px] font-black uppercase tracking-[0.3em] text-brand-navy">Shipment Tracking</p>
+                                      {order.waybillNumber ? (
+                                        <p className="text-xs font-bold text-muted-foreground mt-0.5">{order.waybillNumber}</p>
+                                      ) : (
+                                        <p className="text-xs font-bold text-muted-foreground mt-0.5">Awaiting Waybill</p>
+                                      )}
+                                    </div>
+                                    <div className="text-right">
+                                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Status</p>
+                                      <p className="text-xs font-black text-brand-navy mt-0.5">
+                                        {tracking?.data?.status || order.deliveryStatus || "Processing Shipment"}
+                                      </p>
+                                    </div>
+                                  </div>
+
+                                  {/* Timeline */}
+                                  {tracking?.loading ? (
+                                    <div className="flex items-center justify-center gap-2 py-6 text-muted-foreground">
+                                      <Loader2 className="size-4 animate-spin" />
+                                      <span className="text-[11px] font-black uppercase tracking-widest">Fetching live updates…</span>
+                                    </div>
+                                  ) : tracking?.data?.events?.length > 0 ? (
+                                    <div className="p-4 space-y-0">
+                                      {tracking.data.events.map((event: any, i: number) => (
+                                        <div key={i} className="relative flex gap-3 pb-5 last:pb-0">
+                                          {/* vertical line */}
+                                          {i < tracking.data.events.length - 1 && (
+                                            <div className="absolute left-[13px] top-6 bottom-0 w-px bg-zinc-200" />
+                                          )}
+                                          <div className={cn(
+                                            "relative z-10 flex-shrink-0 h-7 w-7 rounded-full flex items-center justify-center",
+                                            i === 0 ? "bg-brand-navy" : "bg-zinc-200"
+                                          )}>
+                                            {i === 0 
+                                              ? <Truck className="size-3.5 text-white" />
+                                              : <CheckCircle2 className="size-3.5 text-zinc-400" />
+                                            }
+                                          </div>
+                                          <div className="pt-0.5 min-w-0">
+                                            <p className={cn("text-xs font-black leading-snug", i === 0 ? "text-brand-navy" : "text-foreground")}>
+                                              {event.status}
+                                            </p>
+                                            {event.location && (
+                                              <p className="text-[10px] text-muted-foreground font-medium mt-0.5">{event.location}</p>
+                                            )}
+                                            <p className="text-[10px] text-muted-foreground mt-0.5">{event.time}</p>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ) : order.waybillNumber ? (
+                                    <div className="py-6 text-center">
+                                      <p className="text-[11px] text-muted-foreground font-black uppercase tracking-widest">No scan events yet</p>
+                                      <p className="text-[10px] text-muted-foreground mt-1">Your shipment has been booked. Check back soon!</p>
+                                    </div>
+                                  ) : (
+                                    <div className="py-6 text-center">
+                                      <p className="text-[11px] text-muted-foreground font-black uppercase tracking-widest">Preparing your shipment</p>
+                                      <p className="text-[10px] text-muted-foreground mt-1">You'll receive a waybill number once your order is dispatched.</p>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })()}
+
                             <div className="space-y-3">
                               {(order.items ?? order.SaleItem ?? []).map((item: any, idx: number) => {
                                 const variant = item.variant ?? item.ProductVariant ?? {};
@@ -360,6 +461,28 @@ export default function AccountClient({ initialPatronData, initialOrders }: Acco
                                   </div>
                                 );
                               })}
+                            </div>
+
+                            {/* Cost Breakdown */}
+                            <div className="mt-4 flex justify-end">
+                              <div className="w-full max-w-sm rounded-[1.5rem] bg-white p-5 border border-border/10 shadow-sm space-y-3">
+                                <div className="flex items-center justify-between text-sm">
+                                  <span className="font-bold text-muted-foreground">Items Subtotal</span>
+                                  <span className="font-black">
+                                    ₦{((order.items ?? order.SaleItem ?? []).reduce((acc: number, item: any) => acc + (Number(item.price) * (item.quantity || 1)), 0)).toLocaleString()}
+                                  </span>
+                                </div>
+                                {(order.deliveryFee != null && Number(order.deliveryFee) > 0) && (
+                                  <div className="flex items-center justify-between text-sm">
+                                    <span className="font-bold text-muted-foreground">Logistics / Delivery Fee</span>
+                                    <span className="font-black">₦{Number(order.deliveryFee).toLocaleString()}</span>
+                                  </div>
+                                )}
+                                <div className="pt-3 border-t border-border/10 flex items-center justify-between">
+                                  <span className="text-[11px] font-black uppercase tracking-[0.2em] text-brand-navy">Total Paid</span>
+                                  <span className="text-xl font-black text-brand-navy">₦{Number(order.totalAmount).toLocaleString()}</span>
+                                </div>
+                              </div>
                             </div>
                           </div>
                         )}
