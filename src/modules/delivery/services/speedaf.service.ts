@@ -122,54 +122,88 @@ export class SpeedafService {
 
 
   /**
+   * Resolves the Speedaf Zone (1 to 4) for a given Nigerian state/province name.
+   */
+  static getZoneForProvince(provinceName: string): number {
+    const norm = (provinceName || "").toLowerCase().trim();
+    if (norm.includes("lagos")) {
+      return 1;
+    }
+    
+    // Zone 2: South West & Kwara
+    const zone2Keywords = ["ogun", "ondo", "ekiti", "oyo", "osun", "kwara"];
+    if (zone2Keywords.some((keyword) => norm.includes(keyword))) {
+      return 2;
+    }
+    
+    // Zone 3: South East, South South, Abuja (FCT)
+    const zone3Keywords = [
+      "abia", "anambra", "ebonyi", "enugu", "imo",
+      "akwa ibom", "bayelsa", "cross river", "delta", "edo", "rivers",
+      "abuja", "federal capital territory", "fct"
+    ];
+    if (zone3Keywords.some((keyword) => norm.includes(keyword))) {
+      return 3;
+    }
+    
+    // Zone 4: All Northern Cities (default fallback)
+    return 4;
+  }
+
+  /**
    * Helper to calculate a realistic mock shipping fee when in UAT sandbox mode,
    * since the Speedaf sandbox API always returns a flat 10 or 11 NGN.
+   * Matches the official Speedaf Rate Matrix.
    */
   static calculateMockTariff(provinceName: string, weight: number): number {
-    const normName = (provinceName || "").toLowerCase().trim();
+    const zone = this.getZoneForProvince(provinceName);
     
-    // Default base rates (base weight is up to 1.0kg)
-    let baseRate = 3500;
-    let perKgRate = 800;
-
-    if (normName === "lagos") {
-      baseRate = 1500;
-      perKgRate = 400;
-    } else if (
-      normName.includes("abuja") || 
-      normName.includes("federal capital territory") || 
-      normName.includes("fct") ||
-      normName === "oyo" || 
-      normName === "ogun" || 
-      normName === "osun" || 
-      normName === "ondo" || 
-      normName === "ekiti"
-    ) {
-      // South-West regional and FCT
-      baseRate = 2500;
-      perKgRate = 600;
-    } else if (
-      normName === "plateau" ||
-      normName === "kano" ||
-      normName === "kaduna" ||
-      normName === "rivers" ||
-      normName === "enugu" ||
-      normName === "anambra" ||
-      normName === "delta" ||
-      normName === "edo"
-    ) {
-      // Major shipping hubs and Plateau
-      baseRate = 3500;
-      perKgRate = 800;
+    // Clamp minimum weight to 0.5kg
+    const w = Math.max(0.5, weight);
+    
+    // Rate lists where index is Math.ceil(weight * 2) - 1
+    const zone1Rates = [
+      2494.4, 2992.8, 3242.4, 3492.0, 3740.8, 4240.0, 4489.6, 4747.2, 4996.8, 5495.2,
+      5994.4, 6244.0, 6492.8, 6992.0, 7241.6, 7490.4, 7989.6, 8239.2, 8488.0, 8987.2
+    ];
+    
+    const zone2Rates = [
+      4092.3, 4383.0, 4963.5, 5253.3, 5553.9, 5843.7, 6424.2, 6714.9, 7014.6, 7304.4,
+      8175.6, 8465.4, 8766.0, 9346.5, 9636.3, 9927.0, 10516.5, 10807.2, 11097.0, 11387.7
+    ];
+    
+    const zone3Rates = [
+      5476.5, 5776.2, 6085.8, 6695.1, 6994.8, 7304.4, 7605.0, 8214.3, 8514.0, 8823.6,
+      10516.5, 10845.9, 11174.4, 11832.3, 12161.7, 12490.2, 12819.6, 13467.6, 13797.0, 14125.5
+    ];
+    
+    const zone4Rates = [
+      6695.1, 6994.8, 7304.4, 7605.0, 8214.3, 8514.0, 8823.6, 9123.3, 9733.5, 10043.1,
+      11832.3, 12161.7, 12490.2, 12819.6, 13467.6, 13797.0, 14125.5, 14783.4, 15112.8, 15441.3
+    ];
+    
+    let rates = zone1Rates;
+    if (zone === 2) rates = zone2Rates;
+    else if (zone === 3) rates = zone3Rates;
+    else if (zone === 4) rates = zone4Rates;
+    
+    // Splitting logic for weights exceeding 10.0kg (maximum weight per waybill is 10kg)
+    if (w <= 10.0) {
+      const index = Math.min(19, Math.max(0, Math.ceil(w * 2) - 1));
+      return rates[index];
     } else {
-      // Far North and remote states
-      baseRate = 4500;
-      perKgRate = 1000;
+      let total = 0;
+      let remaining = w;
+      while (remaining > 10.0) {
+        total += rates[19]; // 10.0kg rate
+        remaining -= 10.0;
+      }
+      if (remaining > 0) {
+        const index = Math.min(19, Math.max(0, Math.ceil(remaining * 2) - 1));
+        total += rates[index];
+      }
+      return total;
     }
-
-    const excessWeight = Math.max(0, weight - 1.0);
-    const totalFee = baseRate + Math.ceil(excessWeight) * perKgRate;
-    return totalFee;
   }
 
   /**

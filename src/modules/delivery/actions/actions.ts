@@ -145,6 +145,14 @@ export async function dispatchOrderToSpeedafAction(saleId: string) {
       };
     });
 
+    // Enforce Speedaf's maximum weight limit per waybill (10kg)
+    if (totalWeight > 10.0) {
+      return {
+        success: false,
+        error: `This order's total weight (${totalWeight.toFixed(2)}kg) exceeds Speedaf's maximum single waybill weight limit of 10.0kg. Please split this order or reduce item quantities.`,
+      };
+    }
+
     // Check customer info
     const customer = sale.Customer;
     if (!customer) {
