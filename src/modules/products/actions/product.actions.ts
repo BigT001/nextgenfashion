@@ -122,11 +122,14 @@ export async function getCategoriesAction() {
   }
 }
 
-export async function createCategoryAction(name: string) {
+export async function createCategoryAction(name: string, weight?: number | null) {
   try {
     const { prisma } = await import("@/services/prisma.service");
     const category = await prisma.category.create({
-      data: { name }
+      data: { 
+        name,
+        weight: weight !== undefined && weight !== null ? Number(weight) : null
+      }
     });
     return { success: true, data: serializeProduct(category) };
   } catch (error: any) {
@@ -135,12 +138,15 @@ export async function createCategoryAction(name: string) {
   }
 }
 
-export async function updateCategoryAction(categoryId: string, name: string) {
+export async function updateCategoryAction(categoryId: string, name: string, weight?: number | null) {
   try {
     const { prisma } = await import("@/services/prisma.service");
     const category = await prisma.category.update({
       where: { id: categoryId },
-      data: { name }
+      data: { 
+        name,
+        weight: weight !== undefined && weight !== null ? Number(weight) : null
+      }
     });
     revalidatePath("/dashboard/products");
     revalidatePath("/inventory");

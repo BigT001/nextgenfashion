@@ -96,7 +96,7 @@ export function ProductForm({
   const isEditing = !!initialData;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [priceFieldsRequired, setPriceFieldsRequired] = useState(true);
-  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+  const [categories, setCategories] = useState<{ id: string; name: string; weight?: number | null }[]>([]);
 
   const [images, setImages] = useState<{ id: string; url: string; publicId: string; status?: "idle" | "uploading" | "uploaded" | "failed" }[]>(
     // Pre-populate with existing images when editing
@@ -109,9 +109,11 @@ export function ProductForm({
   const [variants, setVariants] = useState<Variant[]>([]);
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
+  const [newCategoryWeight, setNewCategoryWeight] = useState("");
   const [isAddingCategory, setIsAddingCategory] = useState(false);
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
   const [editingCategoryName, setEditingCategoryName] = useState("");
+  const [editingCategoryWeight, setEditingCategoryWeight] = useState("");
   const [isUpdatingCategoryId, setIsUpdatingCategoryId] = useState<string | null>(null);
   const [isDeletingCategoryId, setIsDeletingCategoryId] = useState<string | null>(null);
   const [isUpdatingProductCategories, setIsUpdatingProductCategories] = useState(false);
@@ -403,13 +405,15 @@ export function ProductForm({
   const handleAddCategory = async () => {
     if (!newCategoryName.trim()) return;
     setIsAddingCategory(true);
-    const result = await createCategoryAction(newCategoryName);
+    const weightVal = newCategoryWeight.trim() ? Number(newCategoryWeight) : null;
+    const result = await createCategoryAction(newCategoryName.trim(), weightVal);
     if (result.success) {
       setCategories(prev => [...prev, result.data]);
       // append new category id to categoryIds array
       const current = form.getValues("categoryIds") || [];
       form.setValue("categoryIds", Array.from(new Set([...current, result.data.id])));
       setNewCategoryName("");
+      setNewCategoryWeight("");
       setIsCategoryDialogOpen(false);
       toast.success("New category added");
     } else {
@@ -424,12 +428,14 @@ export function ProductForm({
       return;
     }
     setIsUpdatingCategoryId(categoryId);
-    const result = await updateCategoryAction(categoryId, name.trim());
+    const weightVal = editingCategoryWeight.trim() ? Number(editingCategoryWeight) : null;
+    const result = await updateCategoryAction(categoryId, name.trim(), weightVal);
     if (result.success) {
       setCategories((prev) => prev.map((cat) => cat.id === categoryId ? result.data : cat));
       setEditingCategoryId(null);
       setEditingCategoryName("");
-      toast.success("Category name updated");
+      setEditingCategoryWeight("");
+      toast.success("Category updated");
     } else {
       toast.error(result.error || "Failed to update category");
     }
@@ -612,13 +618,22 @@ export function ProductForm({
                                 {/* Fixed Header: Add new category */}
                                 <div className="shrink-0 space-y-3 pb-4 border-b border-border/30">
                                   <h3 className="text-sm font-black uppercase tracking-wider text-brand-navy">Manage Categories</h3>
-                                  <div className="flex gap-2">
+                                  <div className="flex gap-2 items-center">
                                     <Input
-                                      placeholder="e.g. Women's Wear"
+                                      placeholder="Category Name"
                                       value={newCategoryName}
                                       onChange={(e) => setNewCategoryName(e.target.value)}
                                       onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddCategory(); } }}
-                                      className="flex-1 h-10 bg-white border-2 border-brand-navy/10 rounded-xl font-medium text-brand-navy focus:border-brand-navy/30 transition-all"
+                                      className="flex-[2] h-10 bg-white border-2 border-brand-navy/10 rounded-xl font-semibold text-brand-navy focus:border-brand-navy/30 transition-all"
+                                    />
+                                    <Input
+                                      type="number"
+                                      step="0.01"
+                                      placeholder="Weight (kg)"
+                                      value={newCategoryWeight}
+                                      onChange={(e) => setNewCategoryWeight(e.target.value)}
+                                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddCategory(); } }}
+                                      className="flex-1 h-10 bg-white border-2 border-brand-navy/10 rounded-xl font-semibold text-brand-navy focus:border-brand-navy/30 transition-all"
                                     />
                                     <Button
                                       type="button"
@@ -641,17 +656,35 @@ export function ProductForm({
                                     <div className="flex-1 min-h-0 overflow-y-auto -mx-1 px-1 space-y-1.5" style={{ maxHeight: "calc(85vh - 180px)" }}>
                                       {categories.map((cat) => (
                                         <div key={cat.id} className="flex items-center justify-between gap-3 p-2.5 rounded-xl border border-border/40 bg-white hover:border-brand-navy/20 hover:shadow-sm transition-all group">
-                                          <div className="flex-1 min-w-0">
+                                          <div className="flex-1 min-w-0 flex items-center gap-2">
                                             {editingCategoryId === cat.id ? (
-                                              <Input
-                                                value={editingCategoryName}
-                                                onChange={(e) => setEditingCategoryName(e.target.value)}
-                                                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleUpdateCategory(cat.id, editingCategoryName); } }}
-                                                className="h-9 border-2 border-brand-navy/20 rounded-lg font-medium"
-                                                autoFocus
-                                              />
+                                              <div className="flex gap-2 w-full">
+                                                <Input
+                                                  value={editingCategoryName}
+                                                  onChange={(e) => setEditingCategoryName(e.target.value)}
+                                                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleUpdateCategory(cat.id, editingCategoryName); } }}
+                                                  className="flex-[2] h-9 border-2 border-brand-navy/20 rounded-lg font-medium"
+                                                  autoFocus
+                                                />
+                                                <Input
+                                                  type="number"
+                                                  step="0.01"
+                                                  placeholder="Weight (kg)"
+                                                  value={editingCategoryWeight}
+                                                  onChange={(e) => setEditingCategoryWeight(e.target.value)}
+                                                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleUpdateCategory(cat.id, editingCategoryName); } }}
+                                                  className="flex-1 h-9 border-2 border-brand-navy/20 rounded-lg font-medium"
+                                                />
+                                              </div>
                                             ) : (
-                                              <div className="text-sm font-semibold text-brand-navy truncate">{cat.name}</div>
+                                              <div className="flex items-center justify-between w-full pr-2">
+                                                <div className="text-sm font-semibold text-brand-navy truncate">{cat.name}</div>
+                                                {cat.weight !== undefined && cat.weight !== null && (
+                                                  <span className="text-[10px] font-black uppercase tracking-wider bg-brand-navy/5 text-brand-navy px-2.5 py-0.5 rounded-full shrink-0">
+                                                    {cat.weight} kg
+                                                  </span>
+                                                )}
+                                              </div>
                                             )}
                                           </div>
                                           {session?.user?.role === "ADMIN" || session?.user?.role === "SUPERADMIN" ? (
@@ -665,6 +698,7 @@ export function ProductForm({
                                                     onClick={() => {
                                                       setEditingCategoryId(null);
                                                       setEditingCategoryName("");
+                                                      setEditingCategoryWeight("");
                                                     }}
                                                   >
                                                     Cancel
@@ -687,6 +721,7 @@ export function ProductForm({
                                                     onClick={() => {
                                                       setEditingCategoryId(cat.id);
                                                       setEditingCategoryName(cat.name);
+                                                      setEditingCategoryWeight(cat.weight !== null && cat.weight !== undefined ? String(cat.weight) : "");
                                                     }}
                                                   >
                                                     Edit
@@ -745,15 +780,15 @@ export function ProductForm({
                         </button>
 
                         {categoryDropdownOpen && (
-                          <div className="absolute z-50 mt-2 w-full bg-popover border border-border/20 rounded-lg shadow-lg max-h-56 overflow-auto p-3">
-                            <div className="space-y-2">
+                          <div className="absolute z-50 mt-2 w-full bg-popover border border-border/20 rounded-xl shadow-xl max-h-96 overflow-y-auto p-4 bg-white">
+                            <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
                               {categories.map((category) => {
                                 const checked = Array.isArray(field.value) && field.value.includes(category.id);
                                 return (
-                                  <label key={category.id} className="flex items-center gap-3 p-2 rounded-md hover:bg-popover/50">
+                                  <label key={category.id} className="flex items-center gap-3 p-2 rounded-xl hover:bg-brand-navy/[0.03] transition-all cursor-pointer">
                                     <input
                                       type="checkbox"
-                                      className="w-4 h-4"
+                                      className="w-4 h-4 rounded border-brand-navy/20 text-brand-navy focus:ring-brand-navy cursor-pointer"
                                       checked={checked}
                                       onChange={(e) => {
                                         const current = Array.isArray(field.value) ? [...field.value] : [];
@@ -764,7 +799,7 @@ export function ProductForm({
                                         }
                                       }}
                                     />
-                                    <span className="text-sm">{category.name}</span>
+                                    <span className="text-sm font-semibold text-brand-navy">{category.name}</span>
                                   </label>
                                 );
                               })}

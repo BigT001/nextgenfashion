@@ -48,6 +48,7 @@ model Category {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   image       String?
+  weight      Decimal?  @db.Decimal(10, 2)
   Product     Product[]  @relation("ProductToCategory")
 }
 

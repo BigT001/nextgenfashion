@@ -86,6 +86,20 @@ export function ProductCard({ product, className }: ProductCardProps) {
       return;
     }
 
+    // Resolve weight: Product weight > Category weight fallback > Default 0.5kg
+    let resolvedWeight = Number((product as any).weight);
+    if (!resolvedWeight && product.categories && Array.isArray(product.categories)) {
+      const catWeights = product.categories
+        .map((c: any) => Number(c.weight))
+        .filter((w: number) => !Number.isNaN(w) && w > 0);
+      if (catWeights.length > 0) {
+        resolvedWeight = Math.max(...catWeights);
+      }
+    }
+    if (!resolvedWeight) {
+      resolvedWeight = 0.5; // fallback default
+    }
+
     const item = {
       id: product.id,
       variantId,
@@ -94,6 +108,7 @@ export function ProductCard({ product, className }: ProductCardProps) {
       quantity: 1,
       image: productImages[0],
       availableStock: stock,
+      weight: resolvedWeight,
     };
     addItem(item);
     setOpenCart(true);

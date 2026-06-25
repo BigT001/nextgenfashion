@@ -306,6 +306,21 @@ export function ProductActions({ product }: ProductActionsProps) {
 
     targetVariants.forEach((v) => {
       const primaryCategory = product.categories?.[0]?.name || product.Category?.name || "Apparel";
+      
+      // Resolve weight: Product weight > Category weight fallback > Default 0.5kg
+      let resolvedWeight = Number(product.weight);
+      if (!resolvedWeight && product.categories && Array.isArray(product.categories)) {
+        const catWeights = product.categories
+          .map((c: any) => Number(c.weight))
+          .filter((w: number) => !Number.isNaN(w) && w > 0);
+        if (catWeights.length > 0) {
+          resolvedWeight = Math.max(...catWeights);
+        }
+      }
+      if (!resolvedWeight) {
+        resolvedWeight = 0.5; // fallback default
+      }
+
       addItem({
         id: product.id,
         variantId: v.id,
@@ -317,7 +332,7 @@ export function ProductActions({ product }: ProductActionsProps) {
         color: normalize(v.color) || undefined,
         availableStock: v.inventory?.quantity ?? 0,
         category: primaryCategory,
-        weight: Number(product.weight) || 0.5,
+        weight: resolvedWeight,
       });
     });
 

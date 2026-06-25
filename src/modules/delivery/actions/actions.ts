@@ -133,7 +133,20 @@ export async function dispatchOrderToSpeedafAction(saleId: string) {
       const variant = item.ProductVariant;
       const product = variant?.Product;
       
-      const itemWeight = Number((variant as any)?.weight) || Number((product as any)?.weight) || 0.5;
+      // Resolve weight: Variant weight > Product weight > Category weight fallback > Default 0.5kg
+      let itemWeight = Number((variant as any)?.weight) || Number((product as any)?.weight);
+      if (!itemWeight && product?.categories && Array.isArray(product.categories)) {
+        const catWeights = product.categories
+          .map((c: any) => Number(c.weight))
+          .filter((w: number) => !Number.isNaN(w) && w > 0);
+        if (catWeights.length > 0) {
+          itemWeight = Math.max(...catWeights);
+        }
+      }
+      if (!itemWeight) {
+        itemWeight = 0.5; // fallback default
+      }
+
       totalWeight += itemWeight * item.quantity;
 
       return {
