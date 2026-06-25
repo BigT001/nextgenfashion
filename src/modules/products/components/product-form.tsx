@@ -835,7 +835,7 @@ export function ProductForm({
                   <FormField control={form.control} name="weight" render={({ field }) => (
                     <FormItem className="col-span-1 space-y-2">
                       <FormLabel className="text-[11px] font-black uppercase tracking-widest text-brand-navy">Weight (kg)</FormLabel>
-                      <FormControl><Input type="number" step="0.01" placeholder="e.g. 0.5" className="h-10 bg-white border-2 border-brand-navy/5 rounded-xl font-bold text-brand-navy" {...field} /></FormControl>
+                      <FormControl><Input type="number" step="0.01" placeholder="e.g. 0.5" className="h-10 bg-white border-2 border-brand-navy/5 rounded-xl font-bold text-brand-navy" {...field} value={field.value ?? ""} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )} />
@@ -863,7 +863,7 @@ export function ProductForm({
                         <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Optional</span>
                       )}
                     </div>
-                    <FormControl><Input type="number" placeholder={priceFieldsRequired ? "Required" : "Optional"} className="h-12 bg-white border-2 border-brand-navy/5 rounded-xl font-black text-brand-navy text-xl" {...field} /></FormControl>
+                    <FormControl><Input type="number" placeholder={priceFieldsRequired ? "Required" : "Optional"} className="h-12 bg-white border-2 border-brand-navy/5 rounded-xl font-black text-brand-navy text-xl" {...field} value={field.value ?? ""} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
@@ -875,7 +875,7 @@ export function ProductForm({
                         <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Optional</span>
                       )}
                     </div>
-                    <FormControl><Input type="number" placeholder={priceFieldsRequired ? "Required" : "Optional"} className="h-12 bg-white border-2 border-brand-navy/20 rounded-xl font-black text-brand-navy text-xl shadow-sm focus:border-brand-navy transition-all" {...field} /></FormControl>
+                    <FormControl><Input type="number" placeholder={priceFieldsRequired ? "Required" : "Optional"} className="h-12 bg-white border-2 border-brand-navy/20 rounded-xl font-black text-brand-navy text-xl shadow-sm focus:border-brand-navy transition-all" {...field} value={field.value ?? ""} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
@@ -895,13 +895,13 @@ export function ProductForm({
 
                 <FormField control={form.control} name="tax" render={({ field }) => (
                   <FormItem className="space-y-2">
-                    <FormControl><Input type="number" disabled={!form.watch("hasTax")} className={cn("h-12 bg-white border-2 rounded-xl font-black text-brand-navy text-xl transition-all", !form.watch("hasTax") ? "opacity-30 border-brand-navy/5" : "border-brand-navy/5")} {...field} /></FormControl>
+                    <FormControl><Input type="number" disabled={!form.watch("hasTax")} className={cn("h-12 bg-white border-2 rounded-xl font-black text-brand-navy text-xl transition-all", !form.watch("hasTax") ? "opacity-30 border-brand-navy/5" : "border-brand-navy/5")} {...field} value={field.value ?? ""} /></FormControl>
                   </FormItem>
                 )} />
                 <FormField control={form.control} name="discount" render={({ field }) => (
                   <FormItem className="space-y-2">
                     <FormLabel className="text-[11px] font-black uppercase tracking-widest text-brand-navy">Fixed Discount (₦)</FormLabel>
-                    <FormControl><Input type="number" className="h-12 bg-white border-2 border-brand-navy/5 rounded-xl font-bold text-brand-navy text-lg" {...field} /></FormControl>
+                    <FormControl><Input type="number" className="h-12 bg-white border-2 border-brand-navy/5 rounded-xl font-bold text-brand-navy text-lg" {...field} value={field.value ?? ""} /></FormControl>
                   </FormItem>
                 )} />
               </div>
