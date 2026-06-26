@@ -21,6 +21,13 @@ export const authConfig = {
           return Response.redirect(new URL("/auth/staff", nextUrl));
         }
 
+        if (nextUrl.pathname.startsWith("/dashboard/settings")) {
+          const userCategory = (auth?.user as any)?.category;
+          if (userRole !== "SUPERADMIN" && userCategory !== "Digital Marketer") {
+            return Response.redirect(new URL("/dashboard?error=AccessDenied", nextUrl));
+          }
+        }
+
         // If user is STAFF, enforce module permissions
         if (userRole === "STAFF") {
           const rawPermissions = (auth?.user as any)?.permissions;

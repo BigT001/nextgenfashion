@@ -39,8 +39,17 @@ import {
   getProductPriceRequirementSetting, 
   setProductPriceRequirementSetting,
   getAutoVatSetting,
-  setAutoVatSetting
+  setAutoVatSetting,
+  getMetaPixelIdSetting,
+  setMetaPixelIdSetting,
+  getMetaConversionsApiTokenSetting,
+  setMetaConversionsApiTokenSetting,
+  getMetaTrackingEnabledSetting,
+  setMetaTrackingEnabledSetting
 } from "@/modules/settings/actions/settings.actions";
+import { MetaSettingsDialog } from "@/modules/settings/components/meta-settings-dialog";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -76,6 +85,8 @@ import {
 import { invalidateCache } from "@/lib/client-cache";
 
 export default function SettingsPage() {
+  const { data: session, status: sessionStatus } = useSession();
+  const router = useRouter();
   const [data, setData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   
@@ -88,6 +99,12 @@ export default function SettingsPage() {
   const [isInviteOpen, setIsInviteOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<any>(null);
   const [isSpeedafOpen, setIsSpeedafOpen] = useState(false);
+
+  // Meta Ads Integration States
+  const [metaPixelId, setMetaPixelId] = useState("");
+  const [metaCapiToken, setMetaCapiToken] = useState("");
+  const [metaTrackingEnabled, setMetaTrackingEnabled] = useState(false);
+  const [isMetaOpen, setIsMetaOpen] = useState(false);
 
   // Category Management States
   const [categories, setCategories] = useState<any[]>([]);
@@ -131,13 +148,19 @@ export default function SettingsPage() {
         loadCategories()
       ]);
       
-      const [priceRequired, vatActive] = await Promise.all([
+      const [priceRequired, vatActive, pixelId, capiToken, trackingEnabled] = await Promise.all([
         getProductPriceRequirementSetting(),
-        getAutoVatSetting()
+        getAutoVatSetting(),
+        getMetaPixelIdSetting(),
+        getMetaConversionsApiTokenSetting(),
+        getMetaTrackingEnabledSetting()
       ]);
       
       setPriceFieldsRequired(priceRequired);
       setAutoVatEnabled(vatActive);
+      setMetaPixelId(pixelId);
+      setMetaCapiToken(capiToken);
+      setMetaTrackingEnabled(trackingEnabled);
       setIsLoading(false);
     }
     initPage();
@@ -302,13 +325,34 @@ export default function SettingsPage() {
     }
   };
 
-  if (isLoading) {
+  const userRole = (session?.user as any)?.role;
+  const userCategory = (session?.user as any)?.category;
+  const hasAccess = userRole === "SUPERADMIN" || userCategory === "Digital Marketer";
+
+  if (sessionStatus === "loading" || isLoading) {
     return (
       <div className="h-[80vh] flex flex-col items-center justify-center space-y-4">
         <LoadingSpinner size="lg" />
         <p className="text-xs font-black uppercase tracking-[0.25em] text-muted-foreground animate-pulse">
           Synchronizing Workspace Data...
         </p>
+      </div>
+    );
+  }
+
+  if (!hasAccess) {
+    return (
+      <div className="h-[80vh] flex flex-col items-center justify-center space-y-4 p-8 text-center">
+        <div className="size-16 rounded-full bg-rose-100 flex items-center justify-center text-rose-600 shadow-inner">
+          <Lock className="size-8" />
+        </div>
+        <h3 className="font-black text-xl text-zinc-900 uppercase tracking-wider">Access Restricted</h3>
+        <p className="text-sm text-muted-foreground max-w-sm leading-relaxed font-semibold">
+          Only Superadmins and the assigned Digital Marketer are authorized to modify system settings.
+        </p>
+        <Button onClick={() => router.push("/dashboard")} className="mt-4 h-11 px-6 bg-brand-navy hover:bg-brand-navy/90 text-white font-black text-xs uppercase tracking-widest rounded-xl">
+          Return to Dashboard
+        </Button>
       </div>
     );
   }
@@ -615,6 +659,38 @@ export default function SettingsPage() {
                   </button>
                 </div>
               </Card>
+
+              {/* Meta Ads Tracking Integration Card */}
+              <Card className="glass-card border border-white/10 hover:border-brand-navy/10 shadow-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 p-8 rounded-[2rem] flex flex-col justify-between group">
+                <div>
+                  <div className="flex items-start justify-between mb-6">
+                    <div className="size-14 rounded-2xl bg-brand-navy/10 flex items-center justify-center text-brand-navy group-hover:bg-brand-navy group-hover:text-white transition-all duration-500 shadow-inner">
+                      <TrendingUp className="size-6" />
+                    </div>
+                    <Badge className={cn(
+                      "border-none font-black text-[9px] px-3 py-1 uppercase tracking-widest",
+                      metaTrackingEnabled ? "bg-emerald-500/10 text-emerald-600 animate-pulse" : "bg-zinc-400/10 text-zinc-600"
+                    )}>
+                      {metaTrackingEnabled ? "ACTIVE" : "DISABLED"}
+                    </Badge>
+                  </div>
+                  <div className="space-y-3">
+                    <h4 className="text-xl font-black tracking-tight">Meta Ads Integration</h4>
+                    <p className="text-muted-foreground text-sm font-medium leading-relaxed">
+                      Sync client-side Pixel events and server-side Conversions API (CAPI) events to optimize Facebook and Instagram ad campaign performance.
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-8">
+                  <Button 
+                    variant="ghost" 
+                    onClick={() => setIsMetaOpen(true)}
+                    className="h-10 rounded-xl font-black text-xs uppercase tracking-widest gap-2 hover:bg-brand-navy/5 hover:text-brand-navy px-0 transition-colors"
+                  >
+                    ORCHESTRATE META <Plus className="size-4" />
+                  </Button>
+                </div>
+              </Card>
             </div>
           </div>
         </TabsContent>
@@ -843,6 +919,19 @@ export default function SettingsPage() {
       <SpeedafSettingsDialog
         open={isSpeedafOpen}
         onOpenChange={setIsSpeedafOpen}
+      />
+
+      <MetaSettingsDialog
+        open={isMetaOpen}
+        onOpenChange={setIsMetaOpen}
+        initialPixelId={metaPixelId}
+        initialCapiToken={metaCapiToken}
+        initialTrackingEnabled={metaTrackingEnabled}
+        onSaveSuccess={(pixelId, capiToken, enabled) => {
+          setMetaPixelId(pixelId);
+          setMetaCapiToken(capiToken);
+          setMetaTrackingEnabled(enabled);
+        }}
       />
 
       {/* Category Create/Edit Dialog */}

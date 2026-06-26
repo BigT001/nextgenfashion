@@ -6,6 +6,8 @@ import { prisma } from "@/services/prisma.service";
 import { PaymentService } from "@/services/payment.service";
 import { events, SYSTEM_EVENTS } from "@/lib/events";
 import { SaleStatus, PaymentMethod } from "@prisma/client";
+import { MetaCapiService } from "@/services/meta-capi.service";
+import { headers } from "next/headers";
 
 export async function validateCartItemsAction(items: { productId?: string; variantId: string }[]) {
   const invalidItems: Array<{ productId?: string; variantId: string }> = [];
@@ -495,6 +497,37 @@ export async function createOrderAction(data: CreateOrderActionPayload) {
       items: sanitizedItems,
       userId: data.customerId || "guest",
     });
+
+    // Dispatch Meta Conversions API (CAPI) Purchase Event if order is paid
+    if (result && (result.status === "PAID" || statusValue === "PAID")) {
+      try {
+        const headersList = await headers();
+        const ipAddress = headersList.get("x-forwarded-for") || headersList.get("x-real-ip") || undefined;
+        const userAgent = headersList.get("user-agent") || undefined;
+
+        MetaCapiService.trackPurchase({
+          orderId: result.id,
+          amount: Number(result.totalAmount),
+          currency: "NGN",
+          email: data.shippingInfo.email,
+          phone: data.shippingInfo.phone || undefined,
+          ipAddress,
+          userAgent,
+        }).catch((err) => {
+          console.error("[createOrderAction] Meta CAPI Purchase tracking error:", err);
+        });
+      } catch (headersError) {
+        MetaCapiService.trackPurchase({
+          orderId: result.id,
+          amount: Number(result.totalAmount),
+          currency: "NGN",
+          email: data.shippingInfo.email,
+          phone: data.shippingInfo.phone || undefined,
+        }).catch((err) => {
+          console.error("[createOrderAction] Meta CAPI Purchase tracking fallback error:", err);
+        });
+      }
+    }
 
     return successResult;
   } catch (error: any) {

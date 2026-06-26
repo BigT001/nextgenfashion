@@ -182,6 +182,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               : [];
 
           const visibleItems = group.items.filter(item => {
+            // Settings access control: only SUPERADMIN and Digital Marketer category can view
+            if (item.url === "/dashboard/settings") {
+              const isDigitalMarketer = (session?.user as any)?.category === "Digital Marketer";
+              return userRole === UserRole.SUPERADMIN || isDigitalMarketer;
+            }
+
             if (!item.roles.includes(userRole)) return false;
             if (userRole === "SUPERADMIN" || userRole === "ADMIN") return true;
             

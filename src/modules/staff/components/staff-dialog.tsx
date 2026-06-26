@@ -231,6 +231,7 @@ export function StaffDialog({ open, onOpenChange, staff, onSuccess }: StaffDialo
                         <SelectItem value="Store Manager">Store Manager</SelectItem>
                         <SelectItem value="Sales Associate">Sales Associate</SelectItem>
                         <SelectItem value="Inventory Specialist">Inventory Specialist</SelectItem>
+                        <SelectItem value="Digital Marketer">Digital Marketer</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
