@@ -27,13 +27,29 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Hard‑coded Meta Pixel implementation – always active
-  const pixelId = "1355267316673789";
+  // Fetch configurations from the database
+  let pixelId = "1355267316673789"; // Default fallback Pixel ID
+  let isTrackingEnabled = true;     // Default fallback status
+
+  try {
+    const [pixelIdSetting, enabledSetting] = await Promise.all([
+      prisma.settings.findUnique({ where: { key: "metaPixelId" } }),
+      prisma.settings.findUnique({ where: { key: "metaTrackingEnabled" } }),
+    ]);
+    if (pixelIdSetting?.value?.trim()) {
+      pixelId = pixelIdSetting.value.trim();
+    }
+    if (enabledSetting) {
+      isTrackingEnabled = enabledSetting.value === "true";
+    }
+  } catch (error) {
+    console.error("[RootLayout] Failed to load Meta Pixel configuration from database:", error);
+  }
 
   return (
     <html lang="en" className={`h-full antialiased`} suppressHydrationWarning>
       <head>
-        {process.env.NODE_ENV === 'production' && (
+        {process.env.NODE_ENV === 'production' && isTrackingEnabled && pixelId && (
           <>
             <Script
               id="fb-pixel"
