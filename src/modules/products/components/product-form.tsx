@@ -14,7 +14,8 @@ import {
   Banknote,
   Warehouse,
   Images,
-  Sparkles
+  Sparkles,
+  Search
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -38,7 +39,11 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogTrigger
+  DialogTrigger,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter
 } from "@/components/ui/dialog";
 import {
   Tabs,
@@ -63,6 +68,7 @@ import {
   createWarehouseAction,
   deleteWarehouseAction
 } from "@/modules/inventory/actions/warehouse.actions";
+import { invalidateCache } from "@/lib/client-cache";
 
 import { toast } from "sonner";
 import { Barcode, RotateCcw, ShieldCheck, AlertCircle, MapPin, HardDrive } from "lucide-react";
@@ -96,7 +102,7 @@ export function ProductForm({
   const isEditing = !!initialData;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [priceFieldsRequired, setPriceFieldsRequired] = useState(true);
-  const [categories, setCategories] = useState<{ id: string; name: string; weight?: number | null }[]>([]);
+  const [categories, setCategories] = useState<{ id: string; name: string; weight?: number | null; _count?: { Product: number } }[]>([]);
 
   const [images, setImages] = useState<{ id: string; url: string; publicId: string; status?: "idle" | "uploading" | "uploaded" | "failed" }[]>(
     // Pre-populate with existing images when editing
@@ -118,7 +124,8 @@ export function ProductForm({
   const [isDeletingCategoryId, setIsDeletingCategoryId] = useState<string | null>(null);
   const [isUpdatingProductCategories, setIsUpdatingProductCategories] = useState(false);
   const { data: session } = useSession();
-  const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false);
+  const [isSelectCategoryModalOpen, setIsSelectCategoryModalOpen] = useState(false);
+  const [categorySearchQuery, setCategorySearchQuery] = useState("");
 
 
   useEffect(() => {
@@ -408,6 +415,7 @@ export function ProductForm({
     const weightVal = newCategoryWeight.trim() ? Number(newCategoryWeight) : null;
     const result = await createCategoryAction(newCategoryName.trim(), weightVal);
     if (result.success) {
+      invalidateCache("categories");
       setCategories(prev => [...prev, result.data]);
       // append new category id to categoryIds array
       const current = form.getValues("categoryIds") || [];
@@ -431,6 +439,7 @@ export function ProductForm({
     const weightVal = editingCategoryWeight.trim() ? Number(editingCategoryWeight) : null;
     const result = await updateCategoryAction(categoryId, name.trim(), weightVal);
     if (result.success) {
+      invalidateCache("categories");
       setCategories((prev) => prev.map((cat) => cat.id === categoryId ? result.data : cat));
       setEditingCategoryId(null);
       setEditingCategoryName("");
@@ -727,11 +736,16 @@ export function ProductForm({
                                                     Edit
                                                   </Button>
                                                   <Button size="sm" variant="ghost" className="h-8 px-2 text-rose-500/60 hover:text-rose-600 hover:bg-rose-50 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity" onClick={async () => {
+                                                    if (cat._count?.Product && cat._count.Product > 0) {
+                                                      toast.error(`Cannot delete category '${cat.name}'. It has ${cat._count.Product} linked products. Please reassign or delete these products first.`);
+                                                      return;
+                                                    }
                                                     if (!confirm(`Delete category '${cat.name}'? This cannot be undone.`)) return;
                                                     try {
                                                       setIsDeletingCategoryId(cat.id);
                                                       const res = await deleteCategoryAction(cat.id);
                                                       if (res.success) {
+                                                        invalidateCache("categories");
                                                         setCategories((prev) => prev.filter(c => c.id !== cat.id));
                                                         toast.success("Category deleted");
                                                       } else {
@@ -771,41 +785,105 @@ export function ProductForm({
                           </div>
                         </div>
 
-                        {/* Dropdown trigger */}
-                        <button type="button" onClick={() => setCategoryDropdownOpen(v => !v)} className="w-full text-left h-10 bg-white border-2 border-brand-navy/5 rounded-xl px-4 flex items-center justify-between">
-                          <div className="text-sm text-muted-foreground">
-                            {Array.isArray(field.value) && field.value.length > 0 ? `${field.value.length} selected` : "Select categories"}
+                        {/* Modal trigger */}
+                        <button
+                          type="button"
+                          onClick={() => setIsSelectCategoryModalOpen(true)}
+                          className="w-full text-left h-10 bg-white border-2 border-brand-navy/5 hover:border-brand-navy/20 rounded-xl px-4 flex items-center justify-between transition-all"
+                        >
+                          <div className="text-sm font-semibold text-brand-navy truncate max-w-[80%]">
+                            {Array.isArray(field.value) && field.value.length > 0
+                              ? categories
+                                  .filter((c) => field.value.includes(c.id))
+                                  .map((c) => c.name)
+                                  .join(", ")
+                              : "Select product categories"}
                           </div>
-                          <div className="text-xs text-muted-foreground">▾</div>
+                          <div className="text-[10px] text-muted-foreground bg-brand-navy/5 px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider shrink-0">
+                            {Array.isArray(field.value) && field.value.length > 0 ? `${field.value.length} Selected` : "Choose"}
+                          </div>
                         </button>
 
-                        {categoryDropdownOpen && (
-                          <div className="absolute z-50 mt-2 w-full bg-popover border border-border/20 rounded-xl shadow-xl max-h-96 overflow-y-auto p-4 bg-white">
-                            <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
-                              {categories.map((category) => {
-                                const checked = Array.isArray(field.value) && field.value.includes(category.id);
-                                return (
-                                  <label key={category.id} className="flex items-center gap-3 p-2 rounded-xl hover:bg-brand-navy/[0.03] transition-all cursor-pointer">
-                                    <input
-                                      type="checkbox"
-                                      className="w-4 h-4 rounded border-brand-navy/20 text-brand-navy focus:ring-brand-navy cursor-pointer"
-                                      checked={checked}
-                                      onChange={(e) => {
-                                        const current = Array.isArray(field.value) ? [...field.value] : [];
-                                        if (e.target.checked) {
-                                          field.onChange(Array.from(new Set([...current, category.id])));
-                                        } else {
-                                          field.onChange(current.filter((id) => id !== category.id));
-                                        }
-                                      }}
-                                    />
-                                    <span className="text-sm font-semibold text-brand-navy">{category.name}</span>
-                                  </label>
-                                );
-                              })}
+                        <Dialog open={isSelectCategoryModalOpen} onOpenChange={setIsSelectCategoryModalOpen}>
+                          <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col overflow-hidden bg-white p-6 rounded-3xl border border-zinc-100 shadow-2xl">
+                            <DialogHeader className="pb-4 border-b border-zinc-100 shrink-0">
+                              <DialogTitle className="text-xl font-black text-brand-navy uppercase tracking-wider">Select Product Categories</DialogTitle>
+                              <DialogDescription className="text-xs text-muted-foreground font-medium">
+                                Choose one or more categories for this product catalog entry. Use the search to quickly filter.
+                              </DialogDescription>
+                            </DialogHeader>
+
+                            {/* Search bar */}
+                            <div className="my-4 shrink-0 relative">
+                              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                              <Input
+                                placeholder="Search categories..."
+                                value={categorySearchQuery}
+                                onChange={(e) => setCategorySearchQuery(e.target.value)}
+                                className="pl-10 h-10 border-2 border-brand-navy/10 rounded-xl text-sm font-medium text-brand-navy focus:border-brand-navy/30 focus-visible:ring-0 focus-visible:ring-offset-0 transition-all bg-zinc-50/50"
+                              />
                             </div>
-                          </div>
-                        )}
+
+                            {/* Category checkboxes */}
+                            <div className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-2">
+                              {categories.filter((cat) =>
+                                cat.name.toLowerCase().includes(categorySearchQuery.toLowerCase().trim())
+                              ).length > 0 ? (
+                                <div className="grid grid-cols-2 gap-3 pb-2">
+                                  {categories
+                                    .filter((cat) =>
+                                      cat.name.toLowerCase().includes(categorySearchQuery.toLowerCase().trim())
+                                    )
+                                    .map((category) => {
+                                      const checked = Array.isArray(field.value) && field.value.includes(category.id);
+                                      return (
+                                        <label
+                                          key={category.id}
+                                          className={cn(
+                                            "flex items-center gap-3 p-3 rounded-2xl border-2 transition-all cursor-pointer select-none",
+                                            checked
+                                              ? "bg-brand-navy/5 border-brand-navy text-brand-navy shadow-sm"
+                                              : "bg-white border-brand-navy/5 hover:border-brand-navy/20 text-muted-foreground"
+                                          )}
+                                        >
+                                          <input
+                                            type="checkbox"
+                                            className="w-4 h-4 rounded border-brand-navy/20 text-brand-navy focus:ring-brand-navy cursor-pointer accent-brand-navy shrink-0"
+                                            checked={checked}
+                                            onChange={(e) => {
+                                              const current = Array.isArray(field.value) ? [...field.value] : [];
+                                              if (e.target.checked) {
+                                                field.onChange(Array.from(new Set([...current, category.id])));
+                                              } else {
+                                                field.onChange(current.filter((id) => id !== category.id));
+                                              }
+                                            }}
+                                          />
+                                          <span className="text-sm font-bold truncate leading-none">{category.name}</span>
+                                        </label>
+                                      );
+                                    })}
+                                </div>
+                              ) : (
+                                <div className="flex flex-col items-center justify-center py-12 text-center">
+                                  <LayoutGrid className="size-8 text-muted-foreground/30 mb-2" />
+                                  <p className="text-xs font-bold text-muted-foreground">No categories match your search</p>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Done / Confirm Footer */}
+                            <DialogFooter className="pt-4 border-t border-zinc-100 shrink-0 -mx-6 -mb-6 bg-zinc-50/50 p-4 rounded-b-3xl mt-4 flex items-center justify-end">
+                              <Button
+                                type="button"
+                                onClick={() => setIsSelectCategoryModalOpen(false)}
+                                className="h-10 px-6 bg-brand-navy hover:bg-brand-navy/90 text-white font-black text-xs uppercase tracking-widest rounded-xl"
+                              >
+                                Done Selection
+                              </Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
 
                         <FormMessage />
                         

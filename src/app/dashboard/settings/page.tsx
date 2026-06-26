@@ -18,7 +18,10 @@ import {
   Cloud,
   Percent,
   Lock,
-  Truck
+  Truck,
+  LayoutGrid,
+  Scale,
+  ShoppingBag
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -64,6 +67,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  getCategoriesAction,
+  createCategoryAction,
+  updateCategoryAction,
+  deleteCategoryAction,
+} from "@/modules/products/actions/product.actions";
+import { invalidateCache } from "@/lib/client-cache";
 
 export default function SettingsPage() {
   const [data, setData] = useState<any>(null);
@@ -78,6 +88,17 @@ export default function SettingsPage() {
   const [isInviteOpen, setIsInviteOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<any>(null);
   const [isSpeedafOpen, setIsSpeedafOpen] = useState(false);
+
+  // Category Management States
+  const [categories, setCategories] = useState<any[]>([]);
+  const [categorySearchQuery, setCategorySearchQuery] = useState("");
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<any>(null);
+  const [catName, setCatName] = useState("");
+  const [catWeight, setCatWeight] = useState("");
+  const [isSubmittingCat, setIsSubmittingCat] = useState(false);
+  const [deletingCategory, setDeletingCategory] = useState<any>(null);
+  const [isDeletingCat, setIsDeletingCat] = useState(false);
 
   // Security Credentials Reset States
   const [resetPasswordMember, setResetPasswordMember] = useState<any>(null);
@@ -95,10 +116,20 @@ export default function SettingsPage() {
     }
   }
 
+  const loadCategories = async () => {
+    const res = await getCategoriesAction();
+    if (res.success) {
+      setCategories(res.data || []);
+    }
+  };
+
   useEffect(() => {
     async function initPage() {
       setIsLoading(true);
-      await loadData();
+      await Promise.all([
+        loadData(),
+        loadCategories()
+      ]);
       
       const [priceRequired, vatActive] = await Promise.all([
         getProductPriceRequirementSetting(),
@@ -216,6 +247,61 @@ export default function SettingsPage() {
     }
   };
 
+  const handleCategorySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!catName.trim()) {
+      toast.error("Category name is required.");
+      return;
+    }
+
+    setIsSubmittingCat(true);
+    try {
+      const weightVal = catWeight.trim() === "" ? null : Number(catWeight);
+      let res;
+      if (editingCategory) {
+        res = await updateCategoryAction(editingCategory.id, catName.trim(), weightVal);
+      } else {
+        res = await createCategoryAction(catName.trim(), weightVal);
+      }
+
+      if (res.success) {
+        toast.success(editingCategory ? "Category updated successfully" : "Category created successfully");
+        setIsCategoryModalOpen(false);
+        setEditingCategory(null);
+        setCatName("");
+        setCatWeight("");
+        invalidateCache("categories");
+        await loadCategories();
+      } else {
+        toast.error(res.error || "Failed to save category");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "An unexpected error occurred");
+    } finally {
+      setIsSubmittingCat(false);
+    }
+  };
+
+  const handleDeleteCategory = async () => {
+    if (!deletingCategory) return;
+    setIsDeletingCat(true);
+    try {
+      const res = await deleteCategoryAction(deletingCategory.id);
+      if (res.success) {
+        toast.success("Category deleted successfully");
+        setDeletingCategory(null);
+        invalidateCache("categories");
+        await loadCategories();
+      } else {
+        toast.error(res.error || "Failed to delete category");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "An unexpected error occurred");
+    } finally {
+      setIsDeletingCat(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="h-[80vh] flex flex-col items-center justify-center space-y-4">
@@ -259,6 +345,10 @@ export default function SettingsPage() {
           <TabsTrigger value="staff" className="rounded-xl h-12 px-8 font-black text-xs uppercase tracking-widest data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-800 data-[state=active]:shadow-lg">
             <Users className="size-4 mr-2" />
             TEAM ARCHITECTURE
+          </TabsTrigger>
+          <TabsTrigger value="categories" className="rounded-xl h-12 px-8 font-black text-xs uppercase tracking-widest data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-800 data-[state=active]:shadow-lg">
+            <LayoutGrid className="size-4 mr-2" />
+            PRODUCT CATEGORIES
           </TabsTrigger>
           <TabsTrigger value="system" className="rounded-xl h-12 px-8 font-black text-xs uppercase tracking-widest data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-800 data-[state=active]:shadow-lg">
             <SettingsIcon className="size-4 mr-2" />
@@ -400,56 +490,42 @@ export default function SettingsPage() {
         </TabsContent>
 
         {/* OS Configurations Tab */}
-        <TabsContent value="system" className="space-y-12">
-          {/* Core System Infrastructure Section */}
+        <TabsContent value="system" className="space-y-10">
           <div className="space-y-6">
             <div className="space-y-1">
-              <h3 className="text-lg font-black uppercase tracking-[0.25em] text-brand-navy/80">System Infrastructure</h3>
-              <p className="text-xs text-muted-foreground">Core operational, database, and security configurations.</p>
+              <h3 className="text-lg font-black uppercase tracking-[0.25em] text-brand-navy/80">Operational Configurations</h3>
+              <p className="text-xs text-muted-foreground">Manage active logistics integration, storefront tax rates, and product catalog regulations.</p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {[
-                { icon: Database, title: "Operational Database", desc: "Configure PostgreSQL synchronization and automated backups.", status: "OPTIMIZED", onClick: () => toast.info("Operational Database configuration optimized.") },
-                { icon: Cloud, title: "Asset Architecture", desc: "Fulfillment and product image orchestration via Cloudinary.", status: "CONNECTED", onClick: () => toast.info("Asset Architecture connected and operating.") },
-                { icon: Shield, title: "Security Protocols", desc: "Manage NextAuth v5 session expiration and JWT encryption.", status: "MILITARY-GRADE", onClick: () => toast.info("Security Protocols operating at maximum integrity.") },
-                { icon: Truck, title: "Speedaf Logistics", desc: "Orchestrate automated shipping fee calculation, waybills, and tracking webhooks.", status: "INTEGRATED", onClick: () => setIsSpeedafOpen(true) }
-              ].map((item, i) => (
-                <Card key={i} className="glass-card border border-white/10 hover:border-brand-navy/10 shadow-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 p-8 rounded-[2rem] group flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-start justify-between mb-6">
-                      <div className="size-14 rounded-2xl bg-brand-navy/10 flex items-center justify-center text-brand-navy group-hover:bg-brand-navy group-hover:text-white transition-all duration-500 shadow-inner">
-                        <item.icon className="size-6" />
-                      </div>
-                      <Badge className="bg-muted/30 text-muted-foreground border-none font-black text-[9px] px-3 py-1 uppercase tracking-widest">
-                        {item.status}
-                      </Badge>
+              {/* Speedaf Logistics Card */}
+              <Card className="glass-card border border-white/10 hover:border-brand-navy/10 shadow-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 p-8 rounded-[2rem] flex flex-col justify-between group">
+                <div>
+                  <div className="flex items-start justify-between mb-6">
+                    <div className="size-14 rounded-2xl bg-brand-navy/10 flex items-center justify-center text-brand-navy group-hover:bg-brand-navy group-hover:text-white transition-all duration-500 shadow-inner">
+                      <Truck className="size-6" />
                     </div>
-                    <div className="space-y-3">
-                      <h4 className="text-xl font-black tracking-tight">{item.title}</h4>
-                      <p className="text-muted-foreground text-sm font-medium leading-relaxed">{item.desc}</p>
-                    </div>
+                    <Badge className="bg-emerald-500/10 text-emerald-600 border-none font-black text-[9px] px-3 py-1 uppercase tracking-widest">
+                      INTEGRATED
+                    </Badge>
                   </div>
-                  <div className="mt-6">
-                    <Button 
-                      variant="ghost" 
-                      onClick={item.onClick}
-                      className="h-10 rounded-xl font-black text-xs uppercase tracking-widest gap-2 hover:bg-brand-navy/5 hover:text-brand-navy px-0 transition-colors"
-                    >
-                      ORCHESTRATE CONFIG <Plus className="size-4" />
-                    </Button>
+                  <div className="space-y-3">
+                    <h4 className="text-xl font-black tracking-tight">Speedaf Logistics</h4>
+                    <p className="text-muted-foreground text-sm font-medium leading-relaxed">
+                      Orchestrate shipping regions, mock tariff lookup matrices, waybill creation, and default fallback calculation rules.
+                    </p>
                   </div>
-                </Card>
-              ))}
-            </div>
-          </div>
+                </div>
+                <div className="mt-8">
+                  <Button 
+                    variant="ghost" 
+                    onClick={() => setIsSpeedafOpen(true)}
+                    className="h-10 rounded-xl font-black text-xs uppercase tracking-widest gap-2 hover:bg-brand-navy/5 hover:text-brand-navy px-0 transition-colors"
+                  >
+                    ORCHESTRATE CONFIG <Plus className="size-4" />
+                  </Button>
+                </div>
+              </Card>
 
-          {/* Business & Sales Regulations Section */}
-          <div className="space-y-6">
-            <div className="space-y-1">
-              <h3 className="text-lg font-black uppercase tracking-[0.25em] text-brand-navy/80">Business Rules & Financials</h3>
-              <p className="text-xs text-muted-foreground">Define catalog policies, custom storefront taxes, and visual identity tokens.</p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {/* Dynamic Auto-VAT Configuration Card */}
               <Card className="glass-card border border-white/10 hover:border-brand-navy/10 shadow-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 p-8 rounded-[2rem] flex flex-col justify-between">
                 <div>
@@ -467,7 +543,7 @@ export default function SettingsPage() {
                   <div className="space-y-3">
                     <h4 className="text-xl font-black tracking-tight font-heading">Global Tax Configuration</h4>
                     <p className="text-muted-foreground text-sm font-medium leading-relaxed">
-                      Automatically calculate and append 7.5% Nigerian VAT to all customer-facing prices. Storefront users see a unified price, while admin logs and POS details track the tax itemization.
+                      Automatically calculate and append 7.5% Nigerian VAT to storefront checkout prices and record tax itemization details.
                     </p>
                   </div>
                 </div>
@@ -510,9 +586,9 @@ export default function SettingsPage() {
                     </Badge>
                   </div>
                   <div className="space-y-3">
-                    <h4 className="text-xl font-black tracking-tight font-heading">Product Upload Price Rules</h4>
+                    <h4 className="text-xl font-black tracking-tight font-heading">Upload Price Rules</h4>
                     <p className="text-muted-foreground text-sm font-medium leading-relaxed">
-                      Toggle whether product upload must include Cost Price and Selling Price. This persists across sessions and keeps existing product data intact.
+                      Toggle whether new catalog product uploads must specify Cost Price and Selling Price fields before saving.
                     </p>
                   </div>
                 </div>
@@ -539,33 +615,149 @@ export default function SettingsPage() {
                   </button>
                 </div>
               </Card>
-
-              {/* Brand Identity Card */}
-              <Card className="glass-card border border-white/10 hover:border-brand-navy/10 shadow-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 p-8 rounded-[2rem] group flex flex-col justify-between">
-                <div>
-                  <div className="flex items-start justify-between mb-6">
-                    <div className="size-14 rounded-2xl bg-brand-navy/10 flex items-center justify-center text-brand-navy group-hover:bg-brand-navy group-hover:text-white transition-all duration-500 shadow-inner">
-                      <Palette className="size-6" />
-                    </div>
-                    <Badge className="bg-muted/30 text-muted-foreground border-none font-black text-[9px] px-3 py-1 uppercase tracking-widest">
-                      LOCKED
-                    </Badge>
-                  </div>
-                  <div className="space-y-3">
-                    <h4 className="text-xl font-black tracking-tight">Brand Identity DNA</h4>
-                    <p className="text-muted-foreground text-sm font-medium leading-relaxed">
-                      Manage global glassmorphic design tokens and brand-mesh palettes. (Locked by configuration policy).
-                    </p>
-                  </div>
-                </div>
-                <div className="mt-6">
-                  <Button variant="ghost" className="h-10 rounded-xl font-black text-xs uppercase tracking-widest gap-2 hover:bg-brand-navy/5 hover:text-brand-navy px-0 transition-colors">
-                    ORCHESTRATE CONFIG <Plus className="size-4" />
-                  </Button>
-                </div>
-              </Card>
             </div>
           </div>
+        </TabsContent>
+
+        {/* Product Categories Tab */}
+        <TabsContent value="categories" className="space-y-10">
+          {/* Categories KPIs */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <MetricCard
+              title="Total Categories"
+              value={categories.length}
+              icon={LayoutGrid}
+              description="Active catalog categories"
+              variant="slate"
+            />
+            <MetricCard
+              title="Weighted Categories"
+              value={categories.filter(c => c.weight !== null && c.weight !== undefined).length}
+              icon={Scale}
+              description="Fallback shipping weights configured"
+              variant="pink"
+            />
+            <MetricCard
+              title="Associated Products"
+              value={categories.reduce((acc, c) => acc + (c._count?.Product || 0), 0)}
+              icon={ShoppingBag}
+              description="Total products linked to categories"
+              variant="blue"
+            />
+          </div>
+
+          {/* Directory Filters & Actions */}
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="relative max-w-md w-full">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Search categories by name..."
+                value={categorySearchQuery}
+                onChange={(e) => setCategorySearchQuery(e.target.value)}
+                className="pl-11 h-12 bg-white/50 backdrop-blur-md border border-border/30 rounded-2xl focus-visible:ring-brand-navy focus-visible:ring-offset-0 focus-visible:border-brand-navy font-medium shadow-inner transition-all text-sm"
+              />
+            </div>
+            <Button 
+              onClick={() => {
+                setEditingCategory(null);
+                setCatName("");
+                setCatWeight("");
+                setIsCategoryModalOpen(true);
+              }}
+              className="bg-brand-navy hover:bg-brand-navy/90 text-white h-12 px-6 font-black rounded-xl shadow-xl shadow-brand-navy/20 transition-all active:scale-95 flex items-center gap-2 shrink-0 self-end sm:self-auto"
+            >
+              <Plus className="h-5 w-5" />
+              ADD NEW CATEGORY
+            </Button>
+          </div>
+
+          {/* Categories Table */}
+          {categories.filter(c => c.name?.toLowerCase().includes(categorySearchQuery.toLowerCase().trim())).length > 0 ? (
+            <div className="rounded-[2rem] border border-border/30 bg-white/50 backdrop-blur-md shadow-sm overflow-hidden glass-card">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent border-b border-border/30">
+                      <TableHead className="font-black text-xs uppercase tracking-widest text-brand-navy/70 px-6 py-4">Category Name</TableHead>
+                      <TableHead className="font-black text-xs uppercase tracking-widest text-brand-navy/70 px-6 py-4">Default Fallback Weight</TableHead>
+                      <TableHead className="font-black text-xs uppercase tracking-widest text-brand-navy/70 px-6 py-4 text-right">Linked Products</TableHead>
+                      <TableHead className="font-black text-xs uppercase tracking-widest text-brand-navy/70 px-6 py-4 text-center w-20">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {categories
+                      .filter(c => c.name?.toLowerCase().includes(categorySearchQuery.toLowerCase().trim()))
+                      .map((category) => (
+                        <TableRow key={category.id} className="hover:bg-brand-navy/5 transition-colors border-b border-border/30 last:border-b-0 group">
+                          <TableCell className="px-6 py-4 font-bold text-foreground">
+                            <div className="flex items-center gap-4">
+                              <div className="size-11 rounded-2xl bg-brand-navy/10 flex items-center justify-center text-brand-navy font-black text-lg shadow-inner group-hover:bg-brand-navy group-hover:text-white transition-all duration-300">
+                                {category.name?.charAt(0) || "C"}
+                              </div>
+                              <span className="font-black tracking-tight">{category.name}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="px-6 py-4">
+                            {category.weight !== null && category.weight !== undefined ? (
+                              <Badge className="border-none font-black text-[10px] px-3 py-1 uppercase tracking-widest bg-emerald-500/10 text-emerald-600">
+                                {category.weight} kg
+                              </Badge>
+                            ) : (
+                              <span className="text-xs font-semibold text-muted-foreground/60 italic">Not Set</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="px-6 py-4 text-right font-black text-brand-navy">
+                            <div className="flex items-center gap-2 justify-end">
+                              <TrendingUp className="h-4 w-4 text-brand-navy/60 group-hover:text-brand-navy" />
+                              <span>{category._count?.Product ?? 0} Products</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="px-6 py-4 text-center">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger className="size-9 rounded-xl inline-flex items-center justify-center hover:bg-brand-navy/10 hover:text-brand-navy transition-colors">
+                                <MoreVertical className="h-5 w-5" />
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="glass-card border-none rounded-2xl shadow-2xl p-2 min-w-[150px]">
+                                <DropdownMenuGroup>
+                                  <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground p-3">Options</DropdownMenuLabel>
+                                  <DropdownMenuItem 
+                                    onClick={() => {
+                                      setEditingCategory(category);
+                                      setCatName(category.name);
+                                      setCatWeight(category.weight !== null && category.weight !== undefined ? String(category.weight) : "");
+                                      setIsCategoryModalOpen(true);
+                                    }}
+                                    className="rounded-xl h-10 font-bold gap-3 focus:bg-brand-navy/5 focus:text-brand-navy cursor-pointer"
+                                  >
+                                    Modify Category
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator className="bg-border/30" />
+                                  <DropdownMenuItem 
+                                    onClick={() => setDeletingCategory(category)}
+                                    className="rounded-xl h-10 font-bold gap-3 text-destructive focus:bg-destructive/5 cursor-pointer"
+                                  >
+                                    Delete Category
+                                  </DropdownMenuItem>
+                                </DropdownMenuGroup>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center p-16 text-center rounded-[2.5rem] bg-zinc-50/50 border border-dashed border-zinc-200">
+              <div className="size-16 rounded-full bg-zinc-100 flex items-center justify-center mb-4 text-muted-foreground shadow-inner">
+                <Search className="size-6" />
+              </div>
+              <h3 className="font-black text-lg text-zinc-900">No categories matched</h3>
+              <p className="text-sm text-muted-foreground mt-1 max-w-xs leading-relaxed font-semibold">Verify your search filter or add a new category to get started.</p>
+            </div>
+          )}
         </TabsContent>
       </Tabs>
 
@@ -652,6 +844,116 @@ export default function SettingsPage() {
         open={isSpeedafOpen}
         onOpenChange={setIsSpeedafOpen}
       />
+
+      {/* Category Create/Edit Dialog */}
+      <Dialog open={isCategoryModalOpen} onOpenChange={(open) => !open && setIsCategoryModalOpen(false)}>
+        <DialogContent className="sm:max-w-[420px] rounded-3xl p-6 bg-white shadow-2xl border border-zinc-100">
+          <DialogHeader className="space-y-2">
+            <DialogTitle className="text-xl font-black text-brand-navy">
+              {editingCategory ? "Edit Product Category" : "Add Product Category"}
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              {editingCategory 
+                ? "Update this category's name and default fallback weight configuration." 
+                : "Create a new product category with an optional default fallback shipping weight."}
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleCategorySubmit} className="space-y-4 pt-4">
+            <div className="space-y-2">
+              <label className="text-xs font-black uppercase tracking-wider text-muted-foreground">Category Name</label>
+              <Input
+                placeholder="e.g. Jeans Trousers, Toys"
+                value={catName}
+                onChange={(e) => setCatName(e.target.value)}
+                className="h-12 bg-zinc-50 border border-zinc-200 rounded-2xl focus-visible:ring-brand-navy text-sm font-medium shadow-inner"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-black uppercase tracking-wider text-muted-foreground">Default Fallback Weight (kg)</label>
+              <Input
+                type="number"
+                step="0.01"
+                placeholder="e.g. 0.50"
+                value={catWeight}
+                onChange={(e) => setCatWeight(e.target.value)}
+                className="h-12 bg-zinc-50 border border-zinc-200 rounded-2xl focus-visible:ring-brand-navy text-sm font-medium shadow-inner"
+              />
+              <p className="text-[10px] text-muted-foreground/60 leading-normal font-semibold">
+                This weight serves as a fallback for calculating shipping fees if products in this category do not specify their individual weights.
+              </p>
+            </div>
+
+            <DialogFooter className="pt-4 flex gap-3 -mx-6 -mb-6 bg-zinc-50/50 p-4 border-t border-zinc-100 rounded-b-3xl mt-4">
+              <Button type="button" variant="outline" onClick={() => setIsCategoryModalOpen(false)} className="h-11 rounded-xl font-bold flex-1">
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmittingCat} className="h-11 rounded-xl bg-brand-navy hover:bg-brand-navy/90 text-white font-black uppercase tracking-wider text-xs flex-1">
+                {isSubmittingCat ? "Saving..." : "Save Changes"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Category Dialog with Deletion Guard Warning */}
+      <Dialog open={!!deletingCategory} onOpenChange={(open) => !open && setDeletingCategory(null)}>
+        <DialogContent className="sm:max-w-[420px] rounded-3xl p-6 bg-white shadow-2xl border border-zinc-100">
+          <DialogHeader className="space-y-2">
+            <DialogTitle className={cn(
+              "text-xl font-black",
+              deletingCategory?._count?.Product > 0 ? "text-amber-600" : "text-rose-600"
+            )}>
+              {deletingCategory?._count?.Product > 0 ? "Category Link Blocked" : "Delete Product Category"}
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              {deletingCategory?._count?.Product > 0 
+                ? "This category has active product associations and cannot be removed."
+                : `Are you sure you want to permanently delete the category '${deletingCategory?.name}'?`}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="pt-4 space-y-4">
+            {deletingCategory?._count?.Product > 0 ? (
+              <div className="space-y-3">
+                <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 text-xs leading-relaxed font-semibold">
+                  ⚠️ This category is currently linked to <span className="font-black text-amber-900">{deletingCategory._count.Product} products</span>. 
+                  Deleting a category that has products attached is restricted to maintain database integrity.
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed font-medium">
+                  Please reassign these products to a different category or delete them from the catalog before attempting to delete this category.
+                </p>
+                <div className="flex gap-3 pt-4 -mx-6 -mb-6 bg-zinc-50/50 p-4 border-t border-zinc-100 rounded-b-3xl mt-4">
+                  <Button type="button" onClick={() => setDeletingCategory(null)} className="h-11 rounded-xl bg-brand-navy hover:bg-brand-navy/90 text-white font-black uppercase tracking-wider text-xs flex-1">
+                    Close Window
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <p className="text-xs text-muted-foreground leading-relaxed font-semibold">
+                  This operation will permanently delete the category <span className="font-black text-zinc-900">{deletingCategory?.name}</span>. This action cannot be undone.
+                </p>
+                <div className="flex gap-3 pt-4 -mx-6 -mb-6 bg-rose-50/30 p-4 border-t border-rose-100/30 rounded-b-3xl mt-4">
+                  <Button type="button" variant="outline" onClick={() => setDeletingCategory(null)} className="h-11 rounded-xl font-bold flex-1">
+                    Abort
+                  </Button>
+                  <Button 
+                    type="button" 
+                    onClick={handleDeleteCategory} 
+                    disabled={isDeletingCat} 
+                    className="h-11 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black uppercase tracking-wider text-xs flex-1"
+                  >
+                    {isDeletingCat ? "Deleting..." : "Confirm Delete"}
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

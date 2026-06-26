@@ -427,14 +427,24 @@ export default function LogisticsClient({ initialData }: { initialData: any[] })
             weight += itemWeight * item.quantity;
           });
         }
+        const isOverweight = weight > 10.0;
         return (
           <div className="flex flex-col">
-            <span className="font-black text-xs tracking-tight">
+            <span className={cn(
+              "font-black text-xs tracking-tight",
+              isOverweight ? "text-rose-600 font-extrabold" : "text-zinc-900"
+            )}>
               {weight.toFixed(1)} kg
             </span>
-            <span className="text-[9px] text-muted-foreground font-bold">
-              {row.original.SaleItem?.length || 0} line items
-            </span>
+            {isOverweight ? (
+              <span className="text-[8px] text-rose-600 font-black uppercase tracking-wider mt-0.5 animate-pulse">
+                ⚠️ Split Parcel (&gt;10kg)
+              </span>
+            ) : (
+              <span className="text-[9px] text-muted-foreground font-bold">
+                {row.original.SaleItem?.length || 0} line items
+              </span>
+            )}
           </div>
         );
       },
@@ -583,18 +593,18 @@ export default function LogisticsClient({ initialData }: { initialData: any[] })
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left: Financial summaries */}
         <div className="lg:col-span-8 grid grid-cols-1 sm:grid-cols-3 gap-6">
-          <div className="glass-card p-6 rounded-3xl border-none shadow-lg bg-zinc-950 text-white flex flex-col justify-between min-h-[140px]">
+          <div className="p-6 rounded-3xl border border-brand-navy/15 shadow-lg bg-brand-navy text-white flex flex-col justify-between min-h-[140px] hover:scale-[1.02] transition-all duration-300">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-black uppercase tracking-[0.25em] text-white/60">This Month's Invoice (Est.)</span>
+              <span className="text-[10px] font-black uppercase tracking-[0.25em] text-white/70">This Month's Invoice (Est.)</span>
               <TrendingUp className="size-4.5 text-emerald-400" />
             </div>
             <div className="space-y-1">
-              <h2 className="text-3xl font-black tracking-tight">₦{billingStats.thisMonthBilled.toLocaleString()}</h2>
-              <p className="text-[9px] font-semibold text-white/40 uppercase tracking-widest">Billed current calendar month</p>
+              <h2 className="text-3xl font-black tracking-tight text-white">₦{billingStats.thisMonthBilled.toLocaleString()}</h2>
+              <p className="text-[9px] font-semibold text-white/50 uppercase tracking-widest">Billed current calendar month</p>
             </div>
           </div>
 
-          <div className="glass-card p-6 rounded-3xl border-none shadow-lg bg-white border border-zinc-200 text-zinc-950 flex flex-col justify-between min-h-[140px]">
+          <div className="glass-card p-6 rounded-3xl border border-border/10 shadow-lg bg-white text-zinc-950 flex flex-col justify-between min-h-[140px] hover:scale-[1.02] transition-all duration-300">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-black uppercase tracking-[0.25em] text-muted-foreground">Last Month's Invoice</span>
               <Clock className="size-4.5 text-zinc-400" />
@@ -605,7 +615,7 @@ export default function LogisticsClient({ initialData }: { initialData: any[] })
             </div>
           </div>
 
-          <div className="glass-card p-6 rounded-3xl border-none shadow-lg bg-white border border-zinc-200 text-zinc-950 flex flex-col justify-between min-h-[140px]">
+          <div className="glass-card p-6 rounded-3xl border border-border/10 shadow-lg bg-white text-zinc-950 flex flex-col justify-between min-h-[140px] hover:scale-[1.02] transition-all duration-300">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-black uppercase tracking-[0.25em] text-muted-foreground">Total Cumulative Bill</span>
               <Truck className="size-4.5 text-brand-navy" />
