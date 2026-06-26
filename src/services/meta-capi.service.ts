@@ -29,6 +29,12 @@ export class MetaCapiService {
    */
   static async trackPurchase(data: MetaPurchaseData): Promise<boolean> {
     try {
+      // 0. Ensure server-side event runs ONLY in production
+      if (process.env.NODE_ENV !== "production") {
+        console.log(`[MetaCapiService] Skipping CAPI event for order ${data.orderId} (non-production environment).`);
+        return false;
+      }
+
       // 1. Check if Meta tracking is enabled
       const enabledSetting = await prisma.settings.findUnique({
         where: { key: "metaTrackingEnabled" },
