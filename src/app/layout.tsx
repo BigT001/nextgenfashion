@@ -27,25 +27,13 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Load Meta Ads tracking configuration from the database
-  let pixelId = "";
-  let isEnabled = false;
-  
-  try {
-    const [pixelIdSetting, enabledSetting] = await Promise.all([
-      prisma.settings.findUnique({ where: { key: "metaPixelId" } }),
-      prisma.settings.findUnique({ where: { key: "metaTrackingEnabled" } }),
-    ]);
-    pixelId = pixelIdSetting?.value?.trim() || "";
-    isEnabled = enabledSetting?.value === "true";
-  } catch (error) {
-    console.error("[RootLayout] Failed to load Meta Pixel configuration:", error);
-  }
+  // Hard‑coded Meta Pixel implementation – always active
+  const pixelId = "1355267316673789";
 
   return (
     <html lang="en" className={`h-full antialiased`} suppressHydrationWarning>
       <head>
-        {isEnabled && pixelId && (
+        {process.env.NODE_ENV === 'production' && (
           <>
             <Script
               id="fb-pixel"
