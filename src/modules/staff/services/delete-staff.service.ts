@@ -11,8 +11,13 @@ export class DeleteStaffService {
       throw new Error("Super admin accounts cannot be deleted");
     }
 
-    return prisma.user.delete({
-      where: { id },
-    });
+    // Delete related Account and Session records first to avoid foreign‑key issues
+    await prisma.$transaction([
+      prisma.account.deleteMany({ where: { userId: id } }),
+      prisma.session.deleteMany({ where: { userId: id } }),
+      prisma.user.delete({ where: { id } }),
+    ]);
+
+    return { success: true };
   }
 }
