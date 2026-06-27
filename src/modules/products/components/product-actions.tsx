@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useCartStore } from "@/modules/cart/store/cart.store";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { trackPixelEvent } from "@/lib/meta-pixel";
 
 interface ProductActionsProps {
   product: any;
@@ -122,6 +123,20 @@ export function ProductActions({ product }: ProductActionsProps) {
       setActiveTab(uniqueColors[0]);
     }
   }, [hasColors, uniqueColors, activeTab]);
+
+  // ── track ViewContent on product view ────────────────────────────────────
+  useEffect(() => {
+    if (product) {
+      trackPixelEvent("ViewContent", {
+        content_name: product.name,
+        content_category: product.categories?.[0]?.name || product.Category?.name || "Apparel",
+        content_ids: [product.id],
+        content_type: "product",
+        value: Number(product.basePrice || 0),
+        currency: "NGN",
+      });
+    }
+  }, [product]);
 
   // ── Sizes available for the currently active tab ─────────────────────────
   const sizesForTab = useMemo<string[]>(() => {
@@ -333,6 +348,15 @@ export function ProductActions({ product }: ProductActionsProps) {
         availableStock: v.inventory?.quantity ?? 0,
         category: primaryCategory,
         weight: resolvedWeight,
+      });
+
+      trackPixelEvent("AddToCart", {
+        content_name: product.name,
+        content_category: primaryCategory,
+        content_ids: [product.id],
+        content_type: "product",
+        value: (Number(v.price ?? product.basePrice) || 0) * (qtyMap[v.id] ?? 1),
+        currency: "NGN",
       });
     });
 

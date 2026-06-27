@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useCartStore } from "@/modules/cart/store/cart.store";
 import { useSession } from "next-auth/react";
+import { trackPixelEvent } from "@/lib/meta-pixel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -158,6 +159,19 @@ export default function CheckoutPage() {
     }
     loadProvinces();
   }, []);
+
+  // ── track InitiateCheckout on checkout mount ─────────────────────────────
+  useEffect(() => {
+    if (items.length > 0) {
+      trackPixelEvent("InitiateCheckout", {
+        content_ids: items.map(item => item.id),
+        content_type: "product",
+        value: getTotal(),
+        currency: "NGN",
+        num_items: items.reduce((acc, item) => acc + item.quantity, 0),
+      });
+    }
+  }, [items, getTotal]);
 
   const handleProvinceChange = async (provCode: string) => {
     setSelectedProvince(provCode);

@@ -506,7 +506,7 @@ export async function createOrderAction(data: CreateOrderActionPayload) {
         const userAgent = headersList.get("user-agent") || undefined;
 
         MetaCapiService.trackPurchase({
-          orderId: result.id,
+          orderId: result.orderNumber,
           amount: Number(result.totalAmount),
           currency: "NGN",
           email: data.shippingInfo.email,
@@ -518,7 +518,7 @@ export async function createOrderAction(data: CreateOrderActionPayload) {
         });
       } catch (headersError) {
         MetaCapiService.trackPurchase({
-          orderId: result.id,
+          orderId: result.orderNumber,
           amount: Number(result.totalAmount),
           currency: "NGN",
           email: data.shippingInfo.email,

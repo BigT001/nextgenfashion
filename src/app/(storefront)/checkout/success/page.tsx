@@ -7,6 +7,7 @@ import { CheckCircle2, Package, ArrowRight, ShoppingBag, Sparkles, Zap } from "l
 import { Button } from "@/components/ui/button";
 import confetti from "canvas-confetti";
 import { useCartStore } from "@/modules/cart/store/cart.store";
+import { trackPixelEvent } from "@/lib/meta-pixel";
 
 function OrderSuccessClient() {
   const searchParams = useSearchParams();
@@ -15,6 +16,18 @@ function OrderSuccessClient() {
   const { clearCart } = useCartStore();
 
   useEffect(() => {
+    // Track client-side Purchase event with Meta Pixel
+    if (orderNumber) {
+      trackPixelEvent("Purchase", {
+        content_type: "product",
+        content_ids: [orderNumber],
+        value: Number(totalAmount || 0),
+        currency: "NGN",
+      }, {
+        eventID: orderNumber, // Matches CAPI server event_id for deduplication
+      });
+    }
+
     // Clear the cart since checkout was successful
     clearCart();
 
