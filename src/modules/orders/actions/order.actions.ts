@@ -8,6 +8,7 @@ import { events, SYSTEM_EVENTS } from "@/lib/events";
 import { SaleStatus, PaymentMethod } from "@prisma/client";
 import { MetaCapiService } from "@/services/meta-capi.service";
 import { headers } from "next/headers";
+import { getAutoVatSetting } from "@/modules/settings/actions/settings.actions";
 
 export async function validateCartItemsAction(items: { productId?: string; variantId: string }[]) {
   const invalidItems: Array<{ productId?: string; variantId: string }> = [];
@@ -133,6 +134,8 @@ export async function createOrderAction(data: CreateOrderActionPayload) {
       })),
     });
 
+    const vatEnabled = await getAutoVatSetting();
+
     const sanitizedItems = await Promise.all(data.items.map(async (item) => {
       console.log("[createOrderAction] validating cart item", {
         productId: item.productId,
@@ -156,10 +159,12 @@ export async function createOrderAction(data: CreateOrderActionPayload) {
       });
 
       if (existingVariant) {
+        const rawPrice = Number(existingVariant.price ?? existingVariant.Product?.basePrice ?? 0);
+        const dbPrice = vatEnabled ? Math.round(rawPrice * 1.075) : rawPrice;
         return {
           variantId: item.variantId,
           quantity: item.quantity,
-          price: Number(existingVariant.price ?? existingVariant.Product?.basePrice ?? 0),
+          price: dbPrice,
         };
       }
 
@@ -175,10 +180,12 @@ export async function createOrderAction(data: CreateOrderActionPayload) {
       });
 
       if (skuVariant) {
+        const rawPrice = Number(skuVariant.price ?? skuVariant.Product?.basePrice ?? 0);
+        const dbPrice = vatEnabled ? Math.round(rawPrice * 1.075) : rawPrice;
         return {
           variantId: skuVariant.id,
           quantity: item.quantity,
-          price: Number(skuVariant.price ?? skuVariant.Product?.basePrice ?? 0),
+          price: dbPrice,
         };
       }
 
@@ -239,10 +246,13 @@ export async function createOrderAction(data: CreateOrderActionPayload) {
         throw new Error(`Cannot create order: no available variant found for product ${productId}.`);
       }
 
+      const fallbackRawPrice = Number(fallbackVariant.price ?? product?.basePrice ?? 0);
+      const fallbackPrice = vatEnabled ? Math.round(fallbackRawPrice * 1.075) : fallbackRawPrice;
+
       return {
         variantId: fallbackVariant.id,
         quantity: item.quantity,
-        price: Number(fallbackVariant.price ?? product?.basePrice ?? 0),
+        price: fallbackPrice,
       };
     }));
 

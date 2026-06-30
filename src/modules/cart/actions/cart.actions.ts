@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/services/prisma.service";
+import { getAutoVatSetting } from "@/modules/settings/actions/settings.actions";
 
 export type CartItemSyncPayload = {
   variantId: string;
@@ -19,6 +20,7 @@ export async function getCartItemsLatestDetailsAction(
   items: CartItemSyncPayload[]
 ): Promise<{ success: boolean; data?: CartItemSyncResult[]; error?: string }> {
   try {
+    const vatEnabled = await getAutoVatSetting();
     const results: CartItemSyncResult[] = [];
 
     for (const item of items) {
@@ -41,7 +43,8 @@ export async function getCartItemsLatestDetailsAction(
         continue;
       }
 
-      const price = Number(variant.price ?? variant.Product.basePrice ?? 0);
+      const rawPrice = Number(variant.price ?? variant.Product.basePrice ?? 0);
+      const price = vatEnabled ? Math.round(rawPrice * 1.075) : rawPrice;
       const stock = variant.Inventory?.quantity ?? 0;
       const image = variant.Product.images?.[0] ?? "";
 

@@ -535,7 +535,7 @@ export function ProductForm({
         size: v.size,
         color: v.color,
         sku: v.sku.toUpperCase(),
-        price: v.price,
+        price: values.sellingPrice ? Number(values.sellingPrice) : undefined,
         stock: v.quantity,
       }));
 
