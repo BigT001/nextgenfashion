@@ -145,7 +145,10 @@ export async function createOrderAction(data: CreateOrderActionPayload) {
         throw new Error("Cannot create order: invalid product variant selected.");
       }
 
-      const existingVariant = await prisma.productVariant.findUnique({ where: { id: item.variantId } });
+      const existingVariant = await prisma.productVariant.findUnique({
+        where: { id: item.variantId },
+        include: { Product: true },
+      });
       console.log("[createOrderAction] existingVariant lookup", {
         variantId: item.variantId,
         found: Boolean(existingVariant),
@@ -156,11 +159,14 @@ export async function createOrderAction(data: CreateOrderActionPayload) {
         return {
           variantId: item.variantId,
           quantity: item.quantity,
-          price: item.price,
+          price: Number(existingVariant.price ?? existingVariant.Product?.basePrice ?? 0),
         };
       }
 
-      const skuVariant = await prisma.productVariant.findUnique({ where: { sku: item.variantId } });
+      const skuVariant = await prisma.productVariant.findUnique({
+        where: { sku: item.variantId },
+        include: { Product: true },
+      });
       console.log("[createOrderAction] skuVariant lookup", {
         candidate: item.variantId,
         found: Boolean(skuVariant),
@@ -172,7 +178,7 @@ export async function createOrderAction(data: CreateOrderActionPayload) {
         return {
           variantId: skuVariant.id,
           quantity: item.quantity,
-          price: item.price,
+          price: Number(skuVariant.price ?? skuVariant.Product?.basePrice ?? 0),
         };
       }
 
@@ -182,7 +188,7 @@ export async function createOrderAction(data: CreateOrderActionPayload) {
         throw new Error("Cannot create order: selected product variant is no longer available.");
       }
 
-      let fallbackVariant = null as null | { id: string };
+      let fallbackVariant = null as null | { id: string; price: any };
       let product = await prisma.product.findUnique({
         where: { id: productId },
         include: { ProductVariant: true },
@@ -195,7 +201,10 @@ export async function createOrderAction(data: CreateOrderActionPayload) {
       });
 
       if (!product) {
-        const productVariantCandidate = await prisma.productVariant.findUnique({ where: { id: productId } });
+        const productVariantCandidate = await prisma.productVariant.findUnique({
+          where: { id: productId },
+          include: { Product: true },
+        });
         console.log("[createOrderAction] productId candidate as variant lookup", {
           candidateId: productId,
           found: Boolean(productVariantCandidate),
@@ -233,11 +242,20 @@ export async function createOrderAction(data: CreateOrderActionPayload) {
       return {
         variantId: fallbackVariant.id,
         quantity: item.quantity,
-        price: item.price,
+        price: Number(fallbackVariant.price ?? product?.basePrice ?? 0),
       };
     }));
 
     console.log("[createOrderAction] sanitizedItems before transaction", sanitizedItems);
+
+    const serverSubtotal = sanitizedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const deliveryFee = Number(data.shippingInfo.deliveryFee || 0);
+    const serverTotalAmount = serverSubtotal + deliveryFee;
+
+    const clientTotal = Number(data.totalAmount || 0);
+    if (Math.abs(serverTotalAmount - clientTotal) > 0.01) {
+      console.warn(`[createOrderAction] Price discrepancy detected. Client sent totalAmount: ${clientTotal}, but Server calculated: ${serverTotalAmount}. Overriding with server calculations.`);
+    }
 
     // Ensure status value is acceptable by Prisma enum - sanitize unknown values (e.g. 'PAID')
     const KNOWN_STATUSES = [
@@ -342,10 +360,10 @@ export async function createOrderAction(data: CreateOrderActionPayload) {
         }
 
         // 2. Create Sale
-        console.log("[createOrderAction] creating sale for customer", { customerId: customer.id, totalAmount: data.totalAmount, itemCount: sanitizedItems.length, paymentMethod: verifiedPaymentMethod });
+        console.log("[createOrderAction] creating sale for customer", { customerId: customer.id, totalAmount: serverTotalAmount, itemCount: sanitizedItems.length, paymentMethod: verifiedPaymentMethod });
         const sale = await OrderQueries.createSale({
           orderNumber: `NG-${Date.now().toString(36).toUpperCase()}`,
-          totalAmount: data.totalAmount,
+          totalAmount: serverTotalAmount,
           status: statusValue as any,
           paymentMethod: verifiedPaymentMethod,
           paymentRef: data.paymentRef,
@@ -445,7 +463,7 @@ export async function createOrderAction(data: CreateOrderActionPayload) {
 
           const sale = await OrderQueries.createSale({
             orderNumber: `NG-${Date.now().toString(36).toUpperCase()}`,
-            totalAmount: data.totalAmount,
+            totalAmount: serverTotalAmount,
             status: "PENDING",
             paymentMethod: verifiedPaymentMethod,
             paymentRef: data.paymentRef,

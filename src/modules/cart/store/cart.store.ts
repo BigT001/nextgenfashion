@@ -23,8 +23,16 @@ interface CartState {
   clearCart: () => void;
   getTotal: () => number;
   getItemCount: () => number;
-    openCart: boolean;
-    setOpenCart: (open: boolean) => void;
+  openCart: boolean;
+  setOpenCart: (open: boolean) => void;
+  updateCartItemsDetails: (details: {
+    variantId: string;
+    price: number;
+    availableStock: number;
+    name: string;
+    image?: string;
+    isAvailable: boolean;
+  }[]) => void;
 }
 
 export const useCartStore = create<CartState>()(
@@ -76,6 +84,29 @@ export const useCartStore = create<CartState>()(
       },
       getItemCount: () => {
         return get().items.reduce((count, item) => count + item.quantity, 0);
+      },
+      updateCartItemsDetails: (details) => {
+        const currentItems = get().items;
+        const updatedItems = currentItems
+          .map((item): CartItem | null => {
+            const detail = details.find((d) => d.variantId === item.variantId);
+            if (!detail || !detail.isAvailable) {
+              return null;
+            }
+            const max = detail.availableStock;
+            const newQty = Math.min(item.quantity, max);
+            return {
+              ...item,
+              price: detail.price,
+              availableStock: detail.availableStock,
+              name: detail.name,
+              image: detail.image ?? item.image,
+              quantity: newQty,
+            };
+          })
+          .filter((item): item is CartItem => item !== null);
+
+        set({ items: updatedItems });
       },
     }),
     {

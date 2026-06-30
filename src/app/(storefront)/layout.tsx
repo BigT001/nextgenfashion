@@ -16,6 +16,7 @@ import { useSession } from "next-auth/react";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { SmoothScroll } from "@/components/providers/smooth-scroll";
+import { useCartSync } from "@/modules/cart/hooks/use-cart-sync";
 
 const navLinks = [
   { label: "Home", href: "/" },
@@ -34,6 +35,8 @@ export default function StoreLayout({ children }: { children: React.ReactNode })
   const [isScrolled, setIsScrolled] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  useCartSync();
 
   useEffect(() => {
     setMounted(true);

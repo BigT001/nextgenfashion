@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCartStore } from "@/modules/cart/store/cart.store";
 import { useSession } from "next-auth/react";
 import { trackPixelEvent } from "@/lib/meta-pixel";
+import { useCartSync } from "@/modules/cart/hooks/use-cart-sync";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -86,6 +87,9 @@ export default function CheckoutPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
   const { items, getTotal, clearCart, removeItem } = useCartStore();
+  
+  useCartSync();
+
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<CheckoutStep>("IDENTITY");
   const paymentMethod: "CARD" | "TRANSFER" | "CASH" = "CARD";
