@@ -10,8 +10,34 @@ const geistSans = { variable: "--font-geist-sans", className: "font-sans" };
 const geistMono = { variable: "--font-geist-mono", className: "font-mono" };
 
 export const metadata: Metadata = {
-  title: "NextGen Kiddies OS | Enterprise Retail Ecosystem",
-  description: "High-Fidelity Children's Fashion Retail Operating System",
+  title: "NextGen Kiddies | Premium Children's Fashion Store",
+  description: "Discover premium quality children's wear, accessories, and stylish clothing collections at NextGen Kiddies.",
+  metadataBase: new URL("https://www.nextgenkiddies.com"),
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    title: "NextGen Kiddies | Premium Children's Fashion Store",
+    description: "Discover premium quality children's wear, accessories, and stylish clothing collections at NextGen Kiddies.",
+    url: "https://www.nextgenkiddies.com",
+    siteName: "NextGen Kiddies",
+    images: [
+      {
+        url: "/images/logonextgen.png",
+        width: 1200,
+        height: 630,
+        alt: "NextGen Kiddies Logo",
+      },
+    ],
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "NextGen Kiddies | Premium Children's Fashion Store",
+    description: "Discover premium quality children's wear, accessories, and stylish clothing collections at NextGen Kiddies.",
+    images: ["/images/logonextgen.png"],
+  },
   icons: {
     icon: [
       { url: "/images/logonextgen.png", type: "image/png" },

@@ -200,6 +200,29 @@ export default async function LandingPage() {
 
   return (
     <div className="flex flex-col bg-white overflow-x-hidden">
+      {/* Schema.org JSON-LD Structured Data for Meta/Google Crawler */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Store",
+            "name": "NextGen Kiddies",
+            "url": "https://www.nextgenkiddies.com",
+            "logo": "https://www.nextgenkiddies.com/images/logonextgen.png",
+            "description": "Premium children's fashion, toys, accessories, and clothing store.",
+            "sameAs": [
+              "https://www.facebook.com/nextgenkiddies",
+              "https://www.instagram.com/nextgenkiddies"
+            ],
+            "potentialAction": {
+              "@type": "SearchAction",
+              "target": "https://www.nextgenkiddies.com/shop?q={search_term_string}",
+              "query-input": "required name=search_term_string"
+            }
+          })
+        }}
+      />
 
       {/* ═══════════════════ HERO — Full-width Sky Blue (reference match) ══════ */}
       <section className="relative overflow-hidden min-h-[520px] md:min-h-[82vh]" style={{ background: "linear-gradient(180deg,#1ab2f5 0%,#29ccf5 30%,#5dd8f8 65%,#b3ecfc 85%,#e0f7ff 100%)" }}>
