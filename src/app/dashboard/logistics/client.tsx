@@ -53,6 +53,7 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { ColumnDef } from "@tanstack/react-table";
+import { logger } from "@/lib/logger";
 
 type ActiveTab = "ALL" | "PENDING_DISPATCH" | "IN_TRANSIT" | "DELIVERED" | "CANCELLED";
 
@@ -113,12 +114,15 @@ export default function LogisticsClient({ initialData }: { initialData: any[] })
     try {
       const res = await dispatchOrderToSpeedafAction(saleId);
       if (res.success) {
+        logger.info(`Admin Dispatched Order to Speedaf: Order #${orderNumber}`, { saleId, waybillNumber: res.waybillNumber });
         toast.success(`Waybill created successfully: ${res.waybillNumber}`, { id: toastId });
         loadData();
       } else {
+        logger.error(`Admin Speedaf Dispatch Failed: Order #${orderNumber}`, res.error);
         toast.error(res.error || "Failed to dispatch waybill.", { id: toastId });
       }
     } catch (err: any) {
+      logger.error(`Admin Speedaf Dispatch Critical Error: Order #${orderNumber}`, err);
       toast.error(err.message || "An unexpected error occurred during dispatch.", { id: toastId });
     }
   };
@@ -141,12 +145,15 @@ export default function LogisticsClient({ initialData }: { initialData: any[] })
     try {
       const res = await cancelWaybillAction(cancelSaleId, cancelReason);
       if (res.success) {
+        logger.info(`Admin Cancelled Speedaf Waybill`, { saleId: cancelSaleId, reason: cancelReason });
         toast.success("Waybill cancelled successfully.", { id: toastId });
         loadData();
       } else {
+        logger.error(`Admin Speedaf Waybill Cancellation Failed`, res.error);
         toast.error(res.error || "Failed to cancel waybill.", { id: toastId });
       }
     } catch (err: any) {
+      logger.error(`Admin Speedaf Waybill Cancellation Critical Error`, err);
       toast.error(err.message || "Failed to cancel waybill.", { id: toastId });
     }
   };

@@ -40,6 +40,7 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 
 const DUMMY_ORDER_DETAILS: Record<string, any> = {};
 /*
@@ -297,9 +298,11 @@ export function OrderDetailModal({ orderId, onClose }: OrderDetailModalProps) {
     setIsUpdating(true);
     const result = await updateOrderStatusAction(orderId, newStatus as any);
     if (result.success) {
+        logger.info(`Admin Updated Order Status: Order #${data?.orderNumber || orderId} set to ${newStatus}`, { orderId, status: newStatus });
         setData((prev: any) => ({ ...prev, status: newStatus }));
         toast.success(`Fulfillment state updated to ${newStatus}`);
     } else {
+        logger.error(`Admin Order Status Update Failed: Order #${data?.orderNumber || orderId} to ${newStatus}`, result.error);
         toast.error("Failed to update fulfillment state");
     }
     setIsUpdating(false);

@@ -3,6 +3,7 @@
 import { useState, useEffect, useId } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, Resolver } from "react-hook-form";
+import { logger } from "@/lib/logger";
 import { getProductPriceRequirementSetting } from "@/modules/settings/actions/settings.actions";
 import * as z from "zod";
 import {
@@ -561,12 +562,15 @@ export function ProductForm({
         : await createProductAction(payload);
 
       if (result.success) {
+        logger.info(`Admin ${isEditing ? "Updated" : "Created"} Product: ${values.name}`, { productId: initialData?.id || result.data?.id, sku: values.sku });
         toast.success(`Product ${isEditing ? "updated" : "created"}`);
         onClose();
       } else {
+        logger.error(`Admin Product ${isEditing ? "Update" : "Creation"} Failed: ${values.name}`, result.error);
         toast.error(result.error);
       }
     } catch (error) {
+      logger.error(`Admin Product ${isEditing ? "Update" : "Creation"} Critical Error`, error);
       console.error("[ProductForm] onSubmit error:", error);
       toast.error("Unexpected error occurred");
     } finally {

@@ -58,6 +58,7 @@ import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { ColumnDef } from "@tanstack/react-table";
+import { logger } from "@/lib/logger";
 
 export default function InventoryClient({ initialData }: { initialData: any }) {
   const [data, setData] = useState<any>(initialData);
@@ -411,12 +412,14 @@ export default function InventoryClient({ initialData }: { initialData: any }) {
                     const reasonFallback = adjustmentReason.trim() || (adjustmentMode === "ADD" ? "Restock" : "Shrinkage/Damage");
                     const res = await updateStockAction(stockUpdateItem.variantId, change, reasonFallback);
                     if (res.success) {
+                      logger.info(`Admin Stock Adjustment: Variant ${stockUpdateItem.sku} changed by ${change}`, { variantId: stockUpdateItem.variantId, change, reason: reasonFallback });
                       toast.success("Stock inventory updated successfully");
                       setStockUpdateItem(null);
                       setAdjustmentValue(0);
                       setAdjustmentReason("");
                       loadData();
                     } else {
+                      logger.error(`Admin Stock Adjustment Failed: Variant ${stockUpdateItem.sku}`, res.error);
                       toast.error(res.error);
                     }
                   }}
@@ -527,14 +530,17 @@ export default function InventoryClient({ initialData }: { initialData: any }) {
                   if (actionType === "SUSPEND") {
                     const res = await toggleSuspendProductAction(actionItem.id);
                     if (res.success) {
+                      logger.info(`Admin Product Suspend Toggled: "${actionItem.name}" is now ${res.isSuspended ? "Suspended" : "Active"}`, { productId: actionItem.id, isSuspended: res.isSuspended });
                       toast.success(res.isSuspended ? "Product suspended" : "Product activated");
                       loadData();
                     } else {
+                      logger.error(`Admin Product Suspend Toggle Failed: "${actionItem.name}"`, res.error);
                       toast.error(res.error);
                     }
                   } else if (actionType === "DELETE") {
                     const res: any = await deleteProductAction(actionItem.id);
                     if (res.success) {
+                      logger.info(`Admin Deleted Product: "${actionItem.name}"`, { productId: actionItem.id });
                       if (res.suspended) {
                         toast.info(res.message, { duration: 8000 });
                       } else {
@@ -542,6 +548,7 @@ export default function InventoryClient({ initialData }: { initialData: any }) {
                       }
                       loadData();
                     } else {
+                      logger.error(`Admin Product Deletion Failed: "${actionItem.name}"`, res.error);
                       toast.error(res.error);
                     }
                   }
