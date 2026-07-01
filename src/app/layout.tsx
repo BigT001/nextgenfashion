@@ -115,6 +115,14 @@ export default async function RootLayout({
         )}
       </head>
       <body className="min-h-full flex flex-col bg-background selection:bg-brand-navy/30">
+        {process.env.NEXT_PUBLIC_PROMONITOR_CLIENT_KEY && (
+          <Script 
+            id="promonitor-monitor-sdk" 
+            src="http://localhost:3000/monitor-sdk.js" 
+            data-key={process.env.NEXT_PUBLIC_PROMONITOR_CLIENT_KEY}
+            strategy="afterInteractive"
+          />
+        )}
         <Providers>
           <CommandPalette />
           {children}
