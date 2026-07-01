@@ -631,26 +631,26 @@ export default function CheckoutPage() {
 
               {/* Step 1: Identity */}
               {step === "IDENTITY" && (
-                <div className="glass-card p-6 sm:p-10 rounded-[2.5rem] border-none shadow-2xl animate-in slide-in-from-bottom-8 duration-500 space-y-8">
+                <div className="glass-card p-5 sm:p-8 rounded-[1.5rem] sm:rounded-[2rem] border border-zinc-100 dark:border-zinc-800 shadow-xl animate-in slide-in-from-bottom-8 duration-500 space-y-6">
                     <div className="flex items-center gap-4">
-                        <div className="relative size-12 rounded-3xl overflow-hidden bg-brand-navy/10 shadow-inner">
+                        <div className="relative size-10 rounded-2xl overflow-hidden bg-brand-navy/10 shadow-inner">
                           {customerProfile?.image || session?.user?.image ? (
                             <Image src={customerProfile?.image || session?.user?.image || ""} alt="Profile" fill className="object-cover" />
                           ) : (
-                            <div className="size-12 flex items-center justify-center text-brand-navy bg-zinc-100">
-                              <User className="size-5" />
+                            <div className="size-10 flex items-center justify-center text-brand-navy bg-zinc-100">
+                              <User className="size-4" />
                             </div>
                           )}
                         </div>
                         <div className="space-y-0.5">
-                            <p className="text-[10px] uppercase tracking-[0.35em] text-muted-foreground">Profile details</p>
-                            <h2 className="text-2xl font-black tracking-tight">Your account</h2>
+                            <p className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground font-black">Profile details</p>
+                            <h2 className="text-xl font-black tracking-tight">Your account</h2>
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-                        <div className="space-y-3 md:col-span-2">
-                            <Label htmlFor="fullName" className="text-[10px] font-black uppercase tracking-[0.2em] ml-2 opacity-60">Full Legal Name</Label>
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <div className="space-y-2 md:col-span-2">
+                            <Label htmlFor="fullName" className="text-[9px] font-black uppercase tracking-[0.15em] ml-1 opacity-60">Full Legal Name</Label>
                             <Input 
                                 id="fullName" 
                                 name="fullName" 
@@ -661,12 +661,12 @@ export default function CheckoutPage() {
                                 }}
                                 placeholder="Enter full name" 
                                 required 
-                                className="h-16 sm:h-20 rounded-3xl glass-card border-none bg-zinc-50/50 focus-visible:ring-brand-navy font-bold text-lg px-6" 
+                                className="h-12 rounded-xl glass-card border border-zinc-200/50 dark:border-zinc-800 focus-visible:ring-brand-navy font-semibold text-sm px-5" 
                             />
-                            {formErrors.fullName && <p className="text-xs text-rose-600 mt-1 ml-2">{formErrors.fullName}</p>}
+                            {formErrors.fullName && <p className="text-[10px] text-rose-600 mt-1 ml-1">{formErrors.fullName}</p>}
                         </div>
-                        <div className="space-y-3">
-                            <Label htmlFor="email" className="text-[10px] font-black uppercase tracking-[0.2em] ml-2 opacity-60">Digital Contact (Email)</Label>
+                        <div className="space-y-2">
+                            <Label htmlFor="email" className="text-[9px] font-black uppercase tracking-[0.15em] ml-1 opacity-60">Digital Contact (Email)</Label>
                             <Input 
                                 id="email" 
                                 name="email" 
@@ -680,12 +680,12 @@ export default function CheckoutPage() {
                                 }}
                                 placeholder="name@domain.com" 
                                 required 
-                                className="h-16 sm:h-20 rounded-3xl glass-card border-none bg-zinc-50/50 focus-visible:ring-brand-navy font-bold text-lg px-6" 
+                                className="h-12 rounded-xl glass-card border border-zinc-200/50 dark:border-zinc-800 focus-visible:ring-brand-navy font-semibold text-sm px-5" 
                             />
-                            {formErrors.email && <p className="text-xs text-rose-600 mt-1 ml-2">{formErrors.email}</p>}
+                            {formErrors.email && <p className="text-[10px] text-rose-600 mt-1 ml-1">{formErrors.email}</p>}
                         </div>
-                        <div className="space-y-3">
-                            <Label htmlFor="phone" className="text-[10px] font-black uppercase tracking-[0.2em] ml-2 opacity-60">Secure Communications (Phone)</Label>
+                        <div className="space-y-2">
+                            <Label htmlFor="phone" className="text-[9px] font-black uppercase tracking-[0.15em] ml-1 opacity-60">Secure Communications (Phone)</Label>
                             <Input
                                 id="phone"
                                 name="phone"
@@ -701,40 +701,40 @@ export default function CheckoutPage() {
                                 }}
                                 placeholder="08012345678"
                                 required
-                                className="h-16 sm:h-20 rounded-3xl glass-card border-none bg-zinc-50/50 focus-visible:ring-brand-navy font-bold text-lg px-6" 
+                                className="h-12 rounded-xl glass-card border border-zinc-200/50 dark:border-zinc-800 focus-visible:ring-brand-navy font-semibold text-sm px-5" 
                             />
-                            {formErrors.phone && <p className="text-xs text-rose-600 mt-1 ml-2">{formErrors.phone}</p>}
+                            {formErrors.phone && <p className="text-[10px] text-rose-600 mt-1 ml-1">{formErrors.phone}</p>}
                         </div>
                     </div>
 
-                    <Button type="submit" className="w-full h-20 bg-zinc-950 text-white rounded-[2rem] font-black text-xs uppercase tracking-[0.3em] shadow-2xl transition-all active:scale-95 group">
+                    <Button type="submit" className="w-full h-14 bg-zinc-950 hover:bg-zinc-900 text-white rounded-xl font-bold text-xs uppercase tracking-[0.2em] shadow-md transition-all active:scale-[0.98] group mt-2">
                         PROCEED TO DELIVERY
-                        <ArrowLeft className="ml-3 size-5 rotate-180 group-hover:translate-x-1 transition-transform" />
+                        <ArrowLeft className="ml-3 size-4 rotate-180 group-hover:translate-x-1 transition-transform" />
                     </Button>
                 </div>
               )}
 
               {/* Step 2: Logistics */}
               {step === "LOGISTICS" && (
-                <div className="glass-card p-6 sm:p-10 rounded-[2.5rem] border-none shadow-2xl animate-in slide-in-from-bottom-8 duration-500 space-y-8">
+                <div className="glass-card p-5 sm:p-8 rounded-[1.5rem] sm:rounded-[2rem] border border-zinc-100 dark:border-zinc-800 shadow-xl animate-in slide-in-from-bottom-8 duration-500 space-y-6">
                     <div className="flex items-center gap-4">
-                        <div className="size-12 bg-brand-silver/10 rounded-3xl flex items-center justify-center text-brand-silver shadow-inner">
-                            <Truck className="size-5" />
+                        <div className="size-10 bg-brand-silver/10 rounded-2xl flex items-center justify-center text-brand-silver shadow-inner">
+                            <Truck className="size-4" />
                         </div>
                         <div className="space-y-0.5">
-                            <p className="text-[10px] uppercase tracking-[0.35em] text-muted-foreground">Delivery</p>
-                            <h2 className="text-2xl font-black tracking-tight">Shipping details</h2>
+                            <p className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground font-black">Delivery</p>
+                            <h2 className="text-xl font-black tracking-tight">Shipping details</h2>
                         </div>
                     </div>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-3 md:col-span-2">
-                            <Label htmlFor="address" className="text-[10px] font-black uppercase tracking-[0.2em] ml-2 opacity-60">Fulfillment Address (Physical)</Label>
-                            <Input id="address" name="address" value={shippingInfo.address} onChange={(e) => setShippingInfo({ ...shippingInfo, address: e.target.value })} placeholder="DESTINATION STREET & HOUSE" required className="h-20 rounded-3xl glass-card border-none bg-zinc-50/50 focus-visible:ring-brand-navy font-bold text-lg px-8" />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2 md:col-span-2">
+                            <Label htmlFor="address" className="text-[9px] font-black uppercase tracking-[0.15em] ml-1 opacity-60">Fulfillment Address (Physical)</Label>
+                            <Input id="address" name="address" value={shippingInfo.address} onChange={(e) => setShippingInfo({ ...shippingInfo, address: e.target.value })} placeholder="DESTINATION STREET & HOUSE" required className="h-12 rounded-xl glass-card border border-zinc-200/50 dark:border-zinc-800 focus-visible:ring-brand-navy font-semibold text-sm px-5" />
                         </div>
                         
-                        <div className="space-y-3">
-                            <Label htmlFor="province" className="text-[10px] font-black uppercase tracking-[0.2em] ml-2 opacity-60">State / Region</Label>
+                        <div className="space-y-2">
+                            <Label htmlFor="province" className="text-[9px] font-black uppercase tracking-[0.15em] ml-1 opacity-60">State / Region</Label>
                             <div className="relative">
                                 <select
                                     id="province"
@@ -742,23 +742,23 @@ export default function CheckoutPage() {
                                     value={selectedProvince}
                                     onChange={(e) => handleProvinceChange(e.target.value)}
                                     required
-                                    className="h-20 w-full rounded-3xl glass-card border-none bg-zinc-50/50 focus:ring-2 focus:ring-brand-navy focus-visible:ring-brand-navy font-bold text-lg px-8 appearance-none cursor-pointer outline-none transition-all pr-12 text-zinc-800"
+                                    className="h-12 w-full rounded-xl glass-card border border-zinc-200/50 dark:border-zinc-800 focus:ring-2 focus:ring-brand-navy focus-visible:ring-brand-navy font-semibold text-sm px-5 appearance-none cursor-pointer outline-none transition-all pr-10 text-zinc-800 dark:text-zinc-200 bg-transparent"
                                 >
-                                    <option value="" disabled className="text-zinc-400 bg-white">Select State</option>
+                                    <option value="" disabled className="text-zinc-400 bg-white dark:bg-zinc-900">Select State</option>
                                     {provinces.map((p) => (
-                                        <option key={p.code} value={p.code} className="text-zinc-900 bg-white">
+                                        <option key={p.code} value={p.code} className="text-zinc-900 bg-white dark:bg-zinc-900 dark:text-zinc-100">
                                             {p.name}
                                         </option>
                                     ))}
                                 </select>
-                                <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-500">
-                                    <ChevronDown className="size-5" />
+                                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-500">
+                                    <ChevronDown className="size-4" />
                                 </div>
                             </div>
                         </div>
 
-                        <div className="space-y-3">
-                            <Label htmlFor="city" className="text-[10px] font-black uppercase tracking-[0.2em] ml-2 opacity-60">LGA / City</Label>
+                        <div className="space-y-2">
+                            <Label htmlFor="city" className="text-[9px] font-black uppercase tracking-[0.15em] ml-1 opacity-60">LGA / City</Label>
                             <div className="relative">
                                 <select
                                     id="city"
@@ -767,25 +767,25 @@ export default function CheckoutPage() {
                                     onChange={(e) => handleCityChange(e.target.value)}
                                     required
                                     disabled={!selectedProvince}
-                                    className="h-20 w-full rounded-3xl glass-card border-none bg-zinc-50/50 focus:ring-2 focus:ring-brand-navy focus-visible:ring-brand-navy font-bold text-lg px-8 appearance-none cursor-pointer outline-none transition-all pr-12 disabled:opacity-50 text-zinc-800"
+                                    className="h-12 w-full rounded-xl glass-card border border-zinc-200/50 dark:border-zinc-800 focus:ring-2 focus:ring-brand-navy focus-visible:ring-brand-navy font-semibold text-sm px-5 appearance-none cursor-pointer outline-none transition-all pr-10 disabled:opacity-50 text-zinc-800 dark:text-zinc-200 bg-transparent"
                                 >
-                                    <option value="" disabled className="text-zinc-400 bg-white">
+                                    <option value="" disabled className="text-zinc-400 bg-white dark:bg-zinc-900">
                                         {selectedProvince ? "Select LGA / City" : "Select State First"}
                                     </option>
                                     {cities.map((c) => (
-                                        <option key={c.code} value={c.code} className="text-zinc-900 bg-white">
+                                        <option key={c.code} value={c.code} className="text-zinc-900 bg-white dark:bg-zinc-900 dark:text-zinc-100">
                                             {c.name}
                                         </option>
                                     ))}
                                 </select>
-                                <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-500">
-                                    <ChevronDown className="size-5" />
+                                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-500">
+                                    <ChevronDown className="size-4" />
                                 </div>
                             </div>
                         </div>
 
-                        <div className="space-y-3">
-                            <Label htmlFor="area" className="text-[10px] font-black uppercase tracking-[0.2em] ml-2 opacity-60">Area / District</Label>
+                        <div className="space-y-2">
+                            <Label htmlFor="area" className="text-[9px] font-black uppercase tracking-[0.15em] ml-1 opacity-60">Area / District</Label>
                             <div className="relative">
                                 <select
                                     id="area"
@@ -794,39 +794,39 @@ export default function CheckoutPage() {
                                     onChange={(e) => handleAreaChange(e.target.value)}
                                     required
                                     disabled={!selectedCity}
-                                    className="h-20 w-full rounded-3xl glass-card border-none bg-zinc-50/50 focus:ring-2 focus:ring-brand-navy focus-visible:ring-brand-navy font-bold text-lg px-8 appearance-none cursor-pointer outline-none transition-all pr-12 disabled:opacity-50 text-zinc-800"
+                                    className="h-12 w-full rounded-xl glass-card border border-zinc-200/50 dark:border-zinc-800 focus:ring-2 focus:ring-brand-navy focus-visible:ring-brand-navy font-semibold text-sm px-5 appearance-none cursor-pointer outline-none transition-all pr-10 disabled:opacity-50 text-zinc-800 dark:text-zinc-200 bg-transparent"
                                 >
-                                    <option value="" disabled className="text-zinc-400 bg-white">
+                                    <option value="" disabled className="text-zinc-400 bg-white dark:bg-zinc-900">
                                         {selectedCity ? "Select Area / District" : "Select City First"}
                                     </option>
                                     {areas.map((a) => (
-                                        <option key={a.code} value={a.code} className="text-zinc-900 bg-white">
+                                        <option key={a.code} value={a.code} className="text-zinc-900 bg-white dark:bg-zinc-900 dark:text-zinc-100">
                                             {a.name}
                                         </option>
                                     ))}
                                 </select>
-                                <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-500">
-                                    <ChevronDown className="size-5" />
+                                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-500">
+                                    <ChevronDown className="size-4" />
                                 </div>
                             </div>
                         </div>
 
-                        <div className="space-y-3">
-                            <Label htmlFor="zip" className="text-[10px] font-black uppercase tracking-[0.2em] ml-2 opacity-60">Postcode (Optional)</Label>
-                            <Input id="zip" name="zip" value={shippingInfo.zip} onChange={(e) => setShippingInfo({ ...shippingInfo, zip: e.target.value })} placeholder="000000" className="h-20 rounded-3xl glass-card border-none bg-zinc-50/50 focus-visible:ring-brand-navy font-bold text-lg px-8" />
+                        <div className="space-y-2">
+                            <Label htmlFor="zip" className="text-[9px] font-black uppercase tracking-[0.15em] ml-1 opacity-60">Postcode (Optional)</Label>
+                            <Input id="zip" name="zip" value={shippingInfo.zip} onChange={(e) => setShippingInfo({ ...shippingInfo, zip: e.target.value })} placeholder="000000" className="h-12 rounded-xl glass-card border border-zinc-200/50 dark:border-zinc-800 focus-visible:ring-brand-navy font-semibold text-sm px-5" />
                         </div>
                     </div>
 
                     <div className="flex flex-col gap-4">
                         {/* Mobile-only shipping cost summary at the base of the form */}
-                        <div className="md:hidden space-y-3 bg-zinc-50/70 p-5 rounded-3xl border border-zinc-100/50 text-xs my-2">
+                        <div className="md:hidden space-y-3 bg-zinc-50/70 dark:bg-zinc-900/40 p-5 rounded-2xl border border-zinc-100 dark:border-zinc-800/80 text-xs my-1">
                             <div className="flex justify-between items-center font-bold">
                                 <span className="text-zinc-500 uppercase tracking-widest text-[9px]">Items Subtotal</span>
-                                <span className="font-black text-zinc-800">₦{subtotal.toLocaleString()}</span>
+                                <span className="font-black text-zinc-800 dark:text-zinc-200">₦{subtotal.toLocaleString()}</span>
                             </div>
                             <div className="flex justify-between items-center font-bold">
                                 <span className="text-zinc-500 uppercase tracking-widest text-[9px]">Delivery Fee</span>
-                                <span className="font-black text-zinc-800">
+                                <span className="font-black text-zinc-800 dark:text-zinc-200">
                                     {isFeeLoading ? (
                                         <span className="animate-pulse">CALCULATING...</span>
                                     ) : shippingFee > 0 ? (
@@ -836,20 +836,20 @@ export default function CheckoutPage() {
                                     )}
                                 </span>
                             </div>
-                            <div className="h-px bg-zinc-200/50 w-full" />
+                            <div className="h-px bg-zinc-200/50 dark:bg-zinc-800 w-full" />
                             <div className="flex justify-between items-end">
                                 <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Payable Total</span>
-                                <span className="text-2xl font-black tracking-tighter text-brand-navy">₦{Math.round(grandTotal).toLocaleString()}</span>
+                                <span className="text-xl font-black tracking-tighter text-brand-navy dark:text-white">₦{Math.round(grandTotal).toLocaleString()}</span>
                             </div>
                         </div>
 
-                        <Button type="submit" disabled={loading} className="w-full h-24 bg-zinc-950 text-white rounded-[2rem] font-black text-base uppercase tracking-[0.35em] shadow-[0_20px_40px_-20px_rgba(15,23,42,0.5)] transition-all active:scale-[0.98] group disabled:opacity-60">
+                        <Button type="submit" disabled={loading} className="w-full h-14 bg-zinc-950 hover:bg-zinc-900 text-white rounded-xl font-bold text-xs uppercase tracking-[0.2em] shadow-md transition-all active:scale-[0.98] group disabled:opacity-60">
                             {loading ? (
                                 "PROCESSING PAYMENT..."
                             ) : (
                                 <>
                                     AUTHORISE PAYMENT
-                                    <ArrowLeft className="ml-3 size-5 rotate-180 group-hover:translate-x-1 transition-transform" />
+                                    <ArrowLeft className="ml-3 size-4 rotate-180 group-hover:translate-x-1 transition-transform" />
                                 </>
                             )}
                         </Button>
