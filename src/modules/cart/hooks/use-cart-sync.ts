@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { useCartStore } from "../store/cart.store";
 import { getCartItemsLatestDetailsAction } from "../actions/cart.actions";
 import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 
 export function useCartSync() {
   const { items, updateCartItemsDetails, openCart } = useCartStore();
@@ -52,6 +53,28 @@ export function useCartSync() {
 
   useEffect(() => {
     syncCart();
+
+    const handleBeforeUnload = () => {
+      const currentItems = useCartStore.getState().items;
+      if (currentItems && currentItems.length > 0) {
+        const total = currentItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
+        logger.info(`Shopping Session Ending: Cart Abandoned (Total: ₦${total.toLocaleString()})`, {
+          itemsCount: currentItems.length,
+          totalAmount: total,
+          cartItems: currentItems.map(item => ({
+            name: item.name,
+            size: item.size,
+            color: item.color,
+            price: item.price,
+            quantity: item.quantity,
+            sku: item.variantId
+          }))
+        });
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, []);
 
   useEffect(() => {

@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { logger } from "@/lib/logger";
 
 export type CartItem = {
   id: string;
@@ -56,19 +57,26 @@ export const useCartStore = create<CartState>()(
                 : item
             ),
           });
+          logger.info(`Cart Quantity Increased: "${newItem.name}" is now qty ${cappedQty}`, { newItem, totalQty: cappedQty });
         } else {
           set({ items: [...currentItems, itemToAdd] });
+          logger.info(`Cart Item Added: "${newItem.name}" (qty ${newItem.quantity})`, { newItem });
         }
       },
       setOpenCart: (open: boolean) => set({ openCart: open }),
       removeItem: (variantId) => {
+        const itemToRemove = get().items.find((item) => item.variantId === variantId);
         set({ items: get().items.filter((item) => item.variantId !== variantId) });
+        if (itemToRemove) {
+          logger.info(`Cart Item Removed: "${itemToRemove.name}"`, { itemToRemove });
+        }
       },
       updateQuantity: (variantId, quantity) => {
         if (quantity <= 0) {
           get().removeItem(variantId);
           return;
         }
+        const itemToUpdate = get().items.find((item) => item.variantId === variantId);
         set({
           items: get().items.map((item) => {
             if (item.variantId !== variantId) return item;
@@ -77,6 +85,9 @@ export const useCartStore = create<CartState>()(
             return { ...item, quantity: newQty };
           }),
         });
+        if (itemToUpdate) {
+          logger.info(`Cart Quantity Updated: "${itemToUpdate.name}" set to ${quantity}`, { itemToUpdate, newQuantity: quantity });
+        }
       },
       clearCart: () => set({ items: [] }),
       getTotal: () => {
