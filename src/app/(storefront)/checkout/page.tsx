@@ -857,47 +857,45 @@ export default function CheckoutPage() {
                 </div>
               )}
             </form>
-
-            {/* Right: Revenue Summary */}
-            <div className="order-first lg:order-none lg:col-span-5 lg:sticky lg:top-32 animate-slow-fade">
-              <div className="glass-card p-8 sm:p-12 rounded-[3.5rem] border-none shadow-[0_50px_100px_-20px_rgba(0,0,0,0.15)] space-y-10 relative overflow-hidden">
-                <div className="absolute inset-0 bg-brand-mesh opacity-5 pointer-events-none" />
-                <div className="flex items-center gap-4">
-                    <div className="size-10 bg-brand-navy/10 rounded-xl flex items-center justify-center text-brand-navy">
-                        <ShoppingCart className="size-5" />
+             <div className="order-first lg:order-none lg:col-span-5 lg:sticky lg:top-32 animate-slow-fade">
+              <div className="p-4 lg:p-12 rounded-[1.5rem] lg:rounded-[3.5rem] lg:glass-card border-none lg:shadow-[0_50px_100px_-20px_rgba(0,0,0,0.15)] space-y-6 lg:space-y-10 relative overflow-visible lg:overflow-hidden lg:bg-white/45">
+                <div className="absolute inset-0 bg-brand-mesh opacity-5 pointer-events-none hidden lg:block" />
+                <div className="flex items-center gap-3 lg:gap-4">
+                    <div className="size-8 lg:size-10 bg-brand-navy/10 rounded-lg lg:rounded-xl flex items-center justify-center text-brand-navy">
+                        <ShoppingCart className="size-4 lg:size-5" />
                     </div>
-                    <h2 className="text-2xl font-black tracking-tight">Orders</h2>
+                    <h2 className="text-lg lg:text-2xl font-black tracking-tight">Orders</h2>
                 </div>
                 
-                <div className="space-y-8 max-h-[350px] overflow-y-auto pr-0 sm:pr-4 scrollbar-hide">
+                <div className="space-y-5 lg:space-y-8 max-h-[350px] overflow-y-auto pr-0 sm:pr-4 scrollbar-hide">
                   {items.map((item) => (
-                    <div key={item.variantId} className="flex gap-4 group">
-                      <div className="size-24 rounded-3xl bg-zinc-50 border-none relative overflow-hidden flex-shrink-0 glass-card">
+                    <div key={item.variantId} className="flex gap-3 lg:gap-4 group items-center">
+                      <div className="size-16 lg:size-24 rounded-2xl lg:rounded-3xl border border-zinc-100 dark:border-zinc-800 lg:border-none relative overflow-hidden flex-shrink-0 lg:glass-card lg:bg-zinc-50">
                         {item.image && <Image src={item.image} alt={item.name} fill className="object-cover group-hover:scale-110 transition-transform duration-500" />}
                       </div>
-                              <div className="flex-1 space-y-2">
-                          <h4 className="text-sm font-black tracking-tight line-clamp-1 group-hover:text-brand-navy transition-colors">{item.name}</h4>
-                          <div className="flex gap-2">
-                            <Badge variant="outline" className="text-[9px] font-black uppercase tracking-tighter border-border/50">QTY: {item.quantity}</Badge>
-                            {item.size && <Badge variant="outline" className="text-[9px] font-black uppercase tracking-tighter border-border/50">SIZE: {item.size}</Badge>}
-                          </div>
-                          <div className="space-y-1">
-                            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">₦{(Number(item.price) || 0).toLocaleString()} each</p>
-                            <p className="text-sm font-black tracking-tighter">₦{((Number(item.price) || 0) * item.quantity).toLocaleString()}</p>
-                          </div>
+                      <div className="flex-1 space-y-1 lg:space-y-2">
+                        <h4 className="text-xs lg:text-sm font-black tracking-tight line-clamp-1 group-hover:text-brand-navy transition-colors">{item.name}</h4>
+                        <div className="flex gap-1.5 lg:gap-2">
+                          <Badge variant="outline" className="text-[8px] lg:text-[9px] font-black uppercase tracking-tighter border-border/50 px-1.5 py-0">QTY: {item.quantity}</Badge>
+                          {item.size && <Badge variant="outline" className="text-[8px] lg:text-[9px] font-black uppercase tracking-tighter border-border/50 px-1.5 py-0">SIZE: {item.size}</Badge>}
                         </div>
+                        <div className="space-y-0.5">
+                          <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground">₦{(Number(item.price) || 0).toLocaleString()} each</p>
+                          <p className="text-xs lg:text-sm font-black tracking-tighter text-zinc-800 dark:text-zinc-200">₦{((Number(item.price) || 0) * item.quantity).toLocaleString()}</p>
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>
 
-                <div className="space-y-4 pt-6 border-t border-border/30">
-                  <div className="flex justify-between text-xs font-bold uppercase tracking-widest">
+                <div className="space-y-3 lg:space-y-4 p-5 lg:p-0 rounded-2xl lg:rounded-none border border-zinc-100 dark:border-zinc-800 lg:border-none bg-zinc-50/50 dark:bg-zinc-900/30 lg:bg-transparent">
+                  <div className="flex justify-between text-[10px] lg:text-xs font-bold uppercase tracking-widest">
                     <span className="text-muted-foreground">Subtotal</span>
-                    <span className="font-black">₦{subtotal.toLocaleString()}</span>
+                    <span className="font-black text-zinc-800 dark:text-zinc-200">₦{subtotal.toLocaleString()}</span>
                   </div>
-                  <div className="flex justify-between text-xs font-bold uppercase tracking-widest">
+                  <div className="flex justify-between text-[10px] lg:text-xs font-bold uppercase tracking-widest">
                     <span className="text-muted-foreground">Delivery</span>
-                    <span className="font-black">
+                    <span className="font-black text-zinc-800 dark:text-zinc-200">
                       {isFeeLoading ? (
                         <span className="animate-pulse">CALCULATING...</span>
                       ) : shippingFee > 0 ? (
@@ -907,17 +905,17 @@ export default function CheckoutPage() {
                       )}
                     </span>
                   </div>
-                  <div className="pt-8 mt-4 border-t border-border/30">
+                  <div className="pt-4 lg:pt-8 mt-2 lg:mt-4 border-t border-zinc-200/50 dark:border-zinc-800 lg:border-border/30">
                     <div className="flex justify-between items-end">
-                      <span className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/60">Portfolio Total</span>
-                      <span className="text-4xl font-black tracking-tighter text-brand-navy">₦{Math.round(grandTotal).toLocaleString()}</span>
+                      <span className="text-[9px] lg:text-[10px] font-black uppercase tracking-[0.25em] lg:tracking-[0.3em] text-muted-foreground/60">Portfolio Total</span>
+                      <span className="text-2xl lg:text-4xl font-black tracking-tighter text-brand-navy dark:text-white">₦{Math.round(grandTotal).toLocaleString()}</span>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-center gap-4 opacity-40">
-                    <ShieldCheck className="size-4" />
-                    <span className="text-[9px] font-black uppercase tracking-[0.4em]">NextGen Integrity Standard</span>
+                <div className="flex items-center justify-center gap-3 lg:gap-4 opacity-40 py-2 lg:py-0">
+                    <ShieldCheck className="size-3.5 lg:size-4" />
+                    <span className="text-[8px] lg:text-[9px] font-black uppercase tracking-[0.3em] lg:tracking-[0.4em]">NextGen Integrity Standard</span>
                 </div>
               </div>
             </div>
