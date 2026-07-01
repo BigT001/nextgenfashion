@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCartStore } from "@/modules/cart/store/cart.store";
 import { useSession } from "next-auth/react";
 import { trackPixelEvent } from "@/lib/meta-pixel";
+import { logger } from "@/lib/logger";
 import { useCartSync } from "@/modules/cart/hooks/use-cart-sync";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -410,6 +411,17 @@ export default function CheckoutPage() {
     }
 
     if (paymentMethod === "CARD" || paymentMethod === "TRANSFER") {
+      logger.info(`Flutterwave Payment Initiated: ${shippingInfo.fullName} (Total: ₦${grandTotal.toLocaleString()})`, {
+        buyer: {
+          name: shippingInfo.fullName,
+          email: shippingInfo.email,
+          phone: shippingInfo.phone,
+          address: `${shippingInfo.address}, ${shippingInfo.districtName}, ${shippingInfo.cityName}, ${shippingInfo.provinceName}`
+        },
+        amount: grandTotal,
+        txRef
+      });
+
       handleFlutterPayment({
         callback: async (response) => {
           const rawResponse = response as any;
@@ -432,6 +444,18 @@ export default function CheckoutPage() {
               rawResponse?.data?.transaction_id ||
               ""
             );
+
+            logger.info(`Flutterwave Payment Success: ${shippingInfo.fullName} (Total: ₦${grandTotal.toLocaleString()})`, {
+              buyer: {
+                name: shippingInfo.fullName,
+                email: shippingInfo.email,
+                phone: shippingInfo.phone,
+              },
+              amount: grandTotal,
+              paymentRef,
+              rawResponse
+            });
+
             const detectedPaymentMethod = detectFlutterwavePaymentMethod(rawResponse);
             console.debug("Detected payment method from Flutterwave response:", detectedPaymentMethod);
             const orderItems = items.map((item) => ({
@@ -473,12 +497,26 @@ export default function CheckoutPage() {
               router.push(`/checkout/success?orderNumber=${encodeURIComponent(orderData.data.orderNumber)}&totalAmount=${Math.round(grandTotal)}`);
             } else {
               const errorResult = result as { success: false; error: string | null };
+              logger.error(`Order Creation Failed After Successful Flutterwave Payment: ${shippingInfo.fullName}`, errorResult.error, {
+                buyerName: shippingInfo.fullName,
+                amount: grandTotal,
+                paymentRef
+              });
               console.error("Order creation failed after successful payment:", errorResult.error);
               toast.error(errorResult.error || "Payment succeeded but order creation failed. Please contact support.");
             }
           } else if (paymentStatus === "pending") {
+            logger.warn(`Flutterwave Payment Pending: ${shippingInfo.fullName} (Total: ₦${grandTotal.toLocaleString()})`, {
+              buyerName: shippingInfo.fullName,
+              amount: grandTotal,
+              rawResponse
+            });
             toast.warning("Payment is pending. Please wait a moment and check your bank.");
           } else {
+            logger.error(`Flutterwave Payment Failed: ${shippingInfo.fullName} (Total: ₦${grandTotal.toLocaleString()})`, rawResponse, {
+              buyerName: shippingInfo.fullName,
+              amount: grandTotal
+            });
             console.error("Flutterwave payment callback did not return success:", rawResponse);
             toast.error("Payment was not successful. Please try again.");
           }
@@ -486,6 +524,15 @@ export default function CheckoutPage() {
           setLoading(false);
         },
         onClose: () => {
+          logger.warn(`Flutterwave Payment Cancelled: ${shippingInfo.fullName} (Total: ₦${grandTotal.toLocaleString()})`, {
+            buyer: {
+              name: shippingInfo.fullName,
+              email: shippingInfo.email,
+              phone: shippingInfo.phone,
+            },
+            amount: grandTotal,
+            txRef
+          });
           setLoading(false);
           toast.error("Payment cancelled. You can try again.");
         },
