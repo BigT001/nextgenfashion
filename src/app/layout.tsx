@@ -118,7 +118,7 @@ export default async function RootLayout({
         {process.env.PROMONITOR_CLIENT_KEY && (
           <Script 
             id="promonitor-monitor-sdk" 
-            src="http://localhost:3000/monitor-sdk.js" 
+            src={process.env.PROMONITOR_SDK_URL || "https://samuelstanley.com/monitor-sdk.js"} 
             data-key={process.env.PROMONITOR_CLIENT_KEY}
             strategy="afterInteractive"
           />
