@@ -111,7 +111,7 @@ export default function CheckoutPage() {
     cityName: "",
     districtCode: "",
     districtName: "",
-    deliveryFee: 0,
+    deliveryFee: 3500,
   });
   const [formErrors, setFormErrors] = useState<{ fullName?: string; email?: string; phone?: string }>({});
 
@@ -132,7 +132,7 @@ export default function CheckoutPage() {
     cityName: current.cityName || "",
     districtCode: current.districtCode || "",
     districtName: current.districtName || "",
-    deliveryFee: current.deliveryFee || 0,
+    deliveryFee: current.deliveryFee || 3500,
   });
 
   const [provinces, setProvinces] = useState<{ code: string; name: string }[]>([]);
@@ -143,7 +143,7 @@ export default function CheckoutPage() {
   const [selectedCity, setSelectedCity] = useState("");
   const [selectedArea, setSelectedArea] = useState("");
 
-  const [shippingFee, setShippingFee] = useState(0);
+  const [shippingFee, setShippingFee] = useState(3500);
   const [isFeeLoading, setIsFeeLoading] = useState(false);
 
   const totalWeight = useMemo(() => {
@@ -184,7 +184,7 @@ export default function CheckoutPage() {
     setSelectedArea("");
     setCities([]);
     setAreas([]);
-    setShippingFee(0);
+    setShippingFee(3500);
     setShippingInfo(prev => ({
       ...prev,
       provinceCode: provCode,
@@ -193,7 +193,7 @@ export default function CheckoutPage() {
       cityName: "",
       districtCode: "",
       districtName: "",
-      deliveryFee: 0,
+      deliveryFee: 3500,
     }));
     
     if (!provCode) return;
@@ -207,14 +207,14 @@ export default function CheckoutPage() {
     setSelectedCity(cityCode);
     setSelectedArea("");
     setAreas([]);
-    setShippingFee(0);
+    setShippingFee(3500);
     setShippingInfo(prev => ({
       ...prev,
       cityCode: cityCode,
       cityName: cities.find(c => c.code === cityCode)?.name || "",
       districtCode: "",
       districtName: "",
-      deliveryFee: 0,
+      deliveryFee: 3500,
     }));
 
     if (!cityCode || !selectedProvince) return;
@@ -235,7 +235,7 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     if (!selectedProvince || !selectedCity || !selectedArea) {
-      setShippingFee(0);
+      setShippingFee(3500);
       return;
     }
 
@@ -818,6 +818,31 @@ export default function CheckoutPage() {
                     </div>
 
                     <div className="flex flex-col gap-4">
+                        {/* Mobile-only shipping cost summary at the base of the form */}
+                        <div className="md:hidden space-y-3 bg-zinc-50/70 p-5 rounded-3xl border border-zinc-100/50 text-xs my-2">
+                            <div className="flex justify-between items-center font-bold">
+                                <span className="text-zinc-500 uppercase tracking-widest text-[9px]">Items Subtotal</span>
+                                <span className="font-black text-zinc-800">₦{subtotal.toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between items-center font-bold">
+                                <span className="text-zinc-500 uppercase tracking-widest text-[9px]">Delivery Fee</span>
+                                <span className="font-black text-zinc-800">
+                                    {isFeeLoading ? (
+                                        <span className="animate-pulse">CALCULATING...</span>
+                                    ) : shippingFee > 0 ? (
+                                        `₦${shippingFee.toLocaleString()}`
+                                    ) : (
+                                        "₦3,500"
+                                    )}
+                                </span>
+                            </div>
+                            <div className="h-px bg-zinc-200/50 w-full" />
+                            <div className="flex justify-between items-end">
+                                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Payable Total</span>
+                                <span className="text-2xl font-black tracking-tighter text-brand-navy">₦{Math.round(grandTotal).toLocaleString()}</span>
+                            </div>
+                        </div>
+
                         <Button type="submit" disabled={loading} className="w-full h-24 bg-zinc-950 text-white rounded-[2rem] font-black text-base uppercase tracking-[0.35em] shadow-[0_20px_40px_-20px_rgba(15,23,42,0.5)] transition-all active:scale-[0.98] group disabled:opacity-60">
                             {loading ? (
                                 "PROCESSING PAYMENT..."
