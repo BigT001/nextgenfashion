@@ -53,24 +53,9 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Fetch configurations from environment or database
-  let pixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID || "27710932708578779"; // Default fallback Pixel ID
-  let isTrackingEnabled = true;     // Default fallback status
-
-  try {
-    const [pixelIdSetting, enabledSetting] = await Promise.all([
-      prisma.settings.findUnique({ where: { key: "metaPixelId" } }),
-      prisma.settings.findUnique({ where: { key: "metaTrackingEnabled" } }),
-    ]);
-    if (pixelIdSetting?.value?.trim() && pixelIdSetting.value.trim() !== "1355267316673789") {
-      pixelId = pixelIdSetting.value.trim();
-    }
-    if (enabledSetting?.value) {
-      isTrackingEnabled = enabledSetting.value === "true";
-    }
-  } catch (error) {
-    console.error("[RootLayout] Failed to load Meta Pixel configuration from database:", error);
-  }
+  // Meta Pixel Configuration
+  const pixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID || "27710932708578779";
+  const isTrackingEnabled = true;
 
   return (
     <html lang="en" className={`h-full antialiased`} suppressHydrationWarning>
