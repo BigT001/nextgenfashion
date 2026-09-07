@@ -11,6 +11,8 @@ export function trackPixelEvent(eventName: string, params?: Record<string, any>,
     detailedMessage = `User ViewContent: "${params.content_name}" (${params.currency || "NGN"} ${params.value?.toLocaleString()})`;
   } else if (eventName === "InitiateCheckout" && params?.value) {
     detailedMessage = `User InitiateCheckout: Cart value ${params.currency || "NGN"} ${params.value?.toLocaleString()}`;
+  } else if (eventName === "AddPaymentInfo" && params?.value) {
+    detailedMessage = `User AddPaymentInfo: Total ${params.currency || "NGN"} ${params.value?.toLocaleString()}`;
   } else if (eventName === "Purchase" && params?.value) {
     detailedMessage = `User Purchase Success: Order total ${params.currency || "NGN"} ${params.value?.toLocaleString()}`;
   }

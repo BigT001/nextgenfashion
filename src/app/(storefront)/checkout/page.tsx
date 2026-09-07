@@ -394,6 +394,13 @@ export default function CheckoutPage() {
       if (!validateIdentityStep()) {
         return;
       }
+      trackPixelEvent("AddPaymentInfo", {
+        content_ids: items.map(item => item.id),
+        content_type: "product",
+        value: grandTotal,
+        currency: "NGN",
+        num_items: items.reduce((acc, item) => acc + item.quantity, 0),
+      });
       setStep("LOGISTICS");
       return;
     }
@@ -409,6 +416,14 @@ export default function CheckoutPage() {
       setLoading(false);
       return;
     }
+
+    trackPixelEvent("AddPaymentInfo", {
+      content_ids: items.map(item => item.id),
+      content_type: "product",
+      value: grandTotal,
+      currency: "NGN",
+      num_items: items.reduce((acc, item) => acc + item.quantity, 0),
+    });
 
     if (paymentMethod === "CARD" || paymentMethod === "TRANSFER") {
       logger.info(`Flutterwave Payment Initiated: ${shippingInfo.fullName} (Total: ₦${grandTotal.toLocaleString()})`, {

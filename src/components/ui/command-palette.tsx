@@ -24,6 +24,8 @@ import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 
+import { trackPixelEvent } from "@/lib/meta-pixel";
+
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -54,6 +56,9 @@ export function CommandPalette() {
       const result = await universalSearchAction(query);
       if (result.success) {
         setResults(result.data);
+        trackPixelEvent("Search", {
+          search_string: query,
+        });
       }
       setIsSearching(false);
     };
