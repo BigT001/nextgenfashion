@@ -54,7 +54,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   // Fetch configurations from the database
-  let pixelId = "1355267316673789"; // Default fallback Pixel ID
+  let pixelId = "27710932708578779"; // Default fallback Pixel ID
   let isTrackingEnabled = true;     // Default fallback status
 
   try {
@@ -97,6 +97,7 @@ export default async function RootLayout({
                       s.parentNode.insertBefore(t,s)}(window, document,'script',
                       'https://connect.facebook.net/en_US/fbevents.js');
                       fbq('init', '${pixelId}');
+                      fbq('track', 'PageView');
                     }
                   }
                 `,
