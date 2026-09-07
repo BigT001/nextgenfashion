@@ -53,8 +53,8 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Fetch configurations from the database
-  let pixelId = "27710932708578779"; // Default fallback Pixel ID
+  // Fetch configurations from environment or database
+  let pixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID || "27710932708578779"; // Default fallback Pixel ID
   let isTrackingEnabled = true;     // Default fallback status
 
   try {
