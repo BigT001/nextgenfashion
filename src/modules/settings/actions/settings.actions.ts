@@ -75,7 +75,7 @@ export async function getMetaPixelIdSetting() {
   const setting = await prisma.settings.findUnique({
     where: { key: META_PIXEL_ID_KEY },
   });
-  return setting ? setting.value : "";
+  return setting && setting.value !== "1355267316673789" ? setting.value : "27710932708578779";
 }
 
 export async function setMetaPixelIdSetting(value: string) {
@@ -125,7 +125,7 @@ export async function getMetaTrackingEnabledSetting() {
   const setting = await prisma.settings.findUnique({
     where: { key: META_TRACKING_ENABLED_KEY },
   });
-  return setting ? setting.value === "true" : false;
+  return setting ? setting.value === "true" : true;
 }
 
 export async function setMetaTrackingEnabledSetting(value: boolean) {

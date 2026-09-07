@@ -62,10 +62,10 @@ export default async function RootLayout({
       prisma.settings.findUnique({ where: { key: "metaPixelId" } }),
       prisma.settings.findUnique({ where: { key: "metaTrackingEnabled" } }),
     ]);
-    if (pixelIdSetting?.value?.trim()) {
+    if (pixelIdSetting?.value?.trim() && pixelIdSetting.value.trim() !== "1355267316673789") {
       pixelId = pixelIdSetting.value.trim();
     }
-    if (enabledSetting) {
+    if (enabledSetting?.value) {
       isTrackingEnabled = enabledSetting.value === "true";
     }
   } catch (error) {
@@ -75,31 +75,23 @@ export default async function RootLayout({
   return (
     <html lang="en" className={`h-full antialiased`} suppressHydrationWarning>
       <head>
-        {process.env.NODE_ENV === 'production' && isTrackingEnabled && pixelId && (
+        {isTrackingEnabled && pixelId && (
           <>
             <Script
               id="fb-pixel"
               strategy="afterInteractive"
               dangerouslySetInnerHTML={{
                 __html: `
-                  if (typeof window !== 'undefined') {
-                    var host = window.location.hostname;
-                    if (host.indexOf('localhost') !== -1 || host === '127.0.0.1' || host === '0.0.0.0') {
-                      console.log('[Meta Pixel] Local development hostname detected. Tracking script initialization skipped.');
-                    } else {
-                      console.log('[Meta Pixel] Production environment detected (' + host + '). Initializing tracking...');
-                      !function(f,b,e,v,n,t,s)
-                      {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-                      n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-                      if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-                      n.queue=[];t=b.createElement(e);t.async=!0;
-                      t.src=v;s=b.getElementsByTagName(e)[0];
-                      s.parentNode.insertBefore(t,s)}(window, document,'script',
-                      'https://connect.facebook.net/en_US/fbevents.js');
-                      fbq('init', '${pixelId}');
-                      fbq('track', 'PageView');
-                    }
-                  }
+                  !function(f,b,e,v,n,t,s)
+                  {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+                  n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+                  if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+                  n.queue=[];t=b.createElement(e);t.async=!0;
+                  t.src=v;s=b.getElementsByTagName(e)[0];
+                  s.parentNode.insertBefore(t,s)}(window, document,'script',
+                  'https://connect.facebook.net/en_US/fbevents.js');
+                  fbq('init', '${pixelId}');
+                  fbq('track', 'PageView');
                 `,
               }}
             />
