@@ -2,6 +2,7 @@ import "dotenv/config";
 import { PrismaClient, UserRole } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
+import bcrypt from "bcryptjs";
 
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
@@ -16,15 +17,23 @@ async function main() {
   console.log("🌱 Starting seed...");
 
   // 1. Create Admin User
+  const adminEmail = process.env.ADMIN_EMAIL || "admin@nextgenfashion.com";
+  const rawAdminPassword = process.env.ADMIN_PASSWORD || "admin123";
+  const hashedPassword = await bcrypt.hash(rawAdminPassword, 12);
+
   const admin = await prisma.user.upsert({
-    where: { email: "admin@nextgenfashion.com" },
-    update: {},
+    where: { email: adminEmail },
+    update: {
+      password: hashedPassword,
+      role: UserRole.SUPERADMIN,
+    },
     create: {
       id: "admin-001",
-      email: "admin@nextgenfashion.com",
+      email: adminEmail,
       name: "System Admin",
-      password: "$2b$12$OcWmGIT0gYOleJ23RSA1D.U9XnFDXB.85Zh.BmlaHmJ4e7QRQWxzO", // admin123
+      password: hashedPassword,
       role: UserRole.SUPERADMIN,
+      permissions: ["ALL"],
     },
   });
   console.log(`✅ Admin user: ${admin.email}`);
